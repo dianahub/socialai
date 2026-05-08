@@ -139,22 +139,28 @@ async function uploadTalkingPhoto(imagePath) {
   const buf      = fs.readFileSync(imagePath);
   const ext      = path.extname(imagePath).toLowerCase();
   const mimeType = ext === '.png' ? 'image/png' : 'image/jpeg';
+  const boundary = `boundary${Date.now()}`;
+  const filename = path.basename(imagePath);
 
-  const form = new FormData();
-  form.append('file', buf, {
-    filename:     path.basename(imagePath),
-    contentType:  mimeType,
-    knownLength:  buf.length,
-  });
+  // Build multipart body as a Buffer — native fetch requires Buffer/ArrayBuffer, not a Node.js stream
+  const body = Buffer.concat([
+    Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="${filename}"\r\nContent-Type: ${mimeType}\r\n\r\n`),
+    buf,
+    Buffer.from(`\r\n--${boundary}--\r\n`),
+  ]);
 
   const res = await fetch(`${UPLOAD_BASE}/v1/talking_photo`, {
     method:  'POST',
-    headers: { 'X-Api-Key': API_KEY, ...form.getHeaders() },
-    body:    form,
+    headers: {
+      'X-Api-Key':      API_KEY,
+      'Content-Type':   `multipart/form-data; boundary=${boundary}`,
+      'Content-Length': String(body.length),
+    },
+    body,
   });
   if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`HeyGen talking photo upload ${res.status}: ${body.slice(0, 300)}`);
+    const text = await res.text();
+    throw new Error(`HeyGen talking photo upload ${res.status}: ${text.slice(0, 300)}`);
   }
   const data = await res.json();
   return data.data?.talking_photo_id;
