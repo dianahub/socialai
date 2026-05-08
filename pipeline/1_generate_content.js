@@ -136,33 +136,31 @@ async function getDefaultVoiceId() {
 
 // Upload owner photo to HeyGen; returns talking_photo_id
 async function uploadTalkingPhoto(imagePath) {
-  const buf      = fs.readFileSync(imagePath);
-  const ext      = path.extname(imagePath).toLowerCase();
-  const mimeType = ext === '.png' ? 'image/png' : 'image/jpeg';
-  const boundary = `boundary${Date.now()}`;
-  const filename = path.basename(imagePath);
+  console.log('[uploadTalkingPhoto] path:', imagePath, 'exists:', fs.existsSync(imagePath));
 
-  // Build multipart body as a Buffer — native fetch requires Buffer/ArrayBuffer, not a Node.js stream
+  // Always convert to JPEG — ensures compatibility regardless of upload format
+  const jpegBuf  = await sharp(imagePath).jpeg({ quality: 92 }).toBuffer();
+  console.log('[uploadTalkingPhoto] jpeg size:', jpegBuf.length);
+
+  const boundary = `boundary${Date.now()}`;
   const body = Buffer.concat([
-    Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="${filename}"\r\nContent-Type: ${mimeType}\r\n\r\n`),
-    buf,
+    Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="owner.jpg"\r\nContent-Type: image/jpeg\r\n\r\n`),
+    jpegBuf,
     Buffer.from(`\r\n--${boundary}--\r\n`),
   ]);
 
   const res = await fetch(`${UPLOAD_BASE}/v1/talking_photo`, {
     method:  'POST',
     headers: {
-      'X-Api-Key':      API_KEY,
-      'Content-Type':   `multipart/form-data; boundary=${boundary}`,
-      'Content-Length': String(body.length),
+      'X-Api-Key':    API_KEY,
+      'Content-Type': `multipart/form-data; boundary=${boundary}`,
     },
     body,
   });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`HeyGen talking photo upload ${res.status}: ${text.slice(0, 300)}`);
-  }
-  const data = await res.json();
+  const text = await res.text();
+  console.log('[uploadTalkingPhoto] response:', res.status, text.slice(0, 200));
+  if (!res.ok) throw new Error(`HeyGen talking photo upload ${res.status}: ${text.slice(0, 300)}`);
+  const data = JSON.parse(text);
   return data.data?.talking_photo_id;
 }
 
