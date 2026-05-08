@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Content Generator — Restaurant Social AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg-deep:    #090910;
+    --bg-card:    #12121c;
+    --bg-surface: #1a1a28;
+    --gold:       #c8a84b;
+    --gold-light: #e5c97a;
+    --gold-dim:   rgba(200, 168, 75, 0.12);
+    --gold-border:rgba(200, 168, 75, 0.14);
+    --text:       #f0ede8;
+    --text-muted: #7a7773;
+    --green:      #4a9960;
+    --red:        #cc4444;
+    --border:     rgba(255,255,255,0.05);
+  }
+
+  body {
+    background: var(--bg-deep);
+    color: var(--text);
+    font-family: 'Inter', system-ui, sans-serif;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  nav {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 2.5rem; height: 64px;
+    background: rgba(9,9,16,0.95);
+    border-bottom: 1px solid var(--gold-border);
+    position: sticky; top: 0; z-index: 100;
+    backdrop-filter: blur(12px);
+  }
+  .nav-brand { font-family: 'Playfair Display', Georgia, serif; font-size: 1.1rem; color: var(--gold-light); letter-spacing: 0.05em; }
+  .nav-links { display: flex; gap: 0; }
+  .nav-links a {
+    color: var(--text-muted); text-decoration: none; font-size: 0.8rem;
+    font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 0.4rem 1rem; border-bottom: 2px solid transparent;
+    transition: color 0.2s, border-color 0.2s;
+  }
+  .nav-links a:hover { color: var(--text); }
+  .nav-links a.active { color: var(--gold-light); border-bottom-color: var(--gold); }
+
+  main { max-width: 1040px; margin: 0 auto; padding: 3rem 2rem 6rem; }
+
+  /* ── Restaurant header ── */
+  .restaurant-header {
+    display: flex; align-items: center; gap: 1.5rem;
+    background: var(--bg-card); border: 1px solid var(--gold-border);
+    border-radius: 12px; padding: 1.5rem 2rem; margin-bottom: 2rem;
+  }
+  .rh-logo {
+    width: 64px; height: 64px; border-radius: 8px;
+    background: var(--bg-surface); border: 1px solid var(--gold-border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 2rem; flex-shrink: 0; overflow: hidden;
+  }
+  .rh-logo img { width: 100%; height: 100%; object-fit: contain; }
+  .rh-info h2 {
+    font-family: 'Playfair Display', Georgia, serif; font-size: 1.5rem;
+    color: var(--gold-light); margin-bottom: 0.15rem;
+  }
+  .rh-info p { color: var(--text-muted); font-size: 0.85rem; }
+  .rh-link { margin-left: auto; }
+
+  /* ── Gen buttons ── */
+  .gen-section { margin-bottom: 2rem; }
+  .gen-section h3 {
+    font-family: 'Playfair Display', Georgia, serif; font-size: 1.05rem;
+    color: var(--gold-light); margin-bottom: 1rem;
+    display: flex; align-items: center; gap: 0.5rem;
+  }
+  .gen-section h3::after {
+    content: ''; flex: 1; height: 1px; background: var(--gold-border); margin-left: 0.5rem;
+  }
+  .gen-cards {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;
+  }
+  .gen-card {
+    background: var(--bg-card); border: 1px solid var(--gold-border);
+    border-radius: 12px; padding: 1.5rem; cursor: pointer;
+    transition: border-color 0.2s, background 0.2s, transform 0.15s;
+    display: flex; flex-direction: column; align-items: flex-start;
+    position: relative; overflow: hidden;
+  }
+  .gen-card::before {
+    content: ''; position: absolute; inset: 0;
+    background: radial-gradient(ellipse at top left, rgba(200,168,75,0.07), transparent 70%);
+    opacity: 0; transition: opacity 0.2s;
+  }
+  .gen-card:hover { border-color: var(--gold); transform: translateY(-2px); }
+  .gen-card:hover::before { opacity: 1; }
+  .gen-card:active { transform: translateY(0); }
+  .gen-card.generating { border-color: var(--gold); pointer-events: none; }
+  .gen-card.done { border-color: var(--green); }
+
+  .gen-icon { font-size: 2rem; margin-bottom: 0.75rem; }
+  .gen-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 0.3rem; }
+  .gen-desc { color: var(--text-muted); font-size: 0.8rem; line-height: 1.5; margin-bottom: 1rem; }
+  .gen-model {
+    font-size: 0.7rem; letter-spacing: 0.06em; text-transform: uppercase;
+    color: var(--gold); background: var(--gold-dim); padding: 0.2rem 0.5rem;
+    border-radius: 4px; margin-top: auto;
+  }
+  .gen-status {
+    position: absolute; top: 0.75rem; right: 0.75rem;
+    font-size: 0.7rem; font-weight: 600; letter-spacing: 0.06em;
+    text-transform: uppercase; padding: 0.2rem 0.5rem; border-radius: 4px;
+  }
+  .status-generating { background: rgba(200,168,75,0.15); color: var(--gold); }
+  .status-done       { background: rgba(74,153,96,0.15);  color: var(--green); }
+
+  /* Spinner */
+  .spinner {
+    display: inline-block; width: 14px; height: 14px;
+    border: 2px solid rgba(200,168,75,0.3); border-top-color: var(--gold);
+    border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.5; } }
+
+  /* ── Output gallery ── */
+  .gallery-section h3 {
+    font-family: 'Playfair Display', Georgia, serif; font-size: 1.05rem;
+    color: var(--gold-light); margin-bottom: 1rem;
+    display: flex; align-items: center; gap: 0.5rem;
+  }
+  .gallery-section h3::after {
+    content: ''; flex: 1; height: 1px; background: var(--gold-border); margin-left: 0.5rem;
+  }
+  .gallery-header-actions { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; }
+  .poll-indicator {
+    font-size: 0.75rem; color: var(--text-muted);
+    display: flex; align-items: center; gap: 0.4rem;
+  }
+
+  .gallery-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 1rem;
+  }
+
+  .output-card {
+    background: var(--bg-card); border: 1px solid var(--gold-border);
+    border-radius: 10px; overflow: hidden;
+    transition: border-color 0.2s, transform 0.15s;
+  }
+  .output-card:hover { border-color: rgba(200,168,75,0.35); transform: translateY(-2px); }
+
+  .card-thumb {
+    aspect-ratio: 1; background: var(--bg-surface); position: relative;
+    display: flex; align-items: center; justify-content: center; overflow: hidden;
+  }
+  .card-thumb img {
+    width: 100%; height: 100%; object-fit: cover; display: block;
+  }
+  .card-thumb .play-overlay {
+    position: absolute; inset: 0; display: flex; align-items: center;
+    justify-content: center; background: rgba(0,0,0,0.35);
+  }
+  .card-thumb .play-overlay span {
+    width: 48px; height: 48px; background: rgba(200,168,75,0.85);
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    font-size: 1.2rem; color: #090910;
+  }
+  .card-thumb .generating-overlay {
+    position: absolute; inset: 0; background: rgba(9,9,16,0.85);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.5rem;
+  }
+  .card-thumb .generating-overlay p { font-size: 0.8rem; color: var(--gold); animation: pulse 1.5s infinite; }
+
+  .card-body { padding: 0.9rem 1rem; }
+  .card-badges { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.6rem; }
+  .badge {
+    font-size: 0.65rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 0.2rem 0.5rem; border-radius: 4px;
+  }
+  .badge-video   { background: rgba(99,102,241,0.15); color: #818cf8; }
+  .badge-twin    { background: rgba(236,72,153,0.15); color: #f472b6; }
+  .badge-image   { background: rgba(74,153,96,0.15);  color: #6dbb88; }
+  .badge-feed    { background: rgba(200,168,75,0.12); color: var(--gold); }
+  .badge-story   { background: rgba(200,168,75,0.12); color: var(--gold); }
+  .badge-thumb   { background: rgba(200,168,75,0.12); color: var(--gold); }
+  .badge-ig      { background: rgba(220,39,67,0.12);  color: #f87171; }
+  .badge-fb      { background: rgba(24,119,242,0.12); color: #60a5fa; }
+  .badge-tt      { background: rgba(255,255,255,0.06); color: #d4d4d8; }
+  .badge-li      { background: rgba(10,102,194,0.12); color: #60a5fa; }
+  .badge-x       { background: rgba(255,255,255,0.06); color: #d4d4d8; }
+
+  .card-model { font-size: 0.72rem; color: var(--text-muted); margin-bottom: 0.75rem; }
+  .card-prompt {
+    font-size: 0.75rem; color: var(--text-muted); font-style: italic;
+    line-height: 1.4; margin-bottom: 0.75rem;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .card-note { font-size: 0.7rem; color: rgba(200,168,75,0.6); margin-bottom: 0.75rem; }
+  .card-actions { display: flex; gap: 0.5rem; }
+  .btn-sm {
+    font-size: 0.75rem; font-weight: 600; padding: 0.4rem 0.85rem;
+    border-radius: 5px; border: none; cursor: pointer; transition: opacity 0.2s;
+  }
+  .btn-download { background: var(--gold-dim); color: var(--gold); border: 1px solid rgba(200,168,75,0.2); }
+  .btn-download:hover { opacity: 0.8; }
+
+  .empty-gallery {
+    text-align: center; padding: 4rem 2rem; color: var(--text-muted);
+    border: 1px dashed rgba(200,168,75,0.15); border-radius: 12px;
+  }
+  .empty-gallery p:first-child { font-size: 2rem; margin-bottom: 0.75rem; }
+  .empty-gallery p { font-size: 0.9rem; }
+
+  /* ── Bottom bar ── */
+  .bottom-bar {
+    position: sticky; bottom: 0;
+    padding: 1rem 0;
+    background: linear-gradient(to top, var(--bg-deep) 80%, transparent);
+    display: flex; justify-content: flex-end; gap: 1rem; margin-top: 2rem;
+  }
+  .btn {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    padding: 0.75rem 1.75rem; border-radius: 6px;
+    font-family: 'Inter', sans-serif; font-size: 0.85rem; font-weight: 600;
+    letter-spacing: 0.05em; cursor: pointer; border: none; text-decoration: none;
+    transition: opacity 0.2s, transform 0.1s;
+  }
+  .btn-primary { background: var(--gold); color: #090910; }
+  .btn-primary:hover { opacity: 0.9; }
+  .btn-ghost { background: transparent; color: var(--text-muted); border: 1px solid rgba(255,255,255,0.08); }
+  .btn-ghost:hover { color: var(--text); border-color: rgba(255,255,255,0.15); }
+
+  #toast {
+    position: fixed; bottom: 5rem; right: 2rem;
+    background: var(--bg-surface); border: 1px solid var(--gold-border);
+    border-radius: 8px; padding: 0.8rem 1.2rem; color: var(--text);
+    font-size: 0.85rem; opacity: 0; transform: translateY(10px);
+    transition: opacity 0.3s, transform 0.3s; z-index: 200;
+    pointer-events: none; max-width: 320px;
+  }
+  #toast.show { opacity: 1; transform: translateY(0); }
+  #toast.error { border-color: var(--red); color: #f87171; }
+  #toast.success { border-color: var(--green); color: #6dbb88; }
+
+  @media (max-width: 768px) {
+    .gen-cards { grid-template-columns: 1fr; }
+    nav { padding: 0 1rem; }
+    main { padding: 2rem 1rem 6rem; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <span class="nav-brand">✦ Restaurant Social AI</span>
+  <div class="nav-links">
+    <a href="index.html">Assets</a>
+    <a href="generate.html" class="active">Generate</a>
+    <a href="schedule.html">Schedule</a>
+  </div>
+</nav>
+
+<main>
+
+  <!-- Restaurant header -->
+  <div class="restaurant-header">
+    <div class="rh-logo">
+      <img src="" alt="" id="headerLogo" style="display:none">
+      <span id="headerLogoFallback">✦</span>
+    </div>
+    <div class="rh-info">
+      <h2 id="headerName">Loading…</h2>
+      <p id="headerMeta">Fine Dining Restaurant</p>
+    </div>
+    <a href="index.html" class="rh-link btn btn-ghost" style="font-size:0.78rem">← Edit Assets</a>
+  </div>
+
+  <!-- Generation buttons -->
+  <div class="gen-section">
+    <h3>Generate Content</h3>
+    <div class="gen-cards">
+
+      <div class="gen-card" id="card-video" onclick="generate('video')">
+        <div class="gen-icon">🎬</div>
+        <div class="gen-title">Cinematic Video</div>
+        <div class="gen-desc">AI-generated cinematic dish video for Instagram Reels, TikTok, and Stories. Built from your cuisine and tagline.</div>
+        <div class="gen-model">HeyGen Avatar</div>
+        <div class="gen-status" id="status-video" style="display:none"></div>
+      </div>
+
+      <div class="gen-card" id="card-twin" onclick="generate('twin')">
+        <div class="gen-icon">👤</div>
+        <div class="gen-title">Animate Owner Twin</div>
+        <div class="gen-desc">Creates a digital twin animation from the owner photo — a warm welcome message or chef's introduction.</div>
+        <div class="gen-model">HeyGen Talking Photo</div>
+        <div class="gen-status" id="status-twin" style="display:none"></div>
+      </div>
+
+      <div class="gen-card" id="card-image" onclick="generate('image')">
+        <div class="gen-icon">🖼</div>
+        <div class="gen-title">Image Posts</div>
+        <div class="gen-desc">Three branded image variants: square feed, vertical story, and thumbnail — with logo watermark.</div>
+        <div class="gen-model">Branded Mock</div>
+        <div class="gen-status" id="status-image" style="display:none"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Gallery -->
+  <div class="gallery-section">
+    <div class="gallery-header-actions">
+      <h3 style="margin-bottom:0;flex:1">Generated Output</h3>
+      <div class="poll-indicator" id="pollIndicator" style="display:none">
+        <span class="spinner"></span> Checking for new content…
+      </div>
+    </div>
+    <div id="gallery" class="gallery-grid">
+      <div class="empty-gallery" id="emptyGallery">
+        <p>✦</p>
+        <p>Click a generation button above to create AI content.<br>Output will appear here as cards.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="bottom-bar">
+    <a href="generate.html" class="btn btn-ghost" onclick="location.reload();return false">↺ Refresh</a>
+    <a href="schedule.html" class="btn btn-primary">View Schedule →</a>
+  </div>
+</main>
+
+<div id="toast"></div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────────
+let pollInterval  = null;
+let activejobs    = new Set();
+const cardStates  = {};   // type → 'idle' | 'generating' | 'done'
+
+// ── Toast ──────────────────────────────────────────────────────────────────
+let toastTimer;
+function toast(msg, type = '') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = `show ${type}`;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 3500);
+}
+
+// ── Platform badge helper ──────────────────────────────────────────────────
+function platformBadge(p) {
+  const map = { instagram:'IG', facebook:'FB', tiktok:'TT', x:'X', linkedin:'LI' };
+  const cls = { instagram:'ig', facebook:'fb', tiktok:'tt', x:'x', linkedin:'li' };
+  return `<span class="badge badge-${cls[p] || 'ig'}">${map[p] || p.toUpperCase()}</span>`;
+}
+
+// ── Load restaurant header ─────────────────────────────────────────────────
+async function loadHeader() {
+  try {
+    const [assets, config] = await Promise.all([
+      fetch('/api/assets').then(r => r.json()),
+      fetch('/api/config').then(r => r.json()),
+    ]);
+    if (config.restaurantName) {
+      document.getElementById('headerName').textContent = config.restaurantName;
+      document.getElementById('headerMeta').textContent =
+        [config.cuisineType, config.ownerName ? `Chef ${config.ownerName}` : null].filter(Boolean).join(' · ');
+    }
+    if (assets.logo) {
+      const img = document.getElementById('headerLogo');
+      img.src = assets.logo;
+      img.style.display = 'block';
+      document.getElementById('headerLogoFallback').style.display = 'none';
+    }
+  } catch (e) { console.warn('Header load failed:', e.message); }
+}
+
+// ── Generate ───────────────────────────────────────────────────────────────
+async function generate(type) {
+  if (cardStates[type] === 'generating') {
+    toast('Already generating ' + type, 'error');
+    return;
+  }
+
+  setCardState(type, 'generating');
+  startPolling();
+
+  try {
+    const res  = await fetch('/api/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || res.status);
+    activejobs.add(data.jobId);
+    toast(`${type} generation started`, 'success');
+  } catch (e) {
+    toast('Generation failed: ' + e.message, 'error');
+    setCardState(type, 'idle');
+  }
+}
+
+function setCardState(type, state) {
+  cardStates[type] = state;
+  const card   = document.getElementById(`card-${type}`);
+  const status = document.getElementById(`status-${type}`);
+
+  card.classList.remove('generating', 'done');
+  if (state === 'generating') {
+    card.classList.add('generating');
+    status.style.display = 'block';
+    status.className = 'gen-status status-generating';
+    status.innerHTML = `<span class="spinner"></span> Generating`;
+  } else if (state === 'done') {
+    card.classList.add('done');
+    status.style.display = 'block';
+    status.className = 'gen-status status-done';
+    status.textContent = '✓ Done';
+  } else {
+    status.style.display = 'none';
+  }
+}
+
+// ── Polling ────────────────────────────────────────────────────────────────
+function startPolling() {
+  if (pollInterval) return;
+  document.getElementById('pollIndicator').style.display = 'flex';
+  pollInterval = setInterval(pollOutput, 3000);
+  pollOutput();
+}
+
+function stopPolling() {
+  clearInterval(pollInterval);
+  pollInterval = null;
+  document.getElementById('pollIndicator').style.display = 'none';
+}
+
+let lastOutputHash = '';
+
+async function pollOutput() {
+  try {
+    const items = await fetch('/api/output').then(r => r.json());
+    const hash  = items.map(i => i.id + ':' + i.status).join('|');
+    if (hash === lastOutputHash) return;
+    lastOutputHash = hash;
+
+    renderGallery(items);
+
+    // Update card states based on job completion
+    let anyGenerating = false;
+    for (const item of items) {
+      if (item.status === 'ready' && activejobs.has(item.id)) {
+        setCardState(item.type, 'done');
+        activejobs.delete(item.id);
+      } else if (item.status === 'generating') {
+        anyGenerating = true;
+      }
+    }
+
+    // Check if any card is still in generating state
+    const stillGenerating = Object.values(cardStates).some(s => s === 'generating');
+    if (!stillGenerating && !anyGenerating) stopPolling();
+
+  } catch (e) {
+    console.warn('Poll failed:', e.message);
+  }
+}
+
+// ── Gallery rendering ──────────────────────────────────────────────────────
+function renderGallery(items) {
+  const gallery = document.getElementById('gallery');
+  const empty   = document.getElementById('emptyGallery');
+
+  if (!items.length) {
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+
+  // Flatten items into cards (image type has multiple files)
+  const cards = [];
+  for (const item of items) {
+    if (item.type === 'image' && item.files?.length) {
+      for (const file of item.files) cards.push({ item, file, single: false });
+    } else {
+      cards.push({ item, file: null, single: true });
+    }
+  }
+
+  gallery.innerHTML = cards.map(({ item, file, single }) => {
+    const isGenerating = item.status === 'generating';
+    const isError      = item.status === 'error';
+
+    const thumbPath = single
+      ? (item.thumbnailPath || (item.type === 'image' ? item.path : null))
+      : file?.path;
+
+    const thumbSrc = thumbPath || '';
+
+    const thumbHtml = isGenerating
+      ? `<div class="generating-overlay"><span class="spinner"></span><p>Generating…</p></div>`
+      : isError
+        ? `<div class="generating-overlay" style="color:#f87171"><p>✗ Error</p><p style="font-size:0.7rem;opacity:0.7">${item.error || ''}</p></div>`
+        : thumbSrc
+          ? `<img src="${thumbSrc}" alt="" onerror="this.src=''">`
+          : '';
+
+    const typeClass = item.type === 'video' ? 'video' : item.type === 'twin' ? 'twin' : 'image';
+    const variantClass = file?.variant
+      ? { feed: 'feed', story: 'story', thumbnail: 'thumb' }[file.variant] || ''
+      : '';
+
+    const platforms = (item.platform || []).map(platformBadge).join('');
+    const model     = file?.model || item.model || '';
+    const prompt    = file?.prompt || item.prompt || '';
+    const note      = item.note || '';
+
+    const variantLabel = file?.variant
+      ? `<span class="badge badge-${variantClass}">${file.variant.toUpperCase()} ${file.width}×${file.height}</span>`
+      : '';
+
+    const downloadPath = file?.path || item.path || '';
+    const downloadName = (file?.filename || item.filename || `${item.id}.jpg`);
+
+    const downloadBtn = (!isGenerating && !isError && downloadPath)
+      ? `<a class="btn-sm btn-download" href="${downloadPath}" download="${downloadName}">⬇ Download</a>`
+      : '';
+
+    return `<div class="output-card">
+      <div class="card-thumb">
+        ${thumbHtml}
+        ${item.type === 'video' && !isGenerating && !isError && thumbSrc ? '<div class="play-overlay"><span>▶</span></div>' : ''}
+      </div>
+      <div class="card-body">
+        <div class="card-badges">
+          <span class="badge badge-${typeClass}">${item.type.toUpperCase()}</span>
+          ${variantLabel}
+          ${platforms}
+        </div>
+        ${model ? `<div class="card-model">${model}</div>` : ''}
+        ${prompt ? `<div class="card-prompt">"${prompt}"</div>` : ''}
+        ${note  ? `<div class="card-note">ℹ ${note}</div>` : ''}
+        <div class="card-actions">${downloadBtn}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────
+async function init() {
+  await loadHeader();
+  const items = await fetch('/api/output').then(r => r.json()).catch(() => []);
+  if (items.length) {
+    renderGallery(items);
+    // Check if any are still generating
+    if (items.some(i => i.status === 'generating')) {
+      items.filter(i => i.status === 'generating').forEach(i => setCardState(i.type, 'generating'));
+      startPolling();
+    }
+  }
+}
+
+init();
+</script>
+</body>
+</html>

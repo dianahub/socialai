@@ -1,0 +1,23 @@
+# Environment
+.env
+
+# Dependencies
+node_modules/
+
+# Uploaded assets (user content — not committed)
+assets/logo/
+assets/photos/
+assets/owner/
+assets/config.json
+
+# Generated output
+output/
+
+# Claude Code internals
+.claude/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
