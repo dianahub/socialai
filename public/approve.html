@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Approve Content — Restaurant Social AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg-deep:    #090910;
+    --bg-card:    #12121c;
+    --bg-surface: #1a1a28;
+    --gold:       #c8a84b;
+    --gold-light: #e5c97a;
+    --gold-dim:   rgba(200,168,75,0.14);
+    --gold-border:rgba(200,168,75,0.14);
+    --text:       #f0ede8;
+    --text-muted: #7a7773;
+    --green:      #4a9960;
+    --green-dim:  rgba(74,153,96,0.15);
+    --red:        #cc4444;
+    --red-dim:    rgba(204,68,68,0.12);
+    --border:     rgba(255,255,255,0.05);
+  }
+
+  body {
+    background: var(--bg-deep);
+    color: var(--text);
+    font-family: 'Inter', system-ui, sans-serif;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  nav {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 2.5rem; height: 64px;
+    background: rgba(9,9,16,0.95); border-bottom: 1px solid var(--gold-border);
+    position: sticky; top: 0; z-index: 100; backdrop-filter: blur(12px);
+  }
+  .nav-brand { font-family: 'Playfair Display', Georgia, serif; font-size: 1.1rem; color: var(--gold-light); letter-spacing: 0.05em; }
+  .nav-links { display: flex; gap: 0; }
+  .nav-links a {
+    color: var(--text-muted); text-decoration: none; font-size: 0.8rem;
+    font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 0.4rem 1rem; border-bottom: 2px solid transparent;
+    transition: color 0.2s, border-color 0.2s;
+  }
+  .nav-links a:hover { color: var(--text); }
+  .nav-links a.active { color: var(--gold-light); border-bottom-color: var(--gold); }
+
+  main { max-width: 680px; margin: 0 auto; padding: 3rem 1.5rem 6rem; }
+
+  /* ── Page header ── */
+  .page-header { margin-bottom: 2rem; }
+  .page-header h1 {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 1.8rem; font-weight: 400; color: var(--gold-light);
+    margin-bottom: 0.25rem;
+  }
+  .page-header p { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1.25rem; }
+
+  /* ── Filter tabs ── */
+  .filter-tabs { display: flex; gap: 0.5rem; }
+  .tab {
+    background: none; border: 1px solid var(--border); color: var(--text-muted);
+    padding: 0.4rem 1rem; border-radius: 20px; cursor: pointer; font-size: 0.8rem;
+    font-weight: 500; font-family: inherit; letter-spacing: 0.04em;
+    transition: background 0.2s, color 0.2s, border-color 0.2s;
+  }
+  .tab:hover { color: var(--text); border-color: rgba(255,255,255,0.15); }
+  .tab.active { background: var(--gold-dim); color: var(--gold-light); border-color: var(--gold-border); }
+  .count-badge {
+    display: inline-block; background: var(--gold); color: #090910;
+    font-size: 0.68rem; font-weight: 600; padding: 0 5px; border-radius: 10px;
+    margin-left: 4px; vertical-align: middle;
+  }
+
+  /* ── Empty state ── */
+  .empty-state {
+    text-align: center; padding: 5rem 1rem; color: var(--text-muted);
+  }
+  .empty-icon { font-size: 2.5rem; margin-bottom: 1rem; color: var(--green); }
+  .empty-state p { margin-bottom: 1.5rem; font-size: 0.95rem; }
+  .btn-primary {
+    display: inline-block; background: var(--gold); color: #090910;
+    padding: 0.65rem 1.4rem; border-radius: 8px; font-weight: 600;
+    font-size: 0.85rem; text-decoration: none; letter-spacing: 0.04em;
+    transition: background 0.2s;
+  }
+  .btn-primary:hover { background: var(--gold-light); }
+
+  /* ── Cards ── */
+  .cards-list { display: flex; flex-direction: column; gap: 1.5rem; }
+
+  .approval-card {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 14px; overflow: hidden; transition: border-color 0.3s;
+  }
+  .approval-card.approved { border-color: rgba(74,153,96,0.35); }
+  .approval-card.rejected  { opacity: 0.5; }
+
+  .card-top {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0.85rem 1.25rem; border-bottom: 1px solid var(--border);
+  }
+  .type-badge {
+    font-size: 0.7rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 0.25rem 0.65rem; border-radius: 20px;
+  }
+  .type-twin  { background: var(--gold-dim); color: var(--gold-light); }
+  .type-video { background: rgba(100,100,220,0.15); color: #a0a0f8; }
+  .type-image { background: rgba(74,153,96,0.15); color: #72c98a; }
+  .card-date  { font-size: 0.75rem; color: var(--text-muted); }
+
+  .card-media { background: #000; }
+  .card-media video, .card-media img { width: 100%; display: block; max-height: 400px; object-fit: contain; }
+
+  .card-body { padding: 1.25rem; display: flex; flex-direction: column; gap: 1rem; }
+
+  .card-script {
+    background: var(--bg-surface); border-radius: 8px; padding: 0.9rem 1rem;
+    font-size: 0.88rem; line-height: 1.65; color: var(--text-muted);
+    border-left: 2px solid var(--gold-border);
+    max-height: 100px; overflow-y: auto;
+  }
+  .script-label {
+    font-size: 0.68rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--gold); margin-bottom: 0.4rem;
+  }
+
+  .card-platforms { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+  .plat-badge {
+    font-size: 0.68rem; font-weight: 600; padding: 0.2rem 0.55rem; border-radius: 4px;
+    letter-spacing: 0.04em;
+  }
+  .plat-instagram { background: rgba(200,100,200,0.15); color: #e0a0e0; }
+  .plat-facebook  { background: rgba(66,103,178,0.2);   color: #90a8e8; }
+  .plat-tiktok    { background: rgba(0,200,200,0.12);   color: #80d8d8; }
+  .plat-x         { background: rgba(200,200,200,0.1);  color: #b0b0b0; }
+
+  .caption-wrap label {
+    display: block; font-size: 0.7rem; font-weight: 500; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--text-muted); margin-bottom: 0.4rem;
+  }
+  .caption-input {
+    width: 100%; background: var(--bg-surface); border: 1px solid var(--border);
+    color: var(--text); padding: 0.7rem 0.9rem; border-radius: 8px;
+    font-family: inherit; font-size: 0.88rem; line-height: 1.5; resize: vertical;
+    min-height: 72px; outline: none; transition: border-color 0.2s;
+  }
+  .caption-input:focus { border-color: var(--gold-border); }
+
+  /* ── Action buttons ── */
+  .card-actions { display: flex; gap: 0.75rem; }
+  .btn-approve, .btn-reject {
+    flex: 1; padding: 0.75rem; border-radius: 10px; cursor: pointer; font-weight: 600;
+    font-size: 0.88rem; font-family: inherit; border: none; letter-spacing: 0.03em;
+    transition: opacity 0.15s, transform 0.1s;
+  }
+  .btn-approve:active, .btn-reject:active { transform: scale(0.98); }
+  .btn-approve { background: var(--green); color: #fff; }
+  .btn-approve:hover { opacity: 0.88; }
+  .btn-reject  { background: var(--bg-surface); color: var(--text-muted); border: 1px solid var(--border); }
+  .btn-reject:hover  { color: var(--red); border-color: rgba(204,68,68,0.3); }
+
+  .card-reviewed {
+    padding: 0.6rem 0; text-align: center; font-size: 0.82rem; font-weight: 600;
+    letter-spacing: 0.06em; text-transform: uppercase;
+  }
+  .reviewed-approved { color: var(--green); }
+  .reviewed-rejected { color: var(--text-muted); }
+
+  /* ── Toast ── */
+  #toast {
+    position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: var(--bg-surface); border: 1px solid var(--border); color: var(--text);
+    padding: 0.7rem 1.4rem; border-radius: 8px; font-size: 0.85rem;
+    opacity: 0; pointer-events: none; transition: opacity 0.25s, transform 0.25s; z-index: 999;
+    white-space: nowrap;
+  }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  #toast.success { border-color: rgba(74,153,96,0.4); color: #72c98a; }
+  #toast.error   { border-color: rgba(204,68,68,0.4); color: #f87171; }
+
+  @media (max-width: 500px) {
+    nav { padding: 0 1rem; }
+    .nav-brand { font-size: 0.95rem; }
+    .nav-links a { padding: 0.4rem 0.6rem; font-size: 0.72rem; }
+    main { padding: 2rem 1rem 5rem; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <span class="nav-brand">✦ Restaurant Social AI</span>
+  <div class="nav-links">
+    <a href="index.html">Assets</a>
+    <a href="generate.html">Generate</a>
+    <a href="schedule.html">Schedule</a>
+    <a href="approve.html" class="active">Approve</a>
+  </div>
+</nav>
+
+<main>
+  <div class="page-header">
+    <h1>Content Approval</h1>
+    <p>Review generated content before it goes on the schedule.</p>
+    <div class="filter-tabs">
+      <button class="tab active" onclick="setFilter('pending')" id="tab-pending">Pending</button>
+      <button class="tab" onclick="setFilter('approved')" id="tab-approved">Approved</button>
+      <button class="tab" onclick="setFilter('all')" id="tab-all">All</button>
+    </div>
+  </div>
+
+  <div class="empty-state" id="emptyState" style="display:none">
+    <div class="empty-icon">✓</div>
+    <p id="emptyMsg">No content pending approval.</p>
+    <a href="generate.html" class="btn-primary">Generate Content →</a>
+  </div>
+
+  <div class="cards-list" id="cardsList"></div>
+</main>
+
+<div id="toast"></div>
+
+<script>
+let allItems     = [];
+let currentFilter = 'pending';
+
+// ── Toast ──────────────────────────────────────────────────────────────────
+let toastTimer;
+function toast(msg, type = '') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = `show ${type}`;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+// ── Load ───────────────────────────────────────────────────────────────────
+async function loadItems() {
+  try {
+    const items = await fetch('/api/output').then(r => r.json());
+    allItems = items.filter(i => i.status === 'ready');
+    renderItems();
+    updateCounts();
+  } catch (e) {
+    console.error('Load failed:', e.message);
+  }
+}
+
+// ── Filter ─────────────────────────────────────────────────────────────────
+function setFilter(f) {
+  currentFilter = f;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(`tab-${f}`).classList.add('active');
+  renderItems();
+}
+
+function getFiltered() {
+  if (currentFilter === 'pending')
+    return allItems.filter(i => !i.approval_status || i.approval_status === 'pending');
+  if (currentFilter === 'approved')
+    return allItems.filter(i => i.approval_status === 'approved');
+  return allItems;
+}
+
+function updateCounts() {
+  const n = allItems.filter(i => !i.approval_status || i.approval_status === 'pending').length;
+  const btn = document.getElementById('tab-pending');
+  btn.innerHTML = n > 0
+    ? `Pending <span class="count-badge">${n}</span>`
+    : 'Pending';
+}
+
+// ── Render ─────────────────────────────────────────────────────────────────
+function renderItems() {
+  const items  = getFiltered();
+  const list   = document.getElementById('cardsList');
+  const empty  = document.getElementById('emptyState');
+  const msg    = document.getElementById('emptyMsg');
+
+  if (!items.length) {
+    list.innerHTML = '';
+    if (currentFilter === 'pending') msg.textContent = 'No content pending approval.';
+    else if (currentFilter === 'approved') msg.textContent = 'Nothing approved yet.';
+    else msg.textContent = 'No generated content yet.';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+  list.innerHTML = items.map(renderCard).join('');
+}
+
+function platformBadge(p) {
+  return `<span class="plat-badge plat-${p}">${p.slice(0,2).toUpperCase()}</span>`;
+}
+
+function renderCard(item) {
+  const approved = item.approval_status === 'approved';
+  const rejected = item.approval_status === 'rejected';
+  const cls      = approved ? 'approved' : rejected ? 'rejected' : 'pending';
+
+  const date = new Date(item.created).toLocaleDateString('en-US', {
+    weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+  });
+
+  const typeLabel = { video: 'Cinematic Video', twin: 'Owner Twin', image: 'Image Post' };
+  const typeClass = { video: 'type-video', twin: 'type-twin', image: 'type-image' };
+
+  // Media preview
+  let mediaHtml = '';
+  if ((item.type === 'video' || item.type === 'twin') && item.path) {
+    const poster = item.thumbnailPath ? `poster="${item.thumbnailPath}"` : '';
+    mediaHtml = `<div class="card-media">
+      <video controls playsinline preload="none" ${poster} style="width:100%;display:block;background:#000;max-height:380px">
+        <source src="${item.path}" type="video/mp4">
+      </video>
+    </div>`;
+  } else if (item.type === 'image') {
+    const src = item.files?.[0]?.path || item.thumbnailPath || '';
+    if (src) mediaHtml = `<div class="card-media"><img src="${src}" alt="" style="width:100%;display:block;max-height:380px;object-fit:contain"></div>`;
+  } else if (item.thumbnailPath) {
+    mediaHtml = `<div class="card-media"><img src="${item.thumbnailPath}" alt="" style="width:100%;display:block;max-height:380px;object-fit:contain"></div>`;
+  }
+
+  const script    = item.prompt || '';
+  const caption   = item.caption || '';
+  const platforms = (item.platform || []).map(platformBadge).join('');
+
+  const actions = (!approved && !rejected)
+    ? `<div class="card-actions">
+        <button class="btn-approve" onclick="approveItem('${item.id}')">✓ Approve</button>
+        <button class="btn-reject"  onclick="rejectItem('${item.id}')">✗ Reject</button>
+       </div>`
+    : `<div class="card-reviewed">
+        ${approved
+          ? '<span class="reviewed-approved">✓ Approved</span>'
+          : '<span class="reviewed-rejected">✗ Rejected</span>'}
+       </div>`;
+
+  return `<div class="approval-card ${cls}" id="card-${item.id}">
+    <div class="card-top">
+      <span class="type-badge ${typeClass[item.type] || 'type-video'}">${typeLabel[item.type] || item.type}</span>
+      <span class="card-date">${date}</span>
+    </div>
+    ${mediaHtml}
+    <div class="card-body">
+      ${script ? `<div class="card-script"><div class="script-label">Script</div><p>${script}</p></div>` : ''}
+      ${platforms ? `<div class="card-platforms">${platforms}</div>` : ''}
+      <div class="caption-wrap">
+        <label>Caption</label>
+        <textarea class="caption-input" id="caption-${item.id}" placeholder="Add a caption for this post…">${caption}</textarea>
+      </div>
+      ${actions}
+    </div>
+  </div>`;
+}
+
+// ── Actions ────────────────────────────────────────────────────────────────
+async function approveItem(jobId) {
+  const caption = document.getElementById(`caption-${jobId}`)?.value || '';
+  try {
+    const res = await fetch(`/api/output/${jobId}/approve`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ caption }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    const item = allItems.find(i => i.id === jobId);
+    if (item) { item.approval_status = 'approved'; item.caption = caption; }
+    renderItems();
+    updateCounts();
+    toast('Content approved!', 'success');
+  } catch (e) {
+    toast('Error: ' + e.message, 'error');
+  }
+}
+
+async function rejectItem(jobId) {
+  try {
+    const res = await fetch(`/api/output/${jobId}/reject`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    const item = allItems.find(i => i.id === jobId);
+    if (item) item.approval_status = 'rejected';
+    renderItems();
+    updateCounts();
+    toast('Content rejected.');
+  } catch (e) {
+    toast('Error: ' + e.message, 'error');
+  }
+}
+
+loadItems();
+</script>
+</body>
+</html>

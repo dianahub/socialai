@@ -1,38 +1,42 @@
 require('dotenv').config();
 const express = require('express');
-const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
+const multer  = require('multer');
+const path    = require('path');
+const fs      = require('fs');
 const { v4: uuidv4 } = require('uuid');
 
-const app = express();
+const app  = express();
 const PORT = process.env.PORT || 3000;
 
-// Ensure runtime directories exist
-['assets/logo', 'assets/photos', 'assets/owner', 'output', 'public'].forEach(d =>
-  fs.mkdirSync(d, { recursive: true })
+// ── Data directories (configurable for Railway volume mount) ──────────────────
+const DATA_DIR   = process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : path.resolve('.');
+const ASSETS_DIR = path.join(DATA_DIR, 'assets');
+const OUTPUT_DIR = path.join(DATA_DIR, 'output');
+
+['logo', 'photos', 'owner'].forEach(d =>
+  fs.mkdirSync(path.join(ASSETS_DIR, d), { recursive: true })
 );
+fs.mkdirSync(OUTPUT_DIR, { recursive: true });
+fs.mkdirSync(path.resolve('public'), { recursive: true });
 
 app.use(express.json());
-app.use(express.static('public'));
-app.use('/assets', express.static('assets'));
-app.use('/output', express.static('output'));
+app.use(express.static(path.resolve('public')));
+app.use('/assets', express.static(ASSETS_DIR));
+app.use('/output',  express.static(OUTPUT_DIR));
 
-// ── Multer storage ──────────────────────────────────────────────────────────
+// ── Multer storage ────────────────────────────────────────────────────────────
 
 const logoStorage = multer.diskStorage({
-  destination: 'assets/logo',
+  destination: path.join(ASSETS_DIR, 'logo'),
   filename: (req, file, cb) => cb(null, 'logo' + path.extname(file.originalname).toLowerCase())
 });
-
 const photosStorage = multer.diskStorage({
-  destination: 'assets/photos',
+  destination: path.join(ASSETS_DIR, 'photos'),
   filename: (req, file, cb) =>
     cb(null, `photo_${Date.now()}${path.extname(file.originalname).toLowerCase()}`)
 });
-
 const ownerStorage = multer.diskStorage({
-  destination: 'assets/owner',
+  destination: path.join(ASSETS_DIR, 'owner'),
   filename: (req, file, cb) => cb(null, 'owner' + path.extname(file.originalname).toLowerCase())
 });
 
@@ -40,7 +44,7 @@ const uploadLogo   = multer({ storage: logoStorage,   limits: { fileSize: 10 * 1
 const uploadPhotos = multer({ storage: photosStorage, limits: { fileSize: 10 * 1024 * 1024 } });
 const uploadOwner  = multer({ storage: ownerStorage,  limits: { fileSize: 10 * 1024 * 1024 } });
 
-// ── Upload routes ───────────────────────────────────────────────────────────
+// ── Upload routes ─────────────────────────────────────────────────────────────
 
 app.post('/api/upload/logo', uploadLogo.single('file'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file received' });
@@ -60,23 +64,19 @@ app.post('/api/upload/owner', uploadOwner.single('file'), (req, res) => {
   res.json({ success: true, filename: req.file.filename, path: `/assets/owner/${req.file.filename}` });
 });
 
-// ── Asset management ────────────────────────────────────────────────────────
+// ── Asset management ──────────────────────────────────────────────────────────
 
 app.get('/api/assets', (req, res) => {
   const result = { logo: null, photos: [], owner: null };
-
-  const readDir = (dir) => fs.existsSync(dir)
+  const readDir = dir => fs.existsSync(dir)
     ? fs.readdirSync(dir).filter(f => !f.startsWith('.') && /\.(jpg|jpeg|png|webp|gif)$/i.test(f))
     : [];
 
-  const logoFiles = readDir('assets/logo');
+  const logoFiles = readDir(path.join(ASSETS_DIR, 'logo'));
   if (logoFiles.length) result.logo = `/assets/logo/${logoFiles[0]}`;
-
-  result.photos = readDir('assets/photos').map(f => `/assets/photos/${f}`);
-
-  const ownerFiles = readDir('assets/owner');
+  result.photos = readDir(path.join(ASSETS_DIR, 'photos')).map(f => `/assets/photos/${f}`);
+  const ownerFiles = readDir(path.join(ASSETS_DIR, 'owner'));
   if (ownerFiles.length) result.owner = `/assets/owner/${ownerFiles[0]}`;
-
   res.json(result);
 });
 
@@ -84,58 +84,95 @@ app.delete('/api/assets/:type/:filename', (req, res) => {
   const { type, filename } = req.params;
   if (!['logo', 'photos', 'owner'].includes(type))
     return res.status(400).json({ error: 'Invalid type' });
-
-  // Prevent path traversal
-  const safe = path.basename(filename);
-  const filepath = path.join('assets', type, safe);
-
+  const safe     = path.basename(filename);
+  const filepath = path.join(ASSETS_DIR, type, safe);
   if (!fs.existsSync(filepath)) return res.status(404).json({ error: 'File not found' });
   fs.unlinkSync(filepath);
   res.json({ success: true });
 });
 
-// ── Config ──────────────────────────────────────────────────────────────────
+// ── Config ────────────────────────────────────────────────────────────────────
+
+const CONFIG_PATH = path.join(ASSETS_DIR, 'config.json');
 
 app.post('/api/config', (req, res) => {
-  fs.writeFileSync('assets/config.json', JSON.stringify(req.body, null, 2));
+  fs.writeFileSync(CONFIG_PATH, JSON.stringify(req.body, null, 2));
   res.json({ success: true });
 });
 
 app.get('/api/config', (req, res) => {
-  if (fs.existsSync('assets/config.json')) {
-    try {
-      return res.json(JSON.parse(fs.readFileSync('assets/config.json', 'utf8')));
-    } catch {
-      return res.json({});
-    }
+  if (fs.existsSync(CONFIG_PATH)) {
+    try { return res.json(JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'))); }
+    catch { return res.json({}); }
   }
   res.json({});
 });
 
-// ── Generate ────────────────────────────────────────────────────────────────
+// ── AI Script generation ──────────────────────────────────────────────────────
+
+app.post('/api/generate/script', async (req, res) => {
+  const { topic, details, ownerName, restaurantName, cuisineType } = req.body;
+
+  if (!process.env.ANTHROPIC_API_KEY) {
+    const owner = ownerName || 'the chef';
+    const name  = restaurantName || 'our restaurant';
+    return res.json({
+      script: `Hello, I'm ${owner} from ${name}. ${details ? `I'm excited to share: ${details}. ` : ''}We pour our heart into every experience here, and I'd love to welcome you to our table soon.`,
+      note: 'Template script — add ANTHROPIC_API_KEY to enable AI-written scripts.'
+    });
+  }
+
+  try {
+    const Anthropic = require('@anthropic-ai/sdk');
+    const client    = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+    const msg = await client.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 300,
+      system: 'You write short spoken scripts for restaurant owner digital twin social videos. Output only the spoken words — no stage directions, no labels, no quotes.',
+      messages: [{
+        role: 'user',
+        content: `Write a 15–20 second spoken script (40–55 words) for a restaurant owner video post on Instagram.
+
+Owner: ${ownerName || 'the owner'}
+Restaurant: ${restaurantName || 'the restaurant'}
+Cuisine: ${cuisineType || 'fine dining'}
+Topic: ${topic || 'welcome'}
+Details: ${details || 'none'}
+
+Requirements: first person, warm and personal, specific to the topic, end with a natural invitation to visit or follow.`
+      }]
+    });
+
+    res.json({ script: msg.content[0].text.trim() });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Generate ──────────────────────────────────────────────────────────────────
 
 app.post('/api/generate', async (req, res) => {
-  const { type } = req.body;
+  const { type, customScript } = req.body;
   if (!['video', 'twin', 'image'].includes(type))
     return res.status(400).json({ error: 'Invalid type. Use: video, twin, image' });
 
   let config = {};
   try {
-    if (fs.existsSync('assets/config.json'))
-      config = JSON.parse(fs.readFileSync('assets/config.json', 'utf8'));
+    if (fs.existsSync(CONFIG_PATH))
+      config = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
   } catch { /* use empty config */ }
 
   const jobId = uuidv4();
-  const job = { id: jobId, type, status: 'generating', created: new Date().toISOString() };
-  fs.writeFileSync(`output/${jobId}_meta.json`, JSON.stringify(job, null, 2));
+  const job   = { id: jobId, type, status: 'generating', created: new Date().toISOString() };
+  fs.writeFileSync(path.join(OUTPUT_DIR, `${jobId}_meta.json`), JSON.stringify(job, null, 2));
 
-  // Respond immediately; generation runs in background
   res.json({ success: true, jobId, status: 'generating' });
 
-  runGeneration(jobId, type, config);
+  runGeneration(jobId, type, config, customScript);
 });
 
-async function runGeneration(jobId, type, config) {
+async function runGeneration(jobId, type, config, customScript) {
   try {
     const { generateVideo, generateTwinClip, generateImagePost } = require('./pipeline/1_generate_content');
     const { brandOverlay } = require('./pipeline/2_brand_overlay');
@@ -144,37 +181,35 @@ async function runGeneration(jobId, type, config) {
     if (type === 'video') {
       result = await generateVideo(config, jobId);
     } else if (type === 'twin') {
-      result = await generateTwinClip(config, jobId);
+      result = await generateTwinClip(config, jobId, customScript);
     } else {
       result = await generateImagePost(config, jobId);
-      // Apply brand overlay to each image variant
       if (result.files) {
         for (const file of result.files) {
-          await brandOverlay(`.${file.path}`, config, file.variant).catch(e =>
-            console.warn('[overlay] skipped:', e.message)
-          );
+          await brandOverlay(path.join(OUTPUT_DIR, file.filename), config, file.variant)
+            .catch(e => console.warn('[overlay] skipped:', e.message));
         }
       }
     }
 
     const meta = { ...result, id: jobId, type, status: 'ready', created: new Date().toISOString() };
-    fs.writeFileSync(`output/${jobId}_meta.json`, JSON.stringify(meta, null, 2));
+    fs.writeFileSync(path.join(OUTPUT_DIR, `${jobId}_meta.json`), JSON.stringify(meta, null, 2));
     console.log(`[generate] Job ${jobId} (${type}) complete`);
   } catch (err) {
     console.error(`[generate] Job ${jobId} failed:`, err.message);
     const meta = { id: jobId, type, status: 'error', error: err.message, created: new Date().toISOString() };
-    fs.writeFileSync(`output/${jobId}_meta.json`, JSON.stringify(meta, null, 2));
+    fs.writeFileSync(path.join(OUTPUT_DIR, `${jobId}_meta.json`), JSON.stringify(meta, null, 2));
   }
 }
 
-// ── Output listing ──────────────────────────────────────────────────────────
+// ── Output listing ────────────────────────────────────────────────────────────
 
 app.get('/api/output', (req, res) => {
-  if (!fs.existsSync('output')) return res.json([]);
-  const items = fs.readdirSync('output')
+  if (!fs.existsSync(OUTPUT_DIR)) return res.json([]);
+  const items = fs.readdirSync(OUTPUT_DIR)
     .filter(f => f.endsWith('_meta.json'))
     .map(f => {
-      try { return JSON.parse(fs.readFileSync(`output/${f}`, 'utf8')); }
+      try { return JSON.parse(fs.readFileSync(path.join(OUTPUT_DIR, f), 'utf8')); }
       catch { return null; }
     })
     .filter(Boolean)
@@ -182,23 +217,55 @@ app.get('/api/output', (req, res) => {
   res.json(items);
 });
 
-// ── Schedule ────────────────────────────────────────────────────────────────
+// ── Approval ──────────────────────────────────────────────────────────────────
+
+app.patch('/api/output/:jobId/approve', (req, res) => {
+  const metaPath = path.join(OUTPUT_DIR, `${req.params.jobId}_meta.json`);
+  if (!fs.existsSync(metaPath)) return res.status(404).json({ error: 'Job not found' });
+  try {
+    const meta = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
+    const { caption } = req.body;
+    meta.approval_status = 'approved';
+    meta.approved_at     = new Date().toISOString();
+    if (caption !== undefined) meta.caption = caption;
+    fs.writeFileSync(metaPath, JSON.stringify(meta, null, 2));
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.patch('/api/output/:jobId/reject', (req, res) => {
+  const metaPath = path.join(OUTPUT_DIR, `${req.params.jobId}_meta.json`);
+  if (!fs.existsSync(metaPath)) return res.status(404).json({ error: 'Job not found' });
+  try {
+    const meta = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
+    meta.approval_status = 'rejected';
+    meta.rejected_at     = new Date().toISOString();
+    fs.writeFileSync(metaPath, JSON.stringify(meta, null, 2));
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Schedule ──────────────────────────────────────────────────────────────────
 
 app.get('/api/schedule', (req, res) => {
   let config = {};
   try {
-    if (fs.existsSync('assets/config.json'))
-      config = JSON.parse(fs.readFileSync('assets/config.json', 'utf8'));
+    if (fs.existsSync(CONFIG_PATH))
+      config = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
   } catch { /* use empty config */ }
-
   const { buildSchedule } = require('./pipeline/3_mock_scheduler');
   res.json(buildSchedule(config));
 });
 
-// ── Start ───────────────────────────────────────────────────────────────────
+// ── Start ─────────────────────────────────────────────────────────────────────
 
 app.listen(PORT, () => {
   console.log(`\n  Restaurant Social AI`);
   console.log(`  ─────────────────────────────`);
-  console.log(`  Running at http://localhost:${PORT}\n`);
+  console.log(`  http://localhost:${PORT}`);
+  console.log(`  Data: ${DATA_DIR}\n`);
 });

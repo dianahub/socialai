@@ -254,6 +254,64 @@
     nav { padding: 0 1rem; }
     main { padding: 2rem 1rem 6rem; }
   }
+
+  /* ── Script Writer ── */
+  .script-section {
+    background: var(--bg-card); border: 1px solid var(--gold-border);
+    border-radius: 12px; padding: 1.5rem 2rem; margin-bottom: 2rem;
+  }
+  .sw-heading { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.4rem; }
+  .sw-heading h3 { margin: 0; }
+  .sw-tag {
+    font-size: 0.68rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--gold); background: var(--gold-dim); padding: 0.18rem 0.55rem; border-radius: 20px;
+  }
+  .sw-desc { font-size: 0.83rem; color: var(--text-muted); margin-bottom: 1.2rem; }
+  .sw-form { display: flex; flex-direction: column; gap: 0.75rem; }
+  .sw-row { display: flex; gap: 0.85rem; align-items: flex-end; }
+  .sw-group { display: flex; flex-direction: column; gap: 0.3rem; }
+  .sw-group label {
+    font-size: 0.7rem; font-weight: 500; letter-spacing: 0.07em; text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .sw-group select, .sw-group input[type="text"] {
+    background: var(--bg-surface); border: 1px solid var(--border);
+    color: var(--text); padding: 0.55rem 0.8rem; border-radius: 8px;
+    font-size: 0.88rem; font-family: inherit; outline: none;
+  }
+  .sw-group select:focus, .sw-group input[type="text"]:focus { border-color: var(--gold-border); }
+  .sw-group.topic { min-width: 160px; }
+  .sw-group.details { flex: 1; }
+  .btn-ai {
+    background: var(--gold-dim); color: var(--gold-light); border: 1px solid var(--gold-border);
+    padding: 0.55rem 1.1rem; border-radius: 8px; cursor: pointer; font-size: 0.83rem;
+    font-weight: 500; font-family: inherit; letter-spacing: 0.04em; white-space: nowrap;
+    transition: background 0.2s; align-self: flex-end;
+  }
+  .btn-ai:hover:not(:disabled) { background: rgba(200,168,75,0.28); }
+  .btn-ai:disabled { opacity: 0.45; cursor: default; }
+  .sw-preview {
+    margin-top: 1rem; padding: 1rem 1.2rem;
+    background: var(--bg-surface); border: 1px solid var(--gold-border); border-radius: 10px;
+  }
+  .sw-preview-top {
+    display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;
+  }
+  .sw-preview-label {
+    font-size: 0.68rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gold);
+  }
+  .btn-clear {
+    background: none; border: none; color: var(--text-muted); cursor: pointer;
+    font-size: 0.78rem; padding: 0.15rem 0.4rem; border-radius: 4px; font-family: inherit;
+  }
+  .btn-clear:hover { color: var(--text); }
+  .sw-textarea {
+    width: 100%; background: transparent; border: none; color: var(--text);
+    font-family: 'Inter', sans-serif; font-size: 0.88rem; line-height: 1.6;
+    resize: vertical; outline: none; min-height: 80px;
+  }
+  .sw-hint { font-size: 0.76rem; color: var(--text-muted); margin-top: 0.4rem; }
+  @media (max-width: 580px) { .sw-row { flex-direction: column; } .sw-group.topic { min-width: 0; } }
 </style>
 </head>
 <body>
@@ -264,6 +322,7 @@
     <a href="index.html">Assets</a>
     <a href="generate.html" class="active">Generate</a>
     <a href="schedule.html">Schedule</a>
+    <a href="approve.html">Approve</a>
   </div>
 </nav>
 
@@ -280,6 +339,43 @@
       <p id="headerMeta">Fine Dining Restaurant</p>
     </div>
     <a href="index.html" class="rh-link btn btn-ghost" style="font-size:0.78rem">← Edit Assets</a>
+  </div>
+
+  <!-- AI Script Writer -->
+  <div class="script-section">
+    <div class="sw-heading">
+      <h3>Script Writer</h3>
+      <span class="sw-tag">Owner Twin</span>
+    </div>
+    <p class="sw-desc">Tell Claude what to talk about — it writes the script, you generate the twin video.</p>
+    <div class="sw-form">
+      <div class="sw-row">
+        <div class="sw-group topic">
+          <label>Topic</label>
+          <select id="scriptTopic">
+            <option value="welcome">Welcome message</option>
+            <option value="menu">Menu highlight</option>
+            <option value="event">Event announcement</option>
+            <option value="view">Ambiance &amp; view</option>
+            <option value="special">Special offer</option>
+            <option value="behind">Behind the scenes</option>
+          </select>
+        </div>
+        <div class="sw-group details">
+          <label>Details <span style="font-weight:400;opacity:0.6">(optional but better)</span></label>
+          <input type="text" id="scriptDetails" placeholder='e.g. "Truffle tasting menu, $195pp, Friday 7pm"'>
+        </div>
+        <button class="btn-ai" id="writeScriptBtn" onclick="writeScript()">✦ Write Script</button>
+      </div>
+    </div>
+    <div class="sw-preview" id="scriptPreview" style="display:none">
+      <div class="sw-preview-top">
+        <span class="sw-preview-label">Script — editable</span>
+        <button class="btn-clear" onclick="clearScript()">✕ Clear</button>
+      </div>
+      <textarea class="sw-textarea" id="scriptText" rows="3"></textarea>
+      <p class="sw-hint">This script will be used when you click <strong>Animate Owner Twin</strong> below.</p>
+    </div>
   </div>
 
   <!-- Generation buttons -->
@@ -343,6 +439,7 @@
 let pollInterval  = null;
 let activejobs    = new Set();
 const cardStates  = {};   // type → 'idle' | 'generating' | 'done'
+let customScript  = null;
 
 // ── Toast ──────────────────────────────────────────────────────────────────
 let toastTimer;
@@ -382,6 +479,53 @@ async function loadHeader() {
   } catch (e) { console.warn('Header load failed:', e.message); }
 }
 
+// ── Script Writer ──────────────────────────────────────────────────────────
+async function writeScript() {
+  const topic   = document.getElementById('scriptTopic').value;
+  const details = document.getElementById('scriptDetails').value.trim();
+  const btn     = document.getElementById('writeScriptBtn');
+
+  btn.disabled    = true;
+  btn.textContent = 'Writing…';
+
+  try {
+    let config = {};
+    try { config = await fetch('/api/config').then(r => r.json()); } catch {}
+
+    const res  = await fetch('/api/generate/script', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        topic, details,
+        ownerName:      config.ownerName,
+        restaurantName: config.restaurantName,
+        cuisineType:    config.cuisineType,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || res.status);
+
+    customScript = data.script;
+    const ta = document.getElementById('scriptText');
+    ta.value = customScript;
+    ta.addEventListener('input', () => { customScript = ta.value; }, { once: false });
+    document.getElementById('scriptPreview').style.display = 'block';
+    if (data.note) toast(data.note);
+    else toast('Script ready — click Animate Owner Twin to use it', 'success');
+  } catch (e) {
+    toast('Script error: ' + e.message, 'error');
+  } finally {
+    btn.disabled    = false;
+    btn.textContent = '✦ Write Script';
+  }
+}
+
+function clearScript() {
+  customScript = null;
+  document.getElementById('scriptPreview').style.display = 'none';
+  document.getElementById('scriptText').value = '';
+}
+
 // ── Generate ───────────────────────────────────────────────────────────────
 async function generate(type) {
   if (cardStates[type] === 'generating') {
@@ -393,10 +537,12 @@ async function generate(type) {
   startPolling();
 
   try {
+    const body = { type };
+    if (type === 'twin' && customScript) body.customScript = customScript;
     const res  = await fetch('/api/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type }),
+      body: JSON.stringify(body),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || res.status);

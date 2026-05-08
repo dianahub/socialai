@@ -18,6 +18,10 @@ const API_BASE    = 'https://api.heygen.com';
 const UPLOAD_BASE = 'https://upload.heygen.com';
 const API_KEY     = process.env.HEYGEN_API_KEY;
 
+const DATA_DIR   = process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : path.resolve('.');
+const ASSETS_DIR = path.join(DATA_DIR, 'assets');
+const OUTPUT_DIR = path.join(DATA_DIR, 'output');
+
 // ── Script builders ──────────────────────────────────────────────────────────
 
 function videoScript(cfg) {
@@ -212,7 +216,7 @@ async function mockImage(cfg, jobId, variant, overlayLabel, modelLabel) {
   </svg>`;
 
   const filename   = `${jobId}_${variant}.jpg`;
-  const outputPath = path.join('output', filename);
+  const outputPath = path.join(OUTPUT_DIR, filename);
 
   try {
     await sharp(Buffer.from(svg)).jpeg({ quality: 88 }).toFile(outputPath);
@@ -256,8 +260,8 @@ async function generateVideo(config, jobId) {
       const filename  = `${jobId}_video.mp4`;
       const thumbFile = `${jobId}_video_thumb.jpg`;
 
-      await downloadFile(videoUrl, path.join('output', filename));
-      if (thumbnailUrl) await downloadFile(thumbnailUrl, path.join('output', thumbFile)).catch(() => {});
+      await downloadFile(videoUrl, path.join(OUTPUT_DIR, filename));
+      if (thumbnailUrl) await downloadFile(thumbnailUrl, path.join(OUTPUT_DIR, thumbFile)).catch(() => {});
 
       return {
         filename,
@@ -287,8 +291,8 @@ async function generateVideo(config, jobId) {
   };
 }
 
-async function generateTwinClip(config, jobId) {
-  const script = twinScript(config);
+async function generateTwinClip(config, jobId, customScript) {
+  const script = customScript || twinScript(config);
   console.log('[generateTwinClip] script:', script.slice(0, 80) + '…');
 
   if (API_KEY) {
@@ -300,13 +304,14 @@ async function generateTwinClip(config, jobId) {
       let character;
       let modelLabel = 'HeyGen Avatar';
 
-      const ownerFiles = fs.existsSync('assets/owner')
-        ? fs.readdirSync('assets/owner').filter(f => !f.startsWith('.') && /\.(jpg|jpeg|png)$/i.test(f))
+      const ownerDir   = path.join(ASSETS_DIR, 'owner');
+      const ownerFiles = fs.existsSync(ownerDir)
+        ? fs.readdirSync(ownerDir).filter(f => !f.startsWith('.') && /\.(jpg|jpeg|png)$/i.test(f))
         : [];
 
       if (ownerFiles.length) {
         try {
-          const talkingPhotoId = await uploadTalkingPhoto(`assets/owner/${ownerFiles[0]}`);
+          const talkingPhotoId = await uploadTalkingPhoto(path.join(ownerDir, ownerFiles[0]));
           if (talkingPhotoId) {
             character  = { type: 'talking_photo', talking_photo_id: talkingPhotoId };
             modelLabel = 'HeyGen Talking Photo';
@@ -339,8 +344,8 @@ async function generateTwinClip(config, jobId) {
       const filename  = `${jobId}_twin.mp4`;
       const thumbFile = `${jobId}_twin_thumb.jpg`;
 
-      await downloadFile(videoUrl, path.join('output', filename));
-      if (thumbnailUrl) await downloadFile(thumbnailUrl, path.join('output', thumbFile)).catch(() => {});
+      await downloadFile(videoUrl, path.join(OUTPUT_DIR, filename));
+      if (thumbnailUrl) await downloadFile(thumbnailUrl, path.join(OUTPUT_DIR, thumbFile)).catch(() => {});
 
       return {
         filename,

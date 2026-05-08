@@ -10,6 +10,8 @@ const sharp  = require('sharp');
 const path   = require('path');
 const fs     = require('fs');
 
+const DATA_DIR = process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : path.resolve('.');
+
 function hexToRgb(hex) {
   const h = hex.replace('#', '');
   return {
@@ -36,7 +38,7 @@ async function brandOverlay(filePath, config = {}, variant = 'feed') {
   const composites = [];
 
   // ── Logo (bottom-right, 15% width) ────────────────────────────────────────
-  const logoDir = 'assets/logo';
+  const logoDir = path.join(DATA_DIR, 'assets', 'logo');
   const logoFiles = fs.existsSync(logoDir)
     ? fs.readdirSync(logoDir).filter(f => !f.startsWith('.'))
     : [];
@@ -46,7 +48,7 @@ async function brandOverlay(filePath, config = {}, variant = 'feed') {
       const logoWidth = Math.round(width * 0.15);
       const margin    = Math.round(width * 0.02);
 
-      const logoBuffer = await sharp(`${logoDir}/${logoFiles[0]}`)
+      const logoBuffer = await sharp(path.join(logoDir, logoFiles[0]))
         .resize(logoWidth, null, { fit: 'inside' })
         .toBuffer();
 
