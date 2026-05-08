@@ -19,6 +19,23 @@ const OUTPUT_DIR = path.join(DATA_DIR, 'output');
 fs.mkdirSync(OUTPUT_DIR, { recursive: true });
 fs.mkdirSync(path.resolve('public'), { recursive: true });
 
+// Mark any jobs left in 'generating' state from a previous run as errored
+function cleanStuckJobs() {
+  if (!fs.existsSync(OUTPUT_DIR)) return;
+  fs.readdirSync(OUTPUT_DIR).filter(f => f.endsWith('_meta.json')).forEach(f => {
+    try {
+      const p    = path.join(OUTPUT_DIR, f);
+      const meta = JSON.parse(fs.readFileSync(p, 'utf8'));
+      if (meta.status === 'generating') {
+        meta.status = 'error';
+        meta.error  = 'Server restarted during generation — please try again.';
+        fs.writeFileSync(p, JSON.stringify(meta, null, 2));
+      }
+    } catch {}
+  });
+}
+cleanStuckJobs();
+
 app.use(express.json());
 app.use(express.static(path.resolve('public')));
 app.use('/assets', express.static(ASSETS_DIR));
