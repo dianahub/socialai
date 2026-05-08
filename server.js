@@ -46,8 +46,25 @@ const uploadOwner  = multer({ storage: ownerStorage,  limits: { fileSize: 10 * 1
 
 // ── Upload routes ─────────────────────────────────────────────────────────────
 
-app.post('/api/upload/logo', uploadLogo.single('file'), (req, res) => {
+app.post('/api/upload/logo', uploadLogo.single('file'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file received' });
+
+  const uploaded = path.join(ASSETS_DIR, 'logo', req.file.filename);
+  const ext      = path.extname(req.file.filename).toLowerCase();
+
+  // Convert anything that isn't JPEG/PNG/WebP to PNG so Sharp can always read it
+  if (!['.jpg', '.jpeg', '.png', '.webp'].includes(ext)) {
+    const pngName = 'logo.png';
+    const pngPath = path.join(ASSETS_DIR, 'logo', pngName);
+    try {
+      await require('sharp')(uploaded).png().toFile(pngPath);
+      fs.unlinkSync(uploaded);
+      return res.json({ success: true, filename: pngName, path: `/assets/logo/${pngName}` });
+    } catch (e) {
+      console.warn('[logo] Conversion failed, keeping original:', e.message);
+    }
+  }
+
   res.json({ success: true, filename: req.file.filename, path: `/assets/logo/${req.file.filename}` });
 });
 
