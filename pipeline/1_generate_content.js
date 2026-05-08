@@ -317,25 +317,41 @@ async function generateTwinClip(config, jobId, customScript) {
 
       const ownerDir   = path.join(ASSETS_DIR, 'owner');
       const ownerFiles = fs.existsSync(ownerDir)
-        ? fs.readdirSync(ownerDir).filter(f => !f.startsWith('.') && /\.(jpg|jpeg|png)$/i.test(f))
+        ? fs.readdirSync(ownerDir).filter(f => !f.startsWith('.') && /\.(jpg|jpeg|png|webp)$/i.test(f))
         : [];
 
       if (ownerFiles.length) {
-        try {
-          const talkingPhotoId = await uploadTalkingPhoto(path.join(ownerDir, ownerFiles[0]));
-          if (talkingPhotoId) {
-            character  = { type: 'talking_photo', talking_photo_id: talkingPhotoId };
-            modelLabel = 'HeyGen Talking Photo';
-            console.log('[generateTwinClip] Talking photo uploaded:', talkingPhotoId);
+        const ownerFilename = ownerFiles[0];
+
+        // Try 1: URL-based talking photo (no upload needed, uses public asset URL)
+        const appUrl = process.env.APP_URL || '';
+        if (appUrl) {
+          try {
+            character  = { type: 'talking_photo', talking_photo_url: `${appUrl}/assets/owner/${ownerFilename}` };
+            modelLabel = 'HeyGen Talking Photo (URL)';
+            console.log('[generateTwinClip] Using photo URL:', `${appUrl}/assets/owner/${ownerFilename}`);
+          } catch {}
+        }
+
+        // Try 2: Upload-based talking photo
+        if (!character) {
+          try {
+            const talkingPhotoId = await uploadTalkingPhoto(path.join(ownerDir, ownerFilename));
+            if (talkingPhotoId) {
+              character  = { type: 'talking_photo', talking_photo_id: talkingPhotoId };
+              modelLabel = 'HeyGen Talking Photo';
+              console.log('[generateTwinClip] Talking photo uploaded:', talkingPhotoId);
+            }
+          } catch (uploadErr) {
+            console.warn('[generateTwinClip] Talking photo upload failed:', uploadErr.message);
           }
-        } catch (uploadErr) {
-          console.warn('[generateTwinClip] Talking photo upload failed:', uploadErr.message, '— using avatar');
         }
       }
 
+      // If no owner photo or both approaches failed — skip avatar fallback, go to mock
       if (!character) {
-        const avatarId = await getDefaultAvatarId();
-        character = { type: 'avatar', avatar_id: avatarId, avatar_style: 'normal' };
+        console.warn('[generateTwinClip] No owner photo available — using mock');
+        throw new Error('Owner photo required for twin video. Please upload a photo on the Assets page.');
       }
 
       const resp = await heygenPost('/v2/video/generate', {
