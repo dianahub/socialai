@@ -136,32 +136,52 @@ async function getDefaultVoiceId() {
 
 // Upload owner photo to HeyGen; returns talking_photo_id
 async function uploadTalkingPhoto(imagePath) {
-  console.log('[uploadTalkingPhoto] path:', imagePath, 'exists:', fs.existsSync(imagePath));
+  const https = require('https');
 
-  // Always convert to JPEG — ensures compatibility regardless of upload format
-  const jpegBuf  = await sharp(imagePath).jpeg({ quality: 92 }).toBuffer();
-  console.log('[uploadTalkingPhoto] jpeg size:', jpegBuf.length);
+  // Convert to JPEG, minimum 512px wide for HeyGen face detection
+  const meta    = await sharp(imagePath).metadata();
+  const resized = meta.width < 512
+    ? sharp(imagePath).resize(512, null, { fit: 'inside' })
+    : sharp(imagePath);
+  const jpegBuf = await resized.jpeg({ quality: 92 }).toBuffer();
+  console.log('[uploadTalkingPhoto] jpeg size:', jpegBuf.length, 'original:', meta.width, 'x', meta.height);
 
-  const boundary = `boundary${Date.now()}`;
-  const body = Buffer.concat([
-    Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="owner.jpg"\r\nContent-Type: image/jpeg\r\n\r\n`),
-    jpegBuf,
-    Buffer.from(`\r\n--${boundary}--\r\n`),
-  ]);
+  const boundary = 'FormBoundary' + Date.now();
+  const prefix   = Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="owner.jpg"\r\nContent-Type: image/jpeg\r\n\r\n`);
+  const suffix   = Buffer.from(`\r\n--${boundary}--\r\n`);
+  const body     = Buffer.concat([prefix, jpegBuf, suffix]);
 
-  const res = await fetch(`${UPLOAD_BASE}/v1/talking_photo`, {
-    method:  'POST',
-    headers: {
-      'X-Api-Key':    API_KEY,
-      'Content-Type': `multipart/form-data; boundary=${boundary}`,
-    },
-    body,
+  return new Promise((resolve, reject) => {
+    const req = https.request({
+      hostname: 'upload.heygen.com',
+      path:     '/v1/talking_photo',
+      method:   'POST',
+      headers:  {
+        'X-Api-Key':      API_KEY,
+        'Content-Type':   `multipart/form-data; boundary=${boundary}`,
+        'Content-Length': body.length,
+      },
+    }, res => {
+      let raw = '';
+      res.on('data', chunk => raw += chunk);
+      res.on('end', () => {
+        console.log('[uploadTalkingPhoto] status:', res.statusCode, raw.slice(0, 200));
+        if (res.statusCode < 200 || res.statusCode >= 300) {
+          reject(new Error(`HeyGen talking photo upload ${res.statusCode}: ${raw.slice(0, 300)}`));
+          return;
+        }
+        try {
+          const json = JSON.parse(raw);
+          resolve(json.data?.talking_photo_id);
+        } catch {
+          reject(new Error(`Parse error: ${raw.slice(0, 100)}`));
+        }
+      });
+    });
+    req.on('error', reject);
+    req.write(body);
+    req.end();
   });
-  const text = await res.text();
-  console.log('[uploadTalkingPhoto] response:', res.status, text.slice(0, 200));
-  if (!res.ok) throw new Error(`HeyGen talking photo upload ${res.status}: ${text.slice(0, 300)}`);
-  const data = JSON.parse(text);
-  return data.data?.talking_photo_id;
 }
 
 // ── Mock image generator (Sharp) ─────────────────────────────────────────────
