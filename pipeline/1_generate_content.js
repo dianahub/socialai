@@ -10,9 +10,10 @@
  *   generateImagePost→ Sharp mock    (branded static posts — HeyGen is video-only)
  */
 
-const fs    = require('fs');
-const path  = require('path');
-const sharp = require('sharp');
+const fs       = require('fs');
+const path     = require('path');
+const sharp    = require('sharp');
+const FormData = require('form-data');
 
 const API_BASE    = 'https://api.heygen.com';
 const UPLOAD_BASE = 'https://upload.heygen.com';
@@ -101,7 +102,7 @@ async function waitForVideo(videoId, maxMs = 10 * 60 * 1000) {
     const d    = resp.data || {};
     console.log(`[heygen] ${videoId} → ${d.status}`);
     if (d.status === 'completed') return { videoUrl: d.video_url, thumbnailUrl: d.thumbnail_url };
-    if (d.status === 'failed')    throw new Error('HeyGen failed: ' + (d.error || 'unknown'));
+    if (d.status === 'failed')    throw new Error('HeyGen failed: ' + JSON.stringify(d.error || d));
   }
   throw new Error('HeyGen timed out after 10 min');
 }
@@ -140,12 +141,16 @@ async function uploadTalkingPhoto(imagePath) {
   const mimeType = ext === '.png' ? 'image/png' : 'image/jpeg';
 
   const form = new FormData();
-  form.append('file', new Blob([buf], { type: mimeType }), path.basename(imagePath));
+  form.append('file', buf, {
+    filename:     path.basename(imagePath),
+    contentType:  mimeType,
+    knownLength:  buf.length,
+  });
 
   const res = await fetch(`${UPLOAD_BASE}/v1/talking_photo`, {
-    method: 'POST',
-    headers: { 'X-Api-Key': API_KEY },
-    body: form,
+    method:  'POST',
+    headers: { 'X-Api-Key': API_KEY, ...form.getHeaders() },
+    body:    form,
   });
   if (!res.ok) {
     const body = await res.text();
