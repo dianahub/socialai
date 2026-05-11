@@ -509,9 +509,11 @@ async function writeScript() {
     const ta = document.getElementById('scriptText');
     ta.value = customScript;
     localStorage.setItem('ownerScript', customScript);
+    await saveScriptToConfig(customScript);
     ta.addEventListener('input', () => {
       customScript = ta.value;
       localStorage.setItem('ownerScript', customScript);
+      saveScriptToConfig(customScript);
     }, { once: false });
     document.getElementById('scriptPreview').style.display = 'block';
     if (data.note) toast(data.note);
@@ -527,8 +529,20 @@ async function writeScript() {
 function clearScript() {
   customScript = null;
   localStorage.removeItem('ownerScript');
+  saveScriptToConfig('');
   document.getElementById('scriptPreview').style.display = 'none';
   document.getElementById('scriptText').value = '';
+}
+
+async function saveScriptToConfig(script) {
+  try {
+    const cfg = await fetch('/api/config').then(r => r.json()).catch(() => ({}));
+    await fetch('/api/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...cfg, ownerScript: script }),
+    });
+  } catch {}
 }
 
 // ── Generate ───────────────────────────────────────────────────────────────
@@ -709,18 +723,22 @@ function renderGallery(items) {
 async function init() {
   await loadHeader();
 
-  // Restore saved script
-  const saved = localStorage.getItem('ownerScript');
-  if (saved) {
-    customScript = saved;
-    const ta = document.getElementById('scriptText');
-    ta.value = saved;
-    ta.addEventListener('input', () => {
-      customScript = ta.value;
-      localStorage.setItem('ownerScript', customScript);
-    });
-    document.getElementById('scriptPreview').style.display = 'block';
-  }
+  // Restore saved script — prefer server config, fall back to localStorage
+  try {
+    const cfg = await fetch('/api/config').then(r => r.json()).catch(() => ({}));
+    const saved = cfg.ownerScript || localStorage.getItem('ownerScript');
+    if (saved) {
+      customScript = saved;
+      const ta = document.getElementById('scriptText');
+      ta.value = saved;
+      ta.addEventListener('input', () => {
+        customScript = ta.value;
+        localStorage.setItem('ownerScript', customScript);
+        saveScriptToConfig(customScript);
+      });
+      document.getElementById('scriptPreview').style.display = 'block';
+    }
+  } catch {}
   const items = await fetch('/api/output').then(r => r.json()).catch(() => []);
   if (items.length) {
     renderGallery(items);
