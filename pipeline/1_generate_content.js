@@ -351,10 +351,12 @@ async function generateTwinClip(config, jobId, customScript) {
         }
       }
 
-      // If no owner photo or both approaches failed — skip avatar fallback, go to mock
+      // Talking photo failed or no photo — fall back to HeyGen Avatar (real video)
       if (!character) {
-        console.warn('[generateTwinClip] No owner photo available — using mock');
-        throw new Error('Owner photo required for twin video. Please upload a photo on the Assets page.');
+        const avatarId = await getDefaultAvatarId();
+        character  = { type: 'avatar', avatar_id: avatarId, avatar_style: 'normal' };
+        modelLabel = 'HeyGen Avatar';
+        console.log('[generateTwinClip] Falling back to HeyGen Avatar:', avatarId);
       }
 
       const resp = await heygenPost('/v2/video/generate', {
