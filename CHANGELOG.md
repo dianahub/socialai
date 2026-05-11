@@ -1,5 +1,14 @@
 # Changelog
 
+## May 11, 2026 (Session 3) — Commit & Deploy
+
+- Restored `prisma.config.ts` (accidentally deleted during abandoned Prisma 5 downgrade attempt; required for `prisma migrate deploy` on Railway)
+- Committed all session 2 work: content calendar, migration SQL, CHANGELOG, removed `.node-version` and `nixpacks.toml`
+- Pushed 6 commits (`e74c285`→`583e4a5`) to `origin/main` — Railway auto-deploy triggered
+- Live URL: `https://socialai-production-4507.up.railway.app/schedule.html`
+
+---
+
 ## May 11, 2026 (Session 2) — Database Layer + Content Calendar
 
 ### SQLite Database via Prisma 7
