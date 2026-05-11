@@ -508,7 +508,11 @@ async function writeScript() {
     customScript = data.script;
     const ta = document.getElementById('scriptText');
     ta.value = customScript;
-    ta.addEventListener('input', () => { customScript = ta.value; }, { once: false });
+    localStorage.setItem('ownerScript', customScript);
+    ta.addEventListener('input', () => {
+      customScript = ta.value;
+      localStorage.setItem('ownerScript', customScript);
+    }, { once: false });
     document.getElementById('scriptPreview').style.display = 'block';
     if (data.note) toast(data.note);
     else toast('Script ready — click Animate Owner Twin to use it', 'success');
@@ -522,6 +526,7 @@ async function writeScript() {
 
 function clearScript() {
   customScript = null;
+  localStorage.removeItem('ownerScript');
   document.getElementById('scriptPreview').style.display = 'none';
   document.getElementById('scriptText').value = '';
 }
@@ -703,6 +708,19 @@ function renderGallery(items) {
 // ── Init ───────────────────────────────────────────────────────────────────
 async function init() {
   await loadHeader();
+
+  // Restore saved script
+  const saved = localStorage.getItem('ownerScript');
+  if (saved) {
+    customScript = saved;
+    const ta = document.getElementById('scriptText');
+    ta.value = saved;
+    ta.addEventListener('input', () => {
+      customScript = ta.value;
+      localStorage.setItem('ownerScript', customScript);
+    });
+    document.getElementById('scriptPreview').style.display = 'block';
+  }
   const items = await fetch('/api/output').then(r => r.json()).catch(() => []);
   if (items.length) {
     renderGallery(items);
