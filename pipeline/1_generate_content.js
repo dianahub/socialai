@@ -138,12 +138,13 @@ async function getDefaultVoiceId() {
 async function uploadTalkingPhoto(imagePath) {
   const axios    = require('axios');
 
-  // Convert to JPEG, minimum 512px wide for HeyGen face detection
+  // HeyGen requires 512–1024px wide; resize to fit that range
   const meta    = await sharp(imagePath).metadata();
-  const resized = meta.width < 512
-    ? sharp(imagePath).resize(512, null, { fit: 'inside' })
+  const needsResize = meta.width < 512 || meta.width > 1024;
+  const resized = needsResize
+    ? sharp(imagePath).resize(1024, null, { fit: 'inside' })
     : sharp(imagePath);
-  const jpegBuf = await resized.jpeg({ quality: 92 }).toBuffer();
+  const jpegBuf = await resized.jpeg({ quality: 88 }).toBuffer();
   console.log('[uploadTalkingPhoto] jpeg size:', jpegBuf.length, 'dims:', meta.width, 'x', meta.height);
 
   const form = new FormData();
