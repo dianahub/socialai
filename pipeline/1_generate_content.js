@@ -330,29 +330,15 @@ async function generateTwinClip(config, jobId, customScript) {
 
       if (ownerFiles.length) {
         const ownerFilename = ownerFiles[0];
-
-        // Try 1: URL-based talking photo (no upload needed, uses public asset URL)
-        const appUrl = process.env.APP_URL || '';
-        if (appUrl) {
-          try {
-            character  = { type: 'talking_photo', talking_photo_url: `${appUrl}/assets/owner/${ownerFilename}` };
-            modelLabel = 'HeyGen Talking Photo (URL)';
-            console.log('[generateTwinClip] Using photo URL:', `${appUrl}/assets/owner/${ownerFilename}`);
-          } catch {}
-        }
-
-        // Try 2: Upload-based talking photo
-        if (!character) {
-          try {
-            const talkingPhotoId = await uploadTalkingPhoto(path.join(ownerDir, ownerFilename));
-            if (talkingPhotoId) {
-              character  = { type: 'talking_photo', talking_photo_id: talkingPhotoId };
-              modelLabel = 'HeyGen Talking Photo';
-              console.log('[generateTwinClip] Talking photo uploaded:', talkingPhotoId);
-            }
-          } catch (uploadErr) {
-            console.warn('[generateTwinClip] Talking photo upload failed:', uploadErr.message);
+        try {
+          const talkingPhotoId = await uploadTalkingPhoto(path.join(ownerDir, ownerFilename));
+          if (talkingPhotoId) {
+            character  = { type: 'talking_photo', talking_photo_id: talkingPhotoId };
+            modelLabel = 'HeyGen Talking Photo';
+            console.log('[generateTwinClip] Talking photo uploaded:', talkingPhotoId);
           }
+        } catch (uploadErr) {
+          console.warn('[generateTwinClip] Talking photo upload failed:', uploadErr.message);
         }
       }
 
