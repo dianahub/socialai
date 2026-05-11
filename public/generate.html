@@ -212,6 +212,10 @@
   .btn-download:hover { opacity: 0.8; }
   .btn-delete { background: rgba(239,68,68,0.1); color: #f87171; border: 1px solid rgba(239,68,68,0.2); }
   .btn-delete:hover { opacity: 0.8; }
+  .btn-ig { background: linear-gradient(135deg, rgba(225,48,108,0.15), rgba(131,58,180,0.15)); color: #e1306c; border: 1px solid rgba(225,48,108,0.3); }
+  .btn-ig:hover { opacity: 0.8; }
+  .btn-ig-posted { background: rgba(34,197,94,0.1); color: #4ade80; border: 1px solid rgba(34,197,94,0.2); text-decoration: none; }
+  .btn-ig-posted:hover { opacity: 0.8; }
 
   .empty-gallery {
     text-align: center; padding: 4rem 2rem; color: var(--text-muted);
@@ -436,6 +440,23 @@
 
 <div id="toast"></div>
 
+<!-- Instagram post modal -->
+<div id="igModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:1000;align-items:center;justify-content:center">
+  <div style="background:#0b1120;border:1px solid #1e2d45;border-radius:16px;padding:28px;max-width:520px;width:90%;position:relative">
+    <h3 style="color:#f1f5f9;margin:0 0 6px">Post to Instagram</h3>
+    <p style="color:#64748b;font-size:13px;margin:0 0 16px">Review and edit the caption before posting.</p>
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <button id="igGenerateCapBtn" onclick="generateCaption()" style="flex:1;padding:8px;background:#0e1e3a;border:1px solid #1e3a6e;color:#60a5fa;border-radius:8px;cursor:pointer;font-size:13px">✦ Generate caption with AI</button>
+    </div>
+    <textarea id="igCaption" rows="6" placeholder="Write your Instagram caption…" style="width:100%;box-sizing:border-box;background:#060a14;border:1px solid #1e2d45;border-radius:8px;padding:12px;color:#e2e8f0;font-size:13px;line-height:1.6;resize:vertical"></textarea>
+    <p id="igError" style="color:#f87171;font-size:12px;margin:8px 0 0;display:none"></p>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button onclick="closeIgModal()" style="flex:1;padding:10px;background:#0f1a2e;border:1px solid #1e2d45;color:#94a3b8;border-radius:8px;cursor:pointer">Cancel</button>
+      <button id="igPostBtn" onclick="submitIgPost()" style="flex:1;padding:10px;background:linear-gradient(135deg,#e1306c,#833ab4);border:none;color:#fff;border-radius:8px;cursor:pointer;font-weight:600">Post to Instagram</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ── State ──────────────────────────────────────────────────────────────────
 let pollInterval  = null;
@@ -525,6 +546,71 @@ async function writeScript() {
   } finally {
     btn.disabled    = false;
     btn.textContent = '✦ Write Script';
+  }
+}
+
+// ── Instagram modal ────────────────────────────────────────────────────────────
+let igJobId = null;
+
+async function openIgModal(jobId) {
+  igJobId = jobId;
+  document.getElementById('igCaption').value = '';
+  document.getElementById('igError').style.display = 'none';
+  document.getElementById('igModal').style.display = 'flex';
+  // Auto-generate caption if none saved
+  await generateCaption();
+}
+
+function closeIgModal() {
+  document.getElementById('igModal').style.display = 'none';
+  igJobId = null;
+}
+
+async function generateCaption() {
+  const btn = document.getElementById('igGenerateCapBtn');
+  btn.disabled = true;
+  btn.textContent = '…generating';
+  try {
+    const res  = await fetch(`/api/output/${igJobId}/caption`, { method: 'POST' });
+    const data = await res.json();
+    if (data.caption) document.getElementById('igCaption').value = data.caption;
+    else document.getElementById('igError').textContent = data.error || 'Caption generation failed';
+  } catch (e) {
+    document.getElementById('igError').textContent = e.message;
+    document.getElementById('igError').style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '✦ Generate caption with AI';
+  }
+}
+
+async function submitIgPost() {
+  const caption = document.getElementById('igCaption').value.trim();
+  if (!caption) {
+    document.getElementById('igError').textContent = 'Please add a caption first.';
+    document.getElementById('igError').style.display = 'block';
+    return;
+  }
+  const btn = document.getElementById('igPostBtn');
+  btn.disabled = true;
+  btn.textContent = 'Posting…';
+  document.getElementById('igError').style.display = 'none';
+  try {
+    const res  = await fetch(`/api/output/${igJobId}/post-instagram`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ caption }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Post failed');
+    closeIgModal();
+    toast('Posting to Instagram — check back in a minute!', 'success');
+    setTimeout(() => { fetch('/api/output').then(r => r.json()).then(renderGallery); }, 90000);
+  } catch (e) {
+    document.getElementById('igError').textContent = e.message;
+    document.getElementById('igError').style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = 'Post to Instagram';
   }
 }
 
@@ -720,6 +806,14 @@ function renderGallery(items) {
       ? `<button class="btn-sm btn-delete" onclick="deleteJob('${item.id}', this)">✕ Delete</button>`
       : '';
 
+    const igPosted = item.instagram_url
+      ? `<a class="btn-sm btn-ig-posted" href="${item.instagram_url}" target="_blank">✓ On Instagram</a>`
+      : '';
+
+    const igBtn = (!isGenerating && !isError && !item.instagram_url && (item.filename || item.files?.length))
+      ? `<button class="btn-sm btn-ig" onclick="openIgModal('${item.id}')">📤 Post to Instagram</button>`
+      : '';
+
     return `<div class="output-card" data-job-id="${item.id}">
       <div class="card-thumb">
         ${thumbHtml}
@@ -734,7 +828,7 @@ function renderGallery(items) {
         ${model ? `<div class="card-model">${model}</div>` : ''}
         ${prompt ? `<div class="card-prompt">"${prompt}"</div>` : ''}
         ${note  ? `<div class="card-note">ℹ ${note}</div>` : ''}
-        <div class="card-actions">${downloadBtn}${deleteBtn}</div>
+        <div class="card-actions">${downloadBtn}${igPosted}${igBtn}${deleteBtn}</div>
       </div>
     </div>`;
   }).join('');

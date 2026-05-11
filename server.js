@@ -304,6 +304,87 @@ app.patch('/api/output/:jobId/reject', (req, res) => {
   }
 });
 
+// ── Instagram caption generation ──────────────────────────────────────────────
+
+app.post('/api/output/:jobId/caption', async (req, res) => {
+  const metaPath = path.join(OUTPUT_DIR, `${req.params.jobId}_meta.json`);
+  if (!fs.existsSync(metaPath)) return res.status(404).json({ error: 'Job not found' });
+  try {
+    const meta   = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
+    let   config = {};
+    try { config = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8')); } catch {}
+
+    const Anthropic = require('@anthropic-ai/sdk');
+    const client    = new Anthropic.default({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const msg = await client.messages.create({
+      model:      'claude-haiku-4-5-20251001',
+      max_tokens: 200,
+      messages: [{
+        role:    'user',
+        content: `Write an Instagram caption for a restaurant video post.
+
+Restaurant: ${config.restaurantName || 'our restaurant'}
+Cuisine: ${config.cuisineType || ''}
+Video script: ${meta.prompt || ''}
+
+Rules:
+- 2-3 sentences, warm and inviting tone
+- Include a call to action (book a table, visit us, link in bio)
+- Add 8-10 relevant hashtags at the end
+- Return only the caption text`,
+      }],
+    });
+    const caption = msg.content[0].type === 'text' ? msg.content[0].text.trim() : '';
+
+    // Save caption to job meta
+    meta.caption = caption;
+    fs.writeFileSync(metaPath, JSON.stringify(meta, null, 2));
+    res.json({ caption });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Post to Instagram ─────────────────────────────────────────────────────────
+
+app.post('/api/output/:jobId/post-instagram', async (req, res) => {
+  const metaPath = path.join(OUTPUT_DIR, `${req.params.jobId}_meta.json`);
+  if (!fs.existsSync(metaPath)) return res.status(404).json({ error: 'Job not found' });
+
+  const meta    = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
+  const appUrl  = process.env.APP_URL || '';
+  const caption = req.body.caption || meta.caption || '';
+
+  if (!appUrl) return res.status(500).json({ error: 'APP_URL env var not set — needed to build public media URL' });
+  if (!caption) return res.status(400).json({ error: 'Caption is required' });
+
+  const mediaFile = meta.filename || (meta.files && meta.files[0]?.filename);
+  if (!mediaFile) return res.status(400).json({ error: 'No media file on this job' });
+
+  const publicUrl = `${appUrl}/output/${mediaFile}`;
+  const isVideo   = mediaFile.endsWith('.mp4');
+
+  res.json({ success: true, status: 'posting', message: 'Posting to Instagram in background...' });
+
+  // Post in background
+  (async () => {
+    try {
+      const { postReel, postImage } = require('./pipeline/4_instagram');
+      const result = isVideo ? await postReel(publicUrl, caption) : await postImage(publicUrl, caption);
+      meta.instagram_media_id = result.mediaId;
+      meta.instagram_url      = result.permalink;
+      meta.instagram_posted_at = new Date().toISOString();
+      meta.caption             = caption;
+      fs.writeFileSync(metaPath, JSON.stringify(meta, null, 2));
+      console.log(`[instagram] Job ${req.params.jobId} posted:`, result.permalink);
+    } catch (err) {
+      console.error(`[instagram] Job ${req.params.jobId} failed:`, err.message);
+      meta.instagram_error = err.message;
+      fs.writeFileSync(metaPath, JSON.stringify(meta, null, 2));
+    }
+  })();
+});
+
 // ── Schedule ──────────────────────────────────────────────────────────────────
 
 app.get('/api/schedule', (req, res) => {
