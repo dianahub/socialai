@@ -71,6 +71,7 @@ async function heygenGet(endpoint) {
   if (!API_KEY) throw new Error('HEYGEN_API_KEY not set');
   const res = await fetch(`${API_BASE}${endpoint}`, {
     headers: { 'X-Api-Key': API_KEY },
+    signal: AbortSignal.timeout(20000),
   });
   if (!res.ok) {
     const body = await res.text();
@@ -85,6 +86,7 @@ async function heygenPost(endpoint, payload) {
     method: 'POST',
     headers: { 'X-Api-Key': API_KEY, 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
+    signal: AbortSignal.timeout(20000),
   });
   if (!res.ok) {
     const body = await res.text();
@@ -163,6 +165,7 @@ async function uploadTalkingPhoto(imagePath) {
       },
       maxBodyLength: Infinity,
       maxContentLength: Infinity,
+      timeout: 30000,
     });
   } catch (axiosErr) {
     const body = axiosErr.response?.data;
