@@ -210,6 +210,8 @@
   }
   .btn-download { background: var(--gold-dim); color: var(--gold); border: 1px solid rgba(200,168,75,0.2); }
   .btn-download:hover { opacity: 0.8; }
+  .btn-delete { background: rgba(239,68,68,0.1); color: #f87171; border: 1px solid rgba(239,68,68,0.2); }
+  .btn-delete:hover { opacity: 0.8; }
 
   .empty-gallery {
     text-align: center; padding: 4rem 2rem; color: var(--text-muted);
@@ -526,6 +528,21 @@ async function writeScript() {
   }
 }
 
+async function deleteJob(jobId, btn) {
+  btn.disabled = true;
+  btn.textContent = '…';
+  try {
+    await fetch(`/api/output/${jobId}`, { method: 'DELETE' });
+    const card = document.querySelector(`[data-job-id="${jobId}"]`);
+    if (card) card.remove();
+    toast('Deleted', 'success');
+  } catch (e) {
+    btn.disabled = false;
+    btn.textContent = '✕ Delete';
+    toast('Delete failed', 'error');
+  }
+}
+
 function clearScript() {
   customScript = null;
   localStorage.removeItem('ownerScript');
@@ -699,7 +716,11 @@ function renderGallery(items) {
       ? `<a class="btn-sm btn-download" href="${downloadPath}" download="${downloadName}">⬇ Download</a>`
       : '';
 
-    return `<div class="output-card">
+    const deleteBtn = !isGenerating
+      ? `<button class="btn-sm btn-delete" onclick="deleteJob('${item.id}', this)">✕ Delete</button>`
+      : '';
+
+    return `<div class="output-card" data-job-id="${item.id}">
       <div class="card-thumb">
         ${thumbHtml}
         ${item.type === 'video' && !isGenerating && !isError && thumbSrc ? '<div class="play-overlay"><span>▶</span></div>' : ''}
@@ -713,7 +734,7 @@ function renderGallery(items) {
         ${model ? `<div class="card-model">${model}</div>` : ''}
         ${prompt ? `<div class="card-prompt">"${prompt}"</div>` : ''}
         ${note  ? `<div class="card-note">ℹ ${note}</div>` : ''}
-        <div class="card-actions">${downloadBtn}</div>
+        <div class="card-actions">${downloadBtn}${deleteBtn}</div>
       </div>
     </div>`;
   }).join('');

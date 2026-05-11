@@ -251,6 +251,27 @@ app.get('/api/output', (req, res) => {
   res.json(items);
 });
 
+// ── Delete job ────────────────────────────────────────────────────────────────
+
+app.delete('/api/output/:jobId', (req, res) => {
+  const { jobId } = req.params;
+  const metaPath = path.join(OUTPUT_DIR, `${jobId}_meta.json`);
+  if (!fs.existsSync(metaPath)) return res.status(404).json({ error: 'Job not found' });
+  try {
+    const meta = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
+    // Delete associated media files
+    const filesToDelete = [];
+    if (meta.filename)      filesToDelete.push(path.join(OUTPUT_DIR, meta.filename));
+    if (meta.thumbnailPath) filesToDelete.push(path.join(OUTPUT_DIR, path.basename(meta.thumbnailPath)));
+    if (meta.files)         meta.files.forEach(f => filesToDelete.push(path.join(OUTPUT_DIR, f.filename)));
+    filesToDelete.forEach(f => { try { fs.unlinkSync(f); } catch {} });
+    fs.unlinkSync(metaPath);
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ── Approval ──────────────────────────────────────────────────────────────────
 
 app.patch('/api/output/:jobId/approve', (req, res) => {
