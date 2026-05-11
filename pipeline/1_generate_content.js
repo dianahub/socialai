@@ -154,14 +154,21 @@ async function uploadTalkingPhoto(imagePath) {
     knownLength: jpegBuf.length,
   });
 
-  const resp = await axios.post(`${UPLOAD_BASE}/v1/talking_photo`, form, {
-    headers: {
-      'X-Api-Key': API_KEY,
-      ...form.getHeaders(),
-    },
-    maxBodyLength: Infinity,
-    maxContentLength: Infinity,
-  });
+  let resp;
+  try {
+    resp = await axios.post(`${UPLOAD_BASE}/v1/talking_photo`, form, {
+      headers: {
+        'X-Api-Key': API_KEY,
+        ...form.getHeaders(),
+      },
+      maxBodyLength: Infinity,
+      maxContentLength: Infinity,
+    });
+  } catch (axiosErr) {
+    const body = axiosErr.response?.data;
+    console.error('[uploadTalkingPhoto] HeyGen error body:', JSON.stringify(body).slice(0, 500));
+    throw axiosErr;
+  }
 
   console.log('[uploadTalkingPhoto] response:', resp.status, JSON.stringify(resp.data).slice(0, 200));
   return resp.data?.data?.talking_photo_id;
