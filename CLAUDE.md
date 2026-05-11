@@ -3,36 +3,68 @@
 ## What this project does
 Automated social media content generation for fine dining restaurants.
 Takes restaurant assets (logo, food photos, owner photo) and produces:
-1. Cinematic video content (wow moment) via Higgsfield
+1. Cinematic video content (wow moment) via HeyGen
 2. Branded image posts for Instagram / Facebook / TikTok
 3. Simulated posting queue (mock scheduler, no real auth needed for demo)
 
 ## Stack
 - Frontend: Single-file HTML/JS served by Express
 - Backend: Node.js + Express
-- AI/Video: Higgsfield MCP (already registered at user scope)
+- AI/Video: HeyGen API (avatar video + talking photo)
 - Image processing: Sharp (logo overlay, resizing)
+- Asset storage: Cloudinary (persistent across server restarts)
 - Scheduling UI: Mock only, no real social API keys needed for demo
 
 ## How to run
+```
 npm install
 node server.js
+```
 Open http://localhost:3000
 
-## Higgsfield MCP
-Already registered. Confirm with /mcp inside Claude Code.
-Models to use:
-- Cinematic dish video: Seedance 2.0 or Veo
-- Owner digital twin: Soul or Cinema Studio
-- Image posts: GPT Image 2 or Flux
-- Stories/reels: Nano Banana Pro or Kling
+## Deployed URL
+https://socialai-production-4507.up.railway.app
 
-Always confirm credit cost before triggering a paid Higgsfield run.
+## Environment variables
+```
+HEYGEN_API_KEY=...
+ANTHROPIC_API_KEY=...
+CLOUDINARY_CLOUD_NAME=dlbqagijb
+CLOUDINARY_API_KEY=593464484614269
+CLOUDINARY_API_SECRET=...
+PORT=3000
+# DATA_DIR=/data  (only needed for local output/config without Cloudinary)
+```
+All variables are set in Railway (production) and in local `.env`.
+
+## Asset storage — Cloudinary
+Uploaded assets are stored in Cloudinary and survive Railway server restarts.
+Local filesystem is used as fallback when Cloudinary env vars are not set.
+
+Cloudinary public ID conventions:
+- Logo:   `restaurant-social-ai/logo`   (overwritten on each upload)
+- Owner:  `restaurant-social-ai/owner`  (overwritten on each upload)
+- Photos: `restaurant-social-ai/photos/photo_{timestamp}_{rand}`
+
+Key files:
+- `lib/cloudinary.js` — Cloudinary SDK wrapper (uploadBuffer, deleteAsset, getAssetUrl, listFolder)
+- Upload endpoints use `multer.memoryStorage()` → buffer → Cloudinary
+- `GET /api/assets` queries Cloudinary for live URLs; falls back to local dir scan
+- `DELETE /api/assets/:type/:filename` calls `cloudinary.uploader.destroy`
+- `runGeneration` fetches `_logoUrl` / `_ownerUrl` from Cloudinary and injects into config
+- `pipeline/2_brand_overlay.js` downloads logo from `config._logoUrl` via fetch → Sharp
+- `pipeline/1_generate_content.js` downloads owner photo from `config._ownerUrl` to temp file before HeyGen upload
+
+## HeyGen integration
+- `generateVideo` — Avatar presenter video (16:9)
+- `generateTwinClip` — Talking Photo from owner portrait (9:16); falls back to Avatar if upload fails
+- `generateImagePost` — branded static images via Sharp (HeyGen is video-only)
+- All generation is async: POST /api/generate returns a jobId immediately, polls via GET /api/output
 
 ## Demo flow
-1. Asset manager: fill restaurant info, upload logo + photos + owner photo
-2. Generate page: kick off Higgsfield calls, show cinematic video first
-3. Schedule tab: show the week's posts mocked out with generated content
+1. Asset manager: fill restaurant info, upload logo + food photos + owner portrait
+2. Generate page: kick off HeyGen calls, poll for completion
+3. Schedule tab: shows the week's posts mocked out with generated content
 
 ## Brand overlay rules
 - Logo: bottom-right corner, 15% of image width
@@ -41,7 +73,8 @@ Always confirm credit cost before triggering a paid Higgsfield run.
 - Export at 1080x1080 (feed) and 1080x1920 (story)
 
 ## Key decisions
-- No real Instagram API for demo, mock scheduler shows the concept
-- Owner twin: still photo to Higgsfield Soul to animated welcome clip
-- All output saved to /output with JSON metadata sidecar
-- Uploads persist in /assets between sessions
+- No real Instagram API for demo — mock scheduler shows the concept
+- Owner twin: still photo → HeyGen Talking Photo → animated welcome clip
+- All output (videos/images + metadata JSON) saved to /output on the server filesystem
+- Asset uploads (logo, photos, owner) persist in Cloudinary across restarts
+- config.json (restaurant name, colors, etc.) is still stored on local filesystem — re-enter after a cold restart if no DATA_DIR volume is mounted

@@ -326,21 +326,45 @@ async function generateTwinClip(config, jobId, customScript) {
       let character;
       let modelLabel = 'HeyGen Avatar';
 
-      const ownerDir   = path.join(ASSETS_DIR, 'owner');
-      const ownerFiles = fs.existsSync(ownerDir)
-        ? fs.readdirSync(ownerDir).filter(f => !f.startsWith('.') && /\.(jpg|jpeg|png|webp)$/i.test(f))
-        : [];
+      // Resolve owner photo: prefer cloud URL, fall back to local filesystem
+      let ownerLocalPath = null;
+      let ownerIsTmp     = false;
 
-      if (ownerFiles.length) {
-        const ownerFilename = ownerFiles[0];
+      if (config._ownerUrl) {
         try {
-          const talkingPhotoId = await uploadTalkingPhoto(path.join(ownerDir, ownerFilename));
+          const resp = await fetch(config._ownerUrl);
+          if (resp.ok) {
+            const os_  = require('os');
+            const tmp  = path.join(os_.tmpdir(), `owner_cloud_${Date.now()}.jpg`);
+            fs.writeFileSync(tmp, Buffer.from(await resp.arrayBuffer()));
+            ownerLocalPath = tmp;
+            ownerIsTmp     = true;
+            console.log('[generateTwinClip] Owner photo downloaded from cloud URL');
+          }
+        } catch (e) {
+          console.warn('[generateTwinClip] Owner cloud download failed:', e.message);
+        }
+      }
+
+      if (!ownerLocalPath) {
+        const ownerDir   = path.join(ASSETS_DIR, 'owner');
+        const ownerFiles = fs.existsSync(ownerDir)
+          ? fs.readdirSync(ownerDir).filter(f => !f.startsWith('.') && /\.(jpg|jpeg|png|webp)$/i.test(f))
+          : [];
+        if (ownerFiles.length) ownerLocalPath = path.join(ownerDir, ownerFiles[0]);
+      }
+
+      if (ownerLocalPath) {
+        try {
+          const talkingPhotoId = await uploadTalkingPhoto(ownerLocalPath);
+          if (ownerIsTmp) fs.unlink(ownerLocalPath, () => {});
           if (talkingPhotoId) {
             character  = { type: 'talking_photo', talking_photo_id: talkingPhotoId };
             modelLabel = 'HeyGen Talking Photo';
             console.log('[generateTwinClip] Talking photo uploaded:', talkingPhotoId);
           }
         } catch (uploadErr) {
+          if (ownerIsTmp) fs.unlink(ownerLocalPath, () => {});
           console.warn('[generateTwinClip] Talking photo upload failed:', uploadErr.message);
         }
       }

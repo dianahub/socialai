@@ -4,6 +4,7 @@ const multer  = require('multer');
 const path    = require('path');
 const fs      = require('fs');
 const { v4: uuidv4 } = require('uuid');
+const cld     = require('./lib/cloudinary');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -41,67 +42,136 @@ app.use(express.static(path.resolve('public')));
 app.use('/assets', express.static(ASSETS_DIR));
 app.use('/output',  express.static(OUTPUT_DIR));
 
-// ── Multer storage ────────────────────────────────────────────────────────────
+// ── Multer storage (memory — files are streamed to Cloudinary or saved locally) ─
 
-const logoStorage = multer.diskStorage({
-  destination: path.join(ASSETS_DIR, 'logo'),
-  filename: (req, file, cb) => cb(null, 'logo' + path.extname(file.originalname).toLowerCase())
-});
-const photosStorage = multer.diskStorage({
-  destination: path.join(ASSETS_DIR, 'photos'),
-  filename: (req, file, cb) =>
-    cb(null, `photo_${Date.now()}${path.extname(file.originalname).toLowerCase()}`)
-});
-const ownerStorage = multer.diskStorage({
-  destination: path.join(ASSETS_DIR, 'owner'),
-  filename: (req, file, cb) => cb(null, 'owner' + path.extname(file.originalname).toLowerCase())
-});
+const uploadLogo   = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
+const uploadPhotos = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
+const uploadOwner  = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
-const uploadLogo   = multer({ storage: logoStorage,   limits: { fileSize: 10 * 1024 * 1024 } });
-const uploadPhotos = multer({ storage: photosStorage, limits: { fileSize: 10 * 1024 * 1024 } });
-const uploadOwner  = multer({ storage: ownerStorage,  limits: { fileSize: 10 * 1024 * 1024 } });
+// Save a buffer to the local filesystem fallback
+function saveLocalAsset(subdir, filename, buffer) {
+  const destDir = path.join(ASSETS_DIR, subdir);
+  fs.mkdirSync(destDir, { recursive: true });
+  const dest = path.join(destDir, filename);
+  fs.writeFileSync(dest, buffer);
+  return dest;
+}
 
 // ── Upload routes ─────────────────────────────────────────────────────────────
 
 app.post('/api/upload/logo', uploadLogo.single('file'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file received' });
 
-  const uploaded = path.join(ASSETS_DIR, 'logo', req.file.filename);
-  const ext      = path.extname(req.file.filename).toLowerCase();
+  let buffer = req.file.buffer;
+  const ext  = path.extname(req.file.originalname).toLowerCase();
 
-  // Convert anything that isn't JPEG/PNG/WebP to PNG so Sharp can always read it
+  // Normalize non-standard formats to PNG so Sharp can always read them
   if (!['.jpg', '.jpeg', '.png', '.webp'].includes(ext)) {
-    const pngName = 'logo.png';
-    const pngPath = path.join(ASSETS_DIR, 'logo', pngName);
+    try { buffer = await require('sharp')(buffer).png().toBuffer(); }
+    catch (e) { console.warn('[logo] Conversion failed, keeping original:', e.message); }
+  }
+
+  if (cld.isConfigured()) {
     try {
-      await require('sharp')(uploaded).png().toFile(pngPath);
-      fs.unlinkSync(uploaded);
-      return res.json({ success: true, filename: pngName, path: `/assets/logo/${pngName}` });
+      const result = await cld.uploadBuffer(buffer, {
+        public_id:    'restaurant-social-ai/logo',
+        overwrite:    true,
+        quality:      'auto',
+        fetch_format: 'auto',
+      });
+      return res.json({ success: true, url: result.url, path: result.url });
     } catch (e) {
-      console.warn('[logo] Conversion failed, keeping original:', e.message);
+      console.error('[logo] Cloudinary upload failed:', e.message);
+      return res.status(500).json({ error: 'Cloud upload failed: ' + e.message });
     }
   }
 
-  res.json({ success: true, filename: req.file.filename, path: `/assets/logo/${req.file.filename}` });
+  // Local fallback
+  const filename = 'logo' + (ext || '.jpg');
+  saveLocalAsset('logo', filename, buffer);
+  res.json({ success: true, filename, path: `/assets/logo/${filename}` });
 });
 
-app.post('/api/upload/photos', uploadPhotos.array('files', 6), (req, res) => {
+app.post('/api/upload/photos', uploadPhotos.array('files', 6), async (req, res) => {
   if (!req.files?.length) return res.status(400).json({ error: 'No files received' });
-  res.json({
-    success: true,
-    files: req.files.map(f => ({ filename: f.filename, path: `/assets/photos/${f.filename}` }))
+
+  if (cld.isConfigured()) {
+    try {
+      const uploads = await Promise.all(req.files.map(f => {
+        const ts = Date.now();
+        return cld.uploadBuffer(f.buffer, {
+          public_id:    `restaurant-social-ai/photos/photo_${ts}_${Math.random().toString(36).slice(2, 7)}`,
+          overwrite:    false,
+          quality:      'auto',
+          fetch_format: 'auto',
+        });
+      }));
+      return res.json({
+        success: true,
+        files: uploads.map(u => ({ url: u.url, filename: u.url.split('/').pop(), path: u.url })),
+      });
+    } catch (e) {
+      console.error('[photos] Cloudinary upload failed:', e.message);
+      return res.status(500).json({ error: 'Cloud upload failed: ' + e.message });
+    }
+  }
+
+  // Local fallback
+  const saved = req.files.map(f => {
+    const filename = `photo_${Date.now()}${path.extname(f.originalname).toLowerCase()}`;
+    saveLocalAsset('photos', filename, f.buffer);
+    return { filename, path: `/assets/photos/${filename}` };
   });
+  res.json({ success: true, files: saved });
 });
 
-app.post('/api/upload/owner', uploadOwner.single('file'), (req, res) => {
+app.post('/api/upload/owner', uploadOwner.single('file'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file received' });
-  res.json({ success: true, filename: req.file.filename, path: `/assets/owner/${req.file.filename}` });
+
+  if (cld.isConfigured()) {
+    try {
+      const result = await cld.uploadBuffer(req.file.buffer, {
+        public_id:    'restaurant-social-ai/owner',
+        overwrite:    true,
+        quality:      'auto',
+        fetch_format: 'auto',
+      });
+      return res.json({ success: true, url: result.url, path: result.url });
+    } catch (e) {
+      console.error('[owner] Cloudinary upload failed:', e.message);
+      return res.status(500).json({ error: 'Cloud upload failed: ' + e.message });
+    }
+  }
+
+  // Local fallback
+  const ext      = path.extname(req.file.originalname).toLowerCase();
+  const filename = 'owner' + (ext || '.jpg');
+  saveLocalAsset('owner', filename, req.file.buffer);
+  res.json({ success: true, filename, path: `/assets/owner/${filename}` });
 });
 
 // ── Asset management ──────────────────────────────────────────────────────────
 
-app.get('/api/assets', (req, res) => {
-  const result = { logo: null, photos: [], owner: null };
+app.get('/api/assets', async (req, res) => {
+  if (cld.isConfigured()) {
+    try {
+      const result = { logo: null, photos: [], owner: null };
+      const [logo, owner, photos] = await Promise.all([
+        cld.getAssetUrl('restaurant-social-ai/logo'),
+        cld.getAssetUrl('restaurant-social-ai/owner'),
+        cld.listFolder('restaurant-social-ai/photos/'),
+      ]);
+      result.logo   = logo;
+      result.owner  = owner;
+      result.photos = photos.map(p => p.url);
+      return res.json(result);
+    } catch (e) {
+      console.error('[assets] Cloudinary list failed:', e.message);
+    }
+  }
+
+  // Local fallback
+  const result  = { logo: null, photos: [], owner: null };
   const readDir = dir => fs.existsSync(dir)
     ? fs.readdirSync(dir).filter(f => !f.startsWith('.') && /\.(jpg|jpeg|png|webp|gif)$/i.test(f))
     : [];
@@ -114,10 +184,29 @@ app.get('/api/assets', (req, res) => {
   res.json(result);
 });
 
-app.delete('/api/assets/:type/:filename', (req, res) => {
+app.delete('/api/assets/:type/:filename', async (req, res) => {
   const { type, filename } = req.params;
   if (!['logo', 'photos', 'owner'].includes(type))
     return res.status(400).json({ error: 'Invalid type' });
+
+  if (cld.isConfigured()) {
+    try {
+      let publicId;
+      if (type === 'logo')  publicId = 'restaurant-social-ai/logo';
+      else if (type === 'owner') publicId = 'restaurant-social-ai/owner';
+      else {
+        // photos: derive public_id from filename by stripping extension
+        const base = path.basename(filename, path.extname(filename));
+        publicId = `restaurant-social-ai/photos/${base}`;
+      }
+      await cld.deleteAsset(publicId);
+      return res.json({ success: true });
+    } catch (e) {
+      return res.status(500).json({ error: 'Cloud delete failed: ' + e.message });
+    }
+  }
+
+  // Local fallback
   const safe     = path.basename(filename);
   const filepath = path.join(ASSETS_DIR, type, safe);
   if (!fs.existsSync(filepath)) return res.status(404).json({ error: 'File not found' });
@@ -210,6 +299,16 @@ async function runGeneration(jobId, type, config, customScript) {
   try {
     const { generateVideo, generateTwinClip, generateImagePost } = require('./pipeline/1_generate_content');
     const { brandOverlay } = require('./pipeline/2_brand_overlay');
+
+    // Inject cloud asset URLs so pipeline functions can download them
+    if (cld.isConfigured()) {
+      const [logoUrl, ownerUrl] = await Promise.all([
+        cld.getAssetUrl('restaurant-social-ai/logo'),
+        cld.getAssetUrl('restaurant-social-ai/owner'),
+      ]);
+      if (logoUrl)  config._logoUrl  = logoUrl;
+      if (ownerUrl) config._ownerUrl = ownerUrl;
+    }
 
     let result;
     if (type === 'video') {

@@ -38,24 +38,35 @@ async function brandOverlay(filePath, config = {}, variant = 'feed') {
   const composites = [];
 
   // ── Logo (bottom-right, 15% width) ────────────────────────────────────────
-  const logoDir = path.join(DATA_DIR, 'assets', 'logo');
-  const logoFiles = fs.existsSync(logoDir)
-    ? fs.readdirSync(logoDir).filter(f => !f.startsWith('.'))
-    : [];
+  let rawLogoBuffer = null;
 
-  if (logoFiles.length) {
+  if (config._logoUrl) {
     try {
-      const logoWidth = Math.round(width * 0.15);
-      const margin    = Math.round(width * 0.02);
+      const resp = await fetch(config._logoUrl);
+      if (resp.ok) rawLogoBuffer = Buffer.from(await resp.arrayBuffer());
+    } catch (e) {
+      console.warn('[brandOverlay] Logo URL download failed:', e.message);
+    }
+  } else {
+    const logoDir   = path.join(DATA_DIR, 'assets', 'logo');
+    const logoFiles = fs.existsSync(logoDir)
+      ? fs.readdirSync(logoDir).filter(f => !f.startsWith('.'))
+      : [];
+    if (logoFiles.length) {
+      try { rawLogoBuffer = fs.readFileSync(path.join(logoDir, logoFiles[0])); }
+      catch (e) { console.warn('[brandOverlay] Logo read failed:', e.message); }
+    }
+  }
 
-      const logoBuffer = await sharp(path.join(logoDir, logoFiles[0]))
-        .resize(logoWidth, null, { fit: 'inside' })
-        .toBuffer();
-
-      const logoMeta = await sharp(logoBuffer).metadata();
+  if (rawLogoBuffer) {
+    try {
+      const logoWidth  = Math.round(width * 0.15);
+      const margin     = Math.round(width * 0.02);
+      const logoBuffer = await sharp(rawLogoBuffer).resize(logoWidth, null, { fit: 'inside' }).toBuffer();
+      const logoMeta   = await sharp(logoBuffer).metadata();
       composites.push({
         input: logoBuffer,
-        left: width  - logoWidth      - margin,
+        left: width  - logoWidth       - margin,
         top:  height - logoMeta.height - margin - Math.round(height * 0.1),
       });
     } catch (e) {
