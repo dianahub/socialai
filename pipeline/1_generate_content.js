@@ -148,7 +148,7 @@ async function uploadTalkingPhoto(imagePath) {
   console.log('[uploadTalkingPhoto] jpeg size:', jpegBuf.length, 'dims:', meta.width, 'x', meta.height);
 
   const form = new FormData();
-  form.append('file', jpegBuf, {
+  form.append('talking_photo', jpegBuf, {
     filename:    'owner.jpg',
     contentType: 'image/jpeg',
     knownLength: jpegBuf.length,
