@@ -138,22 +138,26 @@ async function getDefaultVoiceId() {
 
 // Upload owner photo to HeyGen; returns talking_photo_id
 async function uploadTalkingPhoto(imagePath) {
-  const axios    = require('axios');
+  const axios = require('axios');
+  const os    = require('os');
 
-  // HeyGen requires 512–1024px wide; resize to fit that range
+  // Resize to 1024px wide max, save to temp file, send as stream
   const meta    = await sharp(imagePath).metadata();
+  const tmpPath = path.join(os.tmpdir(), `owner_${Date.now()}.jpg`);
   const needsResize = meta.width < 512 || meta.width > 1024;
-  const resized = needsResize
-    ? sharp(imagePath).resize(1024, null, { fit: 'inside' })
-    : sharp(imagePath);
-  const jpegBuf = await resized.jpeg({ quality: 88 }).toBuffer();
-  console.log('[uploadTalkingPhoto] jpeg size:', jpegBuf.length, 'dims:', meta.width, 'x', meta.height);
+  if (needsResize) {
+    await sharp(imagePath).resize(1024, null, { fit: 'inside' }).jpeg({ quality: 88 }).toFile(tmpPath);
+  } else {
+    await sharp(imagePath).jpeg({ quality: 88 }).toFile(tmpPath);
+  }
+  const stat = fs.statSync(tmpPath);
+  console.log('[uploadTalkingPhoto] temp file size:', stat.size, 'original dims:', meta.width, 'x', meta.height);
 
   const form = new FormData();
-  form.append('talking_photo', jpegBuf, {
+  form.append('talking_photo', fs.createReadStream(tmpPath), {
     filename:    'owner.jpg',
     contentType: 'image/jpeg',
-    knownLength: jpegBuf.length,
+    knownLength: stat.size,
   });
 
   let resp;
@@ -170,9 +174,11 @@ async function uploadTalkingPhoto(imagePath) {
   } catch (axiosErr) {
     const body = axiosErr.response?.data;
     console.error('[uploadTalkingPhoto] HeyGen error body:', JSON.stringify(body).slice(0, 500));
+    fs.unlink(tmpPath, () => {});
     throw axiosErr;
   }
 
+  fs.unlink(tmpPath, () => {});
   console.log('[uploadTalkingPhoto] response:', resp.status, JSON.stringify(resp.data).slice(0, 200));
   return resp.data?.data?.talking_photo_id;
 }
