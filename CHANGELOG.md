@@ -1,3 +1,84 @@
+# Changelog
+
+## May 11, 2026 (Session 2) — Database Layer + Content Calendar
+
+### SQLite Database via Prisma 7
+
+Added a full relational database layer (5 tables) using Prisma 7 + libsql (SQLite).
+
+**Schema** (`prisma/schema.prisma`):
+
+| Table | Purpose |
+|-------|---------|
+| `restaurants` | Brand settings, colors, logo/owner URLs, Instagram credentials, auto-publish flag |
+| `food_photos` | Photo library with captions, linked to restaurant |
+| `script_templates` | Reusable voiceover scripts (named, active/inactive) |
+| `scheduled_posts` | Content calendar entries — type, caption, scheduled time, status, Instagram post ID |
+| `generation_jobs` | HeyGen / image generation job tracking (status, external job ID, result URL) |
+
+**Key decisions:**
+- Prisma 7 requires Node ≥ 20 and a driver adapter — uses `@prisma/adapter-libsql` (no binary engine)
+- Datasource URL is in `prisma.config.ts` only (not in `schema.prisma`) — this is Prisma 7 convention
+- Generated client output → `lib/generated/prisma/` (gitignored; regenerated via `postinstall`)
+- Local DB: `file:./data/restaurant.db` · Railway DB: `file:/data/restaurant.db` (persistent volume)
+
+**New files:**
+- `prisma/schema.prisma` — five models with FK relationships
+- `prisma.config.ts` — Prisma 7 runtime config (datasource URL)
+- `prisma/migrations/` — migration SQL files (auto-generated)
+- `lib/db.js` — Prisma singleton using libsql adapter
+- `prisma/seed.js` — seeds "Osteria della Luna" with photos, templates, posts, and jobs
+- `routes/restaurants.js` — `GET/POST /api/db/restaurants`, `GET/PATCH/DELETE /api/db/restaurants/:id`
+- `routes/scheduledPosts.js` — full CRUD + filters (`?status=&from=&to=`); auto-sets `publishedAt`
+- `routes/scriptTemplates.js` — CRUD + `?isActive=` filter
+- `routes/foodPhotos.js` — CRUD + `?restaurantId=` filter
+- `routes/generationJobs.js` — CRUD; auto-sets `completedAt` when status → `completed|failed`
+
+**`server.js` additions:**
+```js
+app.use('/api/db/restaurants',      require('./routes/restaurants'));
+app.use('/api/db/scheduled-posts',  require('./routes/scheduledPosts'));
+app.use('/api/db/script-templates', require('./routes/scriptTemplates'));
+app.use('/api/db/food-photos',      require('./routes/foodPhotos'));
+app.use('/api/db/generation-jobs',  require('./routes/generationJobs'));
+```
+
+### Railway Deployment (DB layer)
+
+- `railway.toml` start command updated to `npx prisma migrate deploy && node server.js`
+- `NIXPACKS_NODE_VERSION=20` added as Railway env var (Prisma 7 requires Node 20; Railway was defaulting to Node 18)
+- Production DB seeded via HTTP API (`/tmp/seed-production.js`) because `railway run` does not mount volumes — cannot reach `file:/data/restaurant.db` from a one-off container
+- Confirmed: all 5 tables populated at `https://socialai-production-4507.up.railway.app/api/db/...`
+
+**Errors encountered and fixed:**
+
+| Error | Fix |
+|-------|-----|
+| `Prisma only supports Node.js >= 20.19` | Set `NIXPACKS_NODE_VERSION=20` Railway env var |
+| `PrismaLibSQL is not a constructor` | Correct casing: `PrismaLibSql` (lowercase 's') |
+| `datasources` not a valid constructor option | Prisma 7 uses adapter pattern, not `datasources` |
+| `url = env("DATABASE_URL")` in schema.prisma errors | URL belongs in `prisma.config.ts` only in Prisma 7 |
+| `SQLITE_CANTOPEN` when running `railway run db:seed` | `railway run` has no volume mount; seeded via live API instead |
+| dotenv not loading in `prisma/seed.js` | Used explicit path: `require('dotenv').config({ path: resolve(__dirname, '../.env') })` |
+
+### Content Calendar UI (`public/schedule.html`)
+
+Complete rewrite of the schedule page from a static mock into a fully DB-backed content calendar.
+
+**Features:**
+- **7-day grid** — one column per day, posts sorted by scheduled time
+- **Post cards** — type icon (👤 owner twin · 🎬 cinematic · 🖼 branded feed · 📱 story), color-coded status badge, time, truncated caption, Edit / Delete buttons on hover
+- **Detail modal** — media preview (video or image from `contentUrl`), editable caption, datetime-local picker, status select dropdown, footer actions: Save / Delete / Post to Instagram / View on Instagram / Post Now
+- **New post modal** — type select, datetime-local, caption → `POST /api/db/scheduled-posts`
+- **Toolbar** — week navigation (← / Today / →), current week label, filter chips (All · Draft · Scheduled · Published · Failed), auto-publish toggle (PATCHes `/api/db/restaurants/:id`)
+- **Stats bar** — live counts for Scheduled / Published / Draft / This Week
+- **Data source** — `GET /api/db/scheduled-posts?restaurantId=1&from=...&to=...` (one fetch per week navigation)
+- **CRUD** — PATCH edits, DELETE removes, POST creates; all reflected immediately in grid
+
+**Note:** This existing restaurant config (config.json, Cloudinary assets, HeyGen output jobs) is a completely separate system from the DB layer. The DB `restaurants` table contains seed data ("Osteria della Luna") — it does not replace or affect the file-based restaurant config used on the generate/assets pages.
+
+---
+
 # Changelog — May 10–11, 2026
 
 ## New Features

@@ -3,236 +3,380 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Content Schedule — Restaurant Social AI</title>
+<title>Content Calendar — Restaurant Social AI</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-  :root {
-    --bg-deep:    #090910;
-    --bg-card:    #12121c;
-    --bg-surface: #1a1a28;
-    --gold:       #c8a84b;
-    --gold-light: #e5c97a;
-    --gold-dim:   rgba(200, 168, 75, 0.12);
-    --gold-border:rgba(200, 168, 75, 0.14);
-    --text:       #f0ede8;
-    --text-muted: #7a7773;
-    --green:      #4a9960;
-    --green-dim:  rgba(74,153,96,0.12);
-    --red:        #cc4444;
-    --border:     rgba(255,255,255,0.05);
-  }
+:root {
+  --bg-deep:     #090910;
+  --bg-card:     #12121c;
+  --bg-surface:  #1a1a28;
+  --bg-modal:    #0f0f1a;
+  --gold:        #c8a84b;
+  --gold-light:  #e5c97a;
+  --gold-dim:    rgba(200,168,75,0.12);
+  --gold-border: rgba(200,168,75,0.18);
+  --text:        #f0ede8;
+  --text-muted:  #7a7773;
+  --green:       #4a9960;
+  --green-dim:   rgba(74,153,96,0.14);
+  --blue:        #4a7fc1;
+  --blue-dim:    rgba(74,127,193,0.14);
+  --amber:       #d97706;
+  --amber-dim:   rgba(217,119,6,0.14);
+  --red:         #cc4444;
+  --red-dim:     rgba(204,68,68,0.14);
+  --border:      rgba(255,255,255,0.05);
+  --radius:      10px;
+}
 
-  body {
-    background: var(--bg-deep);
-    color: var(--text);
-    font-family: 'Inter', system-ui, sans-serif;
-    line-height: 1.6;
-    min-height: 100vh;
-  }
+body {
+  background: var(--bg-deep);
+  color: var(--text);
+  font-family: 'Inter', system-ui, sans-serif;
+  line-height: 1.6;
+  min-height: 100vh;
+}
 
-  nav {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 0 2.5rem; height: 64px;
-    background: rgba(9,9,16,0.95); border-bottom: 1px solid var(--gold-border);
-    position: sticky; top: 0; z-index: 100; backdrop-filter: blur(12px);
-  }
-  .nav-brand { font-family: 'Playfair Display', Georgia, serif; font-size: 1.1rem; color: var(--gold-light); letter-spacing: 0.05em; }
-  .nav-links { display: flex; }
-  .nav-links a {
-    color: var(--text-muted); text-decoration: none; font-size: 0.8rem;
-    font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase;
-    padding: 0.4rem 1rem; border-bottom: 2px solid transparent;
-    transition: color 0.2s, border-color 0.2s;
-  }
-  .nav-links a:hover { color: var(--text); }
-  .nav-links a.active { color: var(--gold-light); border-bottom-color: var(--gold); }
+/* ── Nav ── */
+nav {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 2.5rem; height: 64px;
+  background: rgba(9,9,16,0.96); border-bottom: 1px solid var(--gold-border);
+  position: sticky; top: 0; z-index: 200; backdrop-filter: blur(12px);
+}
+.nav-brand { font-family: 'Playfair Display', Georgia, serif; font-size: 1.1rem; color: var(--gold-light); letter-spacing: 0.05em; }
+.nav-links { display: flex; }
+.nav-links a {
+  color: var(--text-muted); text-decoration: none; font-size: 0.8rem;
+  font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase;
+  padding: 0.4rem 1rem; border-bottom: 2px solid transparent;
+  transition: color 0.2s, border-color 0.2s;
+}
+.nav-links a:hover { color: var(--text); }
+.nav-links a.active { color: var(--gold-light); border-bottom-color: var(--gold); }
 
-  main { max-width: 1240px; margin: 0 auto; padding: 2.5rem 1.5rem 5rem; }
+/* ── Main layout ── */
+main { max-width: 1340px; margin: 0 auto; padding: 2rem 1.5rem 5rem; }
 
-  /* ── Schedule header ── */
-  .schedule-header {
-    display: flex; align-items: center; justify-content: space-between;
-    margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;
-  }
-  .schedule-header h1 {
-    font-family: 'Playfair Display', Georgia, serif;
-    font-size: 1.8rem; color: var(--text);
-  }
-  .schedule-header p { color: var(--text-muted); font-size: 0.85rem; margin-top: 0.2rem; }
-  .header-actions { display: flex; gap: 0.75rem; flex-shrink: 0; }
+/* ── Page header ── */
+.page-header {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  margin-bottom: 1.5rem; gap: 1rem; flex-wrap: wrap;
+}
+.page-header h1 {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 1.75rem; color: var(--text);
+}
+.page-header p { color: var(--text-muted); font-size: 0.85rem; margin-top: 0.15rem; }
 
-  .btn {
-    display: inline-flex; align-items: center; gap: 0.5rem;
-    padding: 0.65rem 1.4rem; border-radius: 6px;
-    font-family: 'Inter', sans-serif; font-size: 0.82rem; font-weight: 600;
-    letter-spacing: 0.05em; cursor: pointer; border: none; text-decoration: none;
-    transition: opacity 0.2s, transform 0.1s;
-  }
-  .btn-primary { background: var(--gold); color: #090910; }
-  .btn-primary:hover { opacity: 0.9; }
-  .btn-ghost {
-    background: transparent; color: var(--text-muted);
-    border: 1px solid rgba(255,255,255,0.08);
-  }
-  .btn-ghost:hover { color: var(--text); border-color: rgba(255,255,255,0.15); }
+/* ── Buttons ── */
+.btn {
+  display: inline-flex; align-items: center; gap: 0.45rem;
+  padding: 0.6rem 1.3rem; border-radius: 7px;
+  font-family: 'Inter', sans-serif; font-size: 0.82rem; font-weight: 600;
+  letter-spacing: 0.04em; cursor: pointer; border: none; text-decoration: none;
+  transition: opacity 0.18s, transform 0.12s;
+  white-space: nowrap;
+}
+.btn:active { transform: scale(0.97); }
+.btn-primary { background: var(--gold); color: #090910; }
+.btn-primary:hover { opacity: 0.88; }
+.btn-ghost {
+  background: transparent; color: var(--text-muted);
+  border: 1px solid rgba(255,255,255,0.09);
+}
+.btn-ghost:hover { color: var(--text); border-color: rgba(255,255,255,0.18); }
+.btn-danger { background: var(--red-dim); color: #f87171; border: 1px solid rgba(204,68,68,0.3); }
+.btn-danger:hover { opacity: 0.8; }
+.btn-sm { padding: 0.35rem 0.85rem; font-size: 0.75rem; }
+.btn-icon { padding: 0.5rem; border-radius: 6px; font-size: 1rem; }
 
-  /* ── Legend ── */
-  .legend {
-    display: flex; gap: 1.5rem; margin-bottom: 1.5rem; flex-wrap: wrap;
-  }
-  .legend-item { display: flex; align-items: center; gap: 0.4rem; font-size: 0.78rem; color: var(--text-muted); }
-  .legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-  .dot-pub  { background: var(--green); }
-  .dot-ready{ background: var(--gold); }
-  .dot-gen  { background: var(--gold); animation: pulse 1.5s ease-in-out infinite; }
-  @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.3; } }
+/* ── Toolbar ── */
+.toolbar {
+  display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;
+  background: var(--bg-card); border: 1px solid var(--gold-border);
+  border-radius: var(--radius); padding: 0.9rem 1.2rem; margin-bottom: 1.5rem;
+}
+.toolbar-left  { display: flex; align-items: center; gap: 0.75rem; flex: 1; flex-wrap: wrap; }
+.toolbar-right { display: flex; align-items: center; gap: 0.75rem; flex-shrink: 0; flex-wrap: wrap; }
 
-  /* ── Week grid ── */
-  .week-grid {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 0.75rem;
-    align-items: start;
-  }
+.week-nav { display: flex; align-items: center; gap: 0.4rem; }
+.week-label {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 0.95rem; color: var(--gold-light);
+  min-width: 180px; text-align: center;
+}
 
-  .day-col {
-    background: var(--bg-card);
-    border: 1px solid var(--gold-border);
-    border-radius: 10px;
-    overflow: hidden;
-    min-height: 200px;
-  }
-  .day-col.today { border-color: rgba(200,168,75,0.4); }
-  .day-col.today .day-head { background: var(--gold-dim); }
+.filter-chips { display: flex; gap: 0.35rem; flex-wrap: wrap; }
+.chip {
+  padding: 0.25rem 0.75rem; border-radius: 99px; font-size: 0.72rem;
+  font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase;
+  cursor: pointer; border: 1px solid transparent; transition: all 0.15s;
+  background: var(--bg-surface); color: var(--text-muted);
+}
+.chip:hover { color: var(--text); }
+.chip.active-all       { background: rgba(255,255,255,0.08); color: var(--text); border-color: rgba(255,255,255,0.15); }
+.chip.active-draft     { background: var(--amber-dim); color: #fbbf24; border-color: rgba(217,119,6,0.35); }
+.chip.active-scheduled { background: var(--blue-dim);  color: #7cb3f5; border-color: rgba(74,127,193,0.35); }
+.chip.active-published { background: var(--green-dim); color: #6dbb88; border-color: rgba(74,153,96,0.35); }
+.chip.active-failed    { background: var(--red-dim);   color: #f87171; border-color: rgba(204,68,68,0.35); }
 
-  .day-head {
-    padding: 0.65rem 0.75rem;
-    border-bottom: 1px solid var(--gold-border);
-    text-align: center;
-  }
-  .day-name {
-    font-size: 0.7rem; font-weight: 600; letter-spacing: 0.08em;
-    text-transform: uppercase; color: var(--text-muted);
-  }
-  .day-col.today .day-name { color: var(--gold); }
-  .day-date {
-    font-family: 'Playfair Display', Georgia, serif;
-    font-size: 1.2rem; color: var(--text); margin-top: 0.1rem;
-  }
-  .day-col.today .day-date { color: var(--gold-light); }
+/* Auto-publish toggle */
+.toggle-wrap { display: flex; align-items: center; gap: 0.5rem; }
+.toggle-label { font-size: 0.78rem; color: var(--text-muted); }
+.toggle {
+  position: relative; width: 36px; height: 20px; cursor: pointer;
+}
+.toggle input { opacity: 0; width: 0; height: 0; }
+.toggle-track {
+  position: absolute; inset: 0; background: rgba(255,255,255,0.08);
+  border-radius: 99px; transition: background 0.2s;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+.toggle input:checked ~ .toggle-track { background: var(--green); border-color: var(--green); }
+.toggle-thumb {
+  position: absolute; top: 3px; left: 3px;
+  width: 14px; height: 14px; background: white; border-radius: 50%;
+  transition: transform 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+}
+.toggle input:checked ~ .toggle-thumb { transform: translateX(16px); }
 
-  .day-posts { padding: 0.5rem; display: flex; flex-direction: column; gap: 0.4rem; }
+/* ── Stats ── */
+.stats-bar {
+  display: flex; gap: 0; flex-wrap: nowrap; overflow: hidden;
+  background: var(--bg-card); border: 1px solid var(--gold-border);
+  border-radius: var(--radius); margin-bottom: 1.5rem;
+}
+.stat {
+  flex: 1; min-width: 70px; padding: 1rem 1.25rem;
+  border-right: 1px solid var(--border);
+}
+.stat:last-child { border-right: none; }
+.stat-num {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 1.6rem; line-height: 1; color: var(--gold-light);
+}
+.stat-label { font-size: 0.68rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 0.2rem; }
 
-  /* ── Post card ── */
-  .post-card {
-    background: var(--bg-surface);
-    border: 1px solid var(--border);
-    border-radius: 7px;
-    padding: 0.55rem 0.65rem;
-    cursor: pointer;
-    transition: border-color 0.2s, background 0.2s;
-    position: relative;
-  }
-  .post-card:hover { border-color: rgba(200,168,75,0.3); background: rgba(26,26,40,0.8); }
-  .post-card.expanded { border-color: rgba(200,168,75,0.35); }
+/* ── Calendar grid ── */
+.calendar-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.week-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(140px, 1fr));
+  gap: 0.6rem;
+  align-items: start;
+}
 
-  .post-top { display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.3rem; }
-  .platform-dot {
-    width: 16px; height: 16px; border-radius: 3px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 8px; font-weight: 700; color: #fff; flex-shrink: 0;
-  }
-  .pd-instagram { background: linear-gradient(135deg,#f09433,#dc2743,#bc1888); }
-  .pd-facebook  { background: #1877f2; }
-  .pd-tiktok    { background: #111; border: 1px solid rgba(255,255,255,0.15); }
-  .pd-x         { background: #111; border: 1px solid rgba(255,255,255,0.15); }
-  .pd-linkedin  { background: #0a66c2; }
+.day-col {
+  background: var(--bg-card);
+  border: 1px solid var(--gold-border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  min-height: 180px;
+}
+.day-col.today { border-color: rgba(200,168,75,0.45); }
+.day-col.today .day-head { background: var(--gold-dim); }
 
-  .post-type {
-    font-size: 0.6rem; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase;
-    padding: 0.1rem 0.35rem; border-radius: 3px;
-  }
-  .pt-image { background: rgba(74,153,96,0.15);  color: #6dbb88; }
-  .pt-video { background: rgba(99,102,241,0.15); color: #818cf8; }
-  .pt-story { background: rgba(236,72,153,0.12); color: #f472b6; }
-  .pt-twin  { background: rgba(251,191,36,0.1);  color: #fbbf24; }
+.day-head {
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid var(--gold-border);
+  text-align: center;
+}
+.day-name {
+  font-size: 0.65rem; font-weight: 600; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--text-muted);
+}
+.day-col.today .day-name { color: var(--gold); }
+.day-date {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 1.15rem; color: var(--text); margin-top: 0.05rem;
+}
+.day-col.today .day-date { color: var(--gold-light); }
 
-  .post-time { font-size: 0.68rem; color: var(--text-muted); margin-left: auto; }
+.day-posts { padding: 0.4rem; display: flex; flex-direction: column; gap: 0.35rem; }
 
-  .status-pill {
-    display: inline-flex; align-items: center; gap: 0.3rem;
-    font-size: 0.62rem; font-weight: 600; letter-spacing: 0.06em;
-    text-transform: uppercase; padding: 0.15rem 0.45rem; border-radius: 99px;
-  }
-  .sp-published { background: var(--green-dim); color: var(--green); }
-  .sp-ready     { background: var(--gold-dim);  color: var(--gold); }
-  .sp-generating{
-    background: var(--gold-dim); color: var(--gold);
-    animation: pulse 1.5s ease-in-out infinite;
-  }
-  .sp-generating::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: currentColor; animation: pulse 1s infinite; }
+.day-add {
+  padding: 0.35rem; display: flex; justify-content: center;
+  border-top: 1px dashed rgba(255,255,255,0.05);
+}
+.day-add button {
+  background: none; border: none; color: rgba(255,255,255,0.15);
+  font-size: 1rem; cursor: pointer; padding: 0.2rem 0.6rem; border-radius: 4px;
+  transition: color 0.2s;
+}
+.day-add button:hover { color: var(--gold); }
 
-  .post-caption-preview {
-    font-size: 0.72rem; color: var(--text-muted); line-height: 1.4;
-    margin-top: 0.3rem;
-    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
-  }
+/* ── Post card (in calendar) ── */
+.post-card {
+  background: var(--bg-surface); border: 1px solid var(--border);
+  border-radius: 7px; padding: 0.5rem 0.6rem;
+  cursor: pointer; transition: border-color 0.18s, background 0.18s;
+  position: relative;
+}
+.post-card:hover { border-color: rgba(200,168,75,0.4); background: rgba(26,26,40,0.9); }
 
-  /* Expanded detail */
-  .post-detail {
-    display: none; margin-top: 0.6rem; padding-top: 0.6rem;
-    border-top: 1px solid var(--border);
-    font-size: 0.75rem; color: var(--text-muted); line-height: 1.5;
-    white-space: pre-wrap; word-break: break-word;
-  }
-  .post-card.expanded .post-detail { display: block; }
-  .post-detail-label {
-    font-size: 0.65rem; font-weight: 600; letter-spacing: 0.08em;
-    text-transform: uppercase; color: var(--text-muted); margin-bottom: 0.3rem;
-  }
+.pc-top { display: flex; align-items: center; gap: 0.3rem; margin-bottom: 0.3rem; }
+.pc-type-icon { font-size: 0.85rem; flex-shrink: 0; }
+.pc-time { font-size: 0.62rem; color: var(--text-muted); margin-left: auto; }
 
-  .no-posts {
-    text-align: center; padding: 1rem 0.5rem;
-    color: rgba(255,255,255,0.08); font-size: 0.75rem;
-  }
+.status-badge {
+  display: inline-block;
+  font-size: 0.58rem; font-weight: 700; letter-spacing: 0.07em;
+  text-transform: uppercase; padding: 0.12rem 0.4rem; border-radius: 99px;
+}
+.sb-draft     { background: var(--amber-dim); color: #fbbf24; }
+.sb-scheduled { background: var(--blue-dim);  color: #7cb3f5; }
+.sb-published { background: var(--green-dim); color: #6dbb88; }
+.sb-failed    { background: var(--red-dim);   color: #f87171; }
 
-  /* ── Stats bar ── */
-  .stats-bar {
-    display: flex; gap: 2rem; flex-wrap: wrap;
-    background: var(--bg-card); border: 1px solid var(--gold-border);
-    border-radius: 10px; padding: 1.25rem 1.75rem; margin-bottom: 1.5rem;
-  }
-  .stat { flex: 1; min-width: 80px; }
-  .stat-num {
-    font-family: 'Playfair Display', Georgia, serif;
-    font-size: 1.8rem; color: var(--gold-light); line-height: 1;
-  }
-  .stat-label { font-size: 0.72rem; color: var(--text-muted); margin-top: 0.25rem; text-transform: uppercase; letter-spacing: 0.05em; }
+.pc-caption {
+  font-size: 0.68rem; color: var(--text-muted); line-height: 1.35;
+  margin-top: 0.25rem;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
 
-  /* ── Scrollable calendar on mobile ── */
-  .calendar-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.pc-actions {
+  display: none; gap: 0.3rem; margin-top: 0.4rem; padding-top: 0.4rem;
+  border-top: 1px solid var(--border);
+}
+.post-card:hover .pc-actions { display: flex; }
+.pc-btn {
+  background: none; border: 1px solid rgba(255,255,255,0.08);
+  color: var(--text-muted); font-size: 0.62rem; font-weight: 600;
+  padding: 0.2rem 0.5rem; border-radius: 4px; cursor: pointer;
+  transition: all 0.15s; letter-spacing: 0.04em;
+}
+.pc-btn:hover { color: var(--gold); border-color: var(--gold-border); }
+.pc-btn.del:hover { color: #f87171; border-color: rgba(204,68,68,0.35); }
 
-  #toast {
-    position: fixed; bottom: 2rem; right: 2rem;
-    background: var(--bg-surface); border: 1px solid var(--gold-border);
-    border-radius: 8px; padding: 0.8rem 1.2rem; color: var(--text);
-    font-size: 0.85rem; opacity: 0; transform: translateY(10px);
-    transition: opacity 0.3s, transform 0.3s; z-index: 200;
-    pointer-events: none; max-width: 320px;
-  }
-  #toast.show { opacity: 1; transform: translateY(0); }
-  #toast.success { border-color: var(--green); color: #6dbb88; }
+.no-posts { text-align: center; padding: 1.2rem 0.5rem; color: rgba(255,255,255,0.1); font-size: 0.72rem; }
 
-  @media (max-width: 900px) {
-    .week-grid { grid-template-columns: repeat(4, minmax(160px, 1fr)); }
-    nav { padding: 0 1rem; }
-  }
-  @media (max-width: 600px) {
-    .week-grid { grid-template-columns: repeat(2, minmax(150px, 1fr)); }
-  }
+/* ── Spinner ── */
+.spinner {
+  display: inline-block; width: 13px; height: 13px;
+  border: 2px solid rgba(200,168,75,0.25); border-top-color: var(--gold);
+  border-radius: 50%; animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.4} }
+
+/* ── Modal ── */
+.modal-backdrop {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.72); backdrop-filter: blur(4px);
+  z-index: 300; align-items: center; justify-content: center;
+  padding: 1rem;
+}
+.modal-backdrop.open { display: flex; }
+
+.modal {
+  background: var(--bg-modal); border: 1px solid var(--gold-border);
+  border-radius: 14px; width: 100%; max-width: 640px;
+  max-height: 90vh; overflow-y: auto;
+  animation: modal-in 0.18s ease;
+}
+@keyframes modal-in { from { opacity:0; transform: translateY(12px); } }
+
+.modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border);
+}
+.modal-title {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 1.15rem; color: var(--gold-light);
+}
+.modal-close {
+  background: none; border: none; color: var(--text-muted);
+  font-size: 1.2rem; cursor: pointer; padding: 0.2rem 0.5rem;
+  border-radius: 5px; transition: color 0.15s;
+}
+.modal-close:hover { color: var(--text); }
+
+.modal-body { padding: 1.5rem; display: flex; flex-direction: column; gap: 1.25rem; }
+
+/* Preview pane */
+.preview-pane {
+  background: var(--bg-surface); border: 1px solid var(--border);
+  border-radius: 10px; overflow: hidden;
+  aspect-ratio: 16/9; display: flex; align-items: center; justify-content: center;
+  position: relative;
+}
+.preview-pane.story { aspect-ratio: 9/16; max-height: 320px; }
+.preview-pane video, .preview-pane img { width: 100%; height: 100%; object-fit: cover; }
+.preview-placeholder { font-size: 3rem; opacity: 0.2; }
+
+/* Form fields */
+.form-group { display: flex; flex-direction: column; gap: 0.4rem; }
+.form-label {
+  font-size: 0.7rem; font-weight: 600; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--text-muted);
+}
+.form-input, .form-textarea, .form-select {
+  background: var(--bg-surface); border: 1px solid rgba(255,255,255,0.08);
+  color: var(--text); padding: 0.6rem 0.85rem; border-radius: 8px;
+  font-size: 0.875rem; font-family: 'Inter', sans-serif; outline: none;
+  transition: border-color 0.15s;
+}
+.form-input:focus, .form-textarea:focus, .form-select:focus { border-color: var(--gold-border); }
+.form-textarea { resize: vertical; min-height: 100px; line-height: 1.55; }
+input[type="datetime-local"].form-input { color-scheme: dark; }
+
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+
+/* Modal info chips */
+.info-chips { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+.info-chip {
+  font-size: 0.68rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
+  padding: 0.18rem 0.55rem; border-radius: 5px;
+  background: var(--bg-surface); color: var(--text-muted);
+  border: 1px solid var(--border);
+}
+
+.modal-footer {
+  display: flex; gap: 0.6rem; flex-wrap: wrap;
+  padding: 1rem 1.5rem; border-top: 1px solid var(--border);
+  align-items: center;
+}
+.modal-footer-left  { display: flex; gap: 0.6rem; flex: 1; flex-wrap: wrap; }
+.modal-footer-right { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+
+/* ── New Post Quick-add modal ── */
+.qa-modal {
+  background: var(--bg-modal); border: 1px solid var(--gold-border);
+  border-radius: 14px; width: 100%; max-width: 480px;
+  animation: modal-in 0.18s ease;
+}
+
+/* ── Toast ── */
+#toast {
+  position: fixed; bottom: 1.75rem; right: 1.75rem;
+  background: var(--bg-surface); border: 1px solid var(--gold-border);
+  border-radius: 8px; padding: 0.75rem 1.1rem; color: var(--text);
+  font-size: 0.84rem; opacity: 0; transform: translateY(8px);
+  transition: opacity 0.25s, transform 0.25s; z-index: 999;
+  pointer-events: none; max-width: 300px;
+}
+#toast.show   { opacity: 1; transform: translateY(0); }
+#toast.ok     { border-color: var(--green); color: #6dbb88; }
+#toast.err    { border-color: var(--red);   color: #f87171; }
+
+/* ── Responsive ── */
+@media (max-width: 1100px) { .week-grid { grid-template-columns: repeat(7, minmax(128px, 1fr)); } }
+@media (max-width: 900px)  {
+  nav { padding: 0 1rem; }
+  .toolbar { flex-direction: column; align-items: flex-start; }
+  .form-row { grid-template-columns: 1fr; }
+}
+@media (max-width: 640px)  {
+  .stats-bar { flex-wrap: wrap; }
+  .stat { min-width: 50%; border-right: none; border-bottom: 1px solid var(--border); }
+  .stat:nth-child(odd) { border-right: 1px solid var(--border); }
+  .stat:last-child, .stat:nth-last-child(2):nth-child(odd) { border-bottom: none; }
+  .modal { max-height: 100vh; border-radius: 0; }
+}
 </style>
 </head>
 <body>
@@ -248,184 +392,649 @@
 </nav>
 
 <main>
-  <div class="schedule-header">
+
+  <!-- Page header -->
+  <div class="page-header">
     <div>
-      <h1 id="scheduleTitle">Content Calendar</h1>
-      <p id="scheduleSubtitle">Loading week schedule…</p>
+      <h1 id="pageTitle">Content Calendar</h1>
+      <p id="pageSubtitle">Loading…</p>
     </div>
-    <div class="header-actions">
-      <button class="btn btn-ghost" onclick="exportSchedule()">⬇ Export JSON</button>
-      <a href="generate.html" class="btn btn-primary">+ Generate Content</a>
+    <div style="display:flex;gap:0.6rem;flex-shrink:0;flex-wrap:wrap">
+      <button class="btn btn-ghost" onclick="openNewPostModal()">+ New Post</button>
+      <a href="generate.html" class="btn btn-primary">⚡ Generate Content</a>
+    </div>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <div class="toolbar-left">
+      <!-- Week navigation -->
+      <div class="week-nav">
+        <button class="btn btn-ghost btn-icon btn-sm" onclick="shiftWeek(-1)" title="Previous week">←</button>
+        <span class="week-label" id="weekLabel">—</span>
+        <button class="btn btn-ghost btn-icon btn-sm" onclick="shiftWeek(1)"  title="Next week">→</button>
+        <button class="btn btn-ghost btn-sm" onclick="goToday()">Today</button>
+      </div>
+
+      <!-- Status filter chips -->
+      <div class="filter-chips" id="filterChips">
+        <button class="chip active-all" data-filter="all"       onclick="setFilter('all')">All</button>
+        <button class="chip"            data-filter="draft"     onclick="setFilter('draft')">Draft</button>
+        <button class="chip"            data-filter="scheduled" onclick="setFilter('scheduled')">Scheduled</button>
+        <button class="chip"            data-filter="published" onclick="setFilter('published')">Published</button>
+        <button class="chip"            data-filter="failed"    onclick="setFilter('failed')">Failed</button>
+      </div>
+    </div>
+
+    <div class="toolbar-right">
+      <div class="toggle-wrap">
+        <label class="toggle" title="Auto-publish enabled">
+          <input type="checkbox" id="autoPublish" onchange="toggleAutoPublish(this.checked)">
+          <span class="toggle-track"></span>
+          <span class="toggle-thumb"></span>
+        </label>
+        <span class="toggle-label">Auto-publish</span>
+      </div>
     </div>
   </div>
 
   <!-- Stats -->
-  <div class="stats-bar" id="statsBar">
-    <div class="stat">
-      <div class="stat-num" id="statTotal">—</div>
-      <div class="stat-label">Total Posts</div>
-    </div>
-    <div class="stat">
-      <div class="stat-num" id="statPublished">—</div>
-      <div class="stat-label">Published</div>
-    </div>
-    <div class="stat">
-      <div class="stat-num" id="statReady">—</div>
-      <div class="stat-label">Ready</div>
-    </div>
-    <div class="stat">
-      <div class="stat-num" id="statGenerating">—</div>
-      <div class="stat-label">Generating</div>
-    </div>
-  </div>
-
-  <!-- Legend -->
-  <div class="legend">
-    <div class="legend-item"><div class="legend-dot dot-pub"></div>Published</div>
-    <div class="legend-item"><div class="legend-dot dot-ready"></div>Ready to post</div>
-    <div class="legend-item"><div class="legend-dot dot-gen"></div>Generating</div>
+  <div class="stats-bar">
+    <div class="stat"><div class="stat-num" id="sSched">—</div><div class="stat-label">Scheduled</div></div>
+    <div class="stat"><div class="stat-num" id="sPub">—</div><div class="stat-label">Published</div></div>
+    <div class="stat"><div class="stat-num" id="sDraft">—</div><div class="stat-label">Draft</div></div>
+    <div class="stat"><div class="stat-num" id="sTotal">—</div><div class="stat-label">This Week</div></div>
   </div>
 
   <!-- Calendar -->
   <div class="calendar-scroll">
     <div class="week-grid" id="weekGrid">
-      <!-- Injected by JS -->
+      <!-- injected by JS -->
     </div>
   </div>
+
 </main>
+
+<!-- ── Detail modal ─────────────────────────────────────────────────────── -->
+<div class="modal-backdrop" id="detailBackdrop" onclick="closeModal(event)">
+  <div class="modal" id="detailModal">
+    <div class="modal-header">
+      <span class="modal-title" id="modalTitle">Post Details</span>
+      <button class="modal-close" onclick="closeDetailModal()">✕</button>
+    </div>
+    <div class="modal-body">
+
+      <!-- Preview -->
+      <div class="preview-pane" id="previewPane">
+        <span class="preview-placeholder">✦</span>
+      </div>
+
+      <!-- Meta chips -->
+      <div class="info-chips" id="infoChips"></div>
+
+      <!-- Caption -->
+      <div class="form-group">
+        <label class="form-label">Caption</label>
+        <textarea class="form-textarea" id="modalCaption" rows="4" placeholder="Write your caption…"></textarea>
+      </div>
+
+      <!-- Time + status -->
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Scheduled Time</label>
+          <input type="datetime-local" class="form-input" id="modalTime">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Status</label>
+          <select class="form-select" id="modalStatus">
+            <option value="draft">Draft</option>
+            <option value="scheduled">Scheduled</option>
+            <option value="published">Published</option>
+            <option value="failed">Failed</option>
+          </select>
+        </div>
+      </div>
+
+    </div>
+    <div class="modal-footer">
+      <div class="modal-footer-left">
+        <button class="btn btn-danger btn-sm" id="modalDeleteBtn" onclick="modalDeletePost()">Delete</button>
+      </div>
+      <div class="modal-footer-right">
+        <button class="btn btn-ghost btn-sm" onclick="closeDetailModal()">Cancel</button>
+        <button class="btn btn-ghost btn-sm" id="modalIgBtn" onclick="modalPostInstagram()" style="display:none">📤 Post to Instagram</button>
+        <a class="btn btn-ghost btn-sm" id="modalIgLink" href="#" target="_blank" style="display:none">↗ View on Instagram</a>
+        <button class="btn btn-ghost btn-sm" id="modalPostNowBtn" onclick="modalPostNow()">Post Now</button>
+        <button class="btn btn-primary btn-sm" id="modalSaveBtn" onclick="modalSave()">Save Changes</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── New Post modal ───────────────────────────────────────────────────── -->
+<div class="modal-backdrop" id="newPostBackdrop" onclick="closeNewPostModal(event)">
+  <div class="qa-modal">
+    <div class="modal-header">
+      <span class="modal-title">New Scheduled Post</span>
+      <button class="modal-close" onclick="closeNewPostModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Post Type</label>
+        <select class="form-select" id="npType">
+          <option value="branded_image_feed">Branded Image — Feed</option>
+          <option value="branded_image_story">Branded Image — Story</option>
+          <option value="owner_twin_video">Owner Twin Video</option>
+          <option value="cinematic_video">Cinematic Video</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Scheduled Time</label>
+        <input type="datetime-local" class="form-input" id="npTime">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Caption <span style="font-weight:400;opacity:0.5">(optional)</span></label>
+        <textarea class="form-textarea" id="npCaption" rows="3" placeholder="Caption for this post…"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer" style="justify-content:flex-end">
+      <button class="btn btn-ghost btn-sm" onclick="closeNewPostModal()">Cancel</button>
+      <button class="btn btn-primary btn-sm" onclick="createPost()">Create Post</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Instagram caption modal ─────────────────────────────────────────── -->
+<div class="modal-backdrop" id="igBackdrop" onclick="closeIgModal(event)">
+  <div class="qa-modal">
+    <div class="modal-header">
+      <span class="modal-title">Post to Instagram</span>
+      <button class="modal-close" onclick="closeIgModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <button class="btn btn-ghost btn-sm" id="igGenCapBtn" onclick="igGenerateCaption()">✦ Generate caption with AI</button>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Caption</label>
+        <textarea class="form-textarea" id="igCaption" rows="5" placeholder="Write your caption…"></textarea>
+      </div>
+      <p id="igError" style="color:#f87171;font-size:0.8rem;display:none"></p>
+    </div>
+    <div class="modal-footer" style="justify-content:flex-end">
+      <button class="btn btn-ghost btn-sm" onclick="closeIgModal()">Cancel</button>
+      <button class="btn btn-primary btn-sm" id="igPostBtn" onclick="submitIgPost()" style="background:linear-gradient(135deg,#e1306c,#833ab4);color:#fff">Post to Instagram</button>
+    </div>
+  </div>
+</div>
 
 <div id="toast"></div>
 
 <script>
-let scheduleData = [];
+// ── Constants ──────────────────────────────────────────────────────────────
+const POST_TYPES = {
+  owner_twin_video:    { icon: '👤', label: 'Owner Twin',    color: 'rgba(251,191,36,0.14)',  text: '#fbbf24' },
+  cinematic_video:    { icon: '🎬', label: 'Cinematic',      color: 'rgba(99,102,241,0.14)',  text: '#818cf8' },
+  branded_image_feed: { icon: '🖼',  label: 'Feed Image',    color: 'rgba(74,153,96,0.14)',   text: '#6dbb88' },
+  branded_image_story:{ icon: '📱', label: 'Story Image',    color: 'rgba(236,72,153,0.14)', text: '#f472b6' },
+};
+
+const STATUS_CFG = {
+  draft:     { cls: 'sb-draft',     label: 'Draft' },
+  scheduled: { cls: 'sb-scheduled', label: 'Scheduled' },
+  published: { cls: 'sb-published', label: 'Published' },
+  failed:    { cls: 'sb-failed',    label: 'Failed' },
+};
+
+// ── State ──────────────────────────────────────────────────────────────────
+let weekStart    = getThisMonday();
+let allPosts     = [];
+let filteredPosts= [];
+let activeFilter = 'all';
+let restaurantId = 1;
+let activeModalPostId = null;
+let igTargetJobId     = null;   // for old filesystem-based jobs
+let igTargetPostId    = null;   // for DB scheduled posts
+
+// ── Utility ───────────────────────────────────────────────────────────────
+function getThisMonday() {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  const dow = d.getDay(); // 0=Sun
+  d.setDate(d.getDate() - ((dow + 6) % 7));
+  return d;
+}
+
+function addDays(date, n) {
+  const d = new Date(date);
+  d.setDate(d.getDate() + n);
+  return d;
+}
+
+function fmtDateLabel(date) {
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function fmtDayName(date) {
+  return date.toLocaleDateString('en-US', { weekday: 'short' });
+}
+
+function fmtTime(isoStr) {
+  return new Date(isoStr).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+}
+
+function toDatetimeLocal(isoStr) {
+  const d = new Date(isoStr);
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function escHtml(s) {
+  return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
 
 // ── Toast ──────────────────────────────────────────────────────────────────
 let toastTimer;
 function toast(msg, type = '') {
   const el = document.getElementById('toast');
   el.textContent = msg;
-  el.className = `show ${type}`;
+  el.className = 'show ' + type;
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => el.classList.remove('show'), 3500);
+  toastTimer = setTimeout(() => el.className = '', 3500);
 }
 
-// ── Platform icon ──────────────────────────────────────────────────────────
-const PLATFORM_ICONS = { instagram:'IG', facebook:'f', tiktok:'TT', x:'𝕏', linkedin:'in' };
-
-function platformDot(platform) {
-  const label = PLATFORM_ICONS[platform] || platform.slice(0,2).toUpperCase();
-  return `<div class="platform-dot pd-${platform}">${label}</div>`;
+// ── API helpers ────────────────────────────────────────────────────────────
+async function api(method, path, body) {
+  const opts = { method, headers: { 'Content-Type': 'application/json' } };
+  if (body) opts.body = JSON.stringify(body);
+  const r = await fetch(path, opts);
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.error || r.status);
+  return data;
 }
 
-function postTypeBadge(type) {
-  const map = { image:'image', video:'video', story:'story', twin:'twin' };
-  return `<span class="post-type pt-${map[type]||'image'}">${type.toUpperCase()}</span>`;
+// ── Load data ──────────────────────────────────────────────────────────────
+async function loadPosts() {
+  const from = weekStart.toISOString();
+  const to   = addDays(weekStart, 7).toISOString();
+  try {
+    allPosts = await api('GET', `/api/db/scheduled-posts?restaurantId=${restaurantId}&from=${from}&to=${to}`);
+  } catch (e) {
+    console.error('Failed to load posts:', e.message);
+    allPosts = [];
+  }
+  applyFilter();
 }
 
-function statusPill(status) {
-  if (status === 'published')
-    return `<span class="status-pill sp-published">✓ Published</span>`;
-  if (status === 'ready')
-    return `<span class="status-pill sp-ready">● Ready</span>`;
-  return `<span class="status-pill sp-generating">Generating</span>`;
+async function loadRestaurant() {
+  try {
+    const rows = await api('GET', '/api/db/restaurants');
+    if (rows?.length) {
+      restaurantId = rows[0].id;
+      document.getElementById('pageTitle').textContent = `${rows[0].name} — Content Calendar`;
+      document.getElementById('autoPublish').checked = rows[0].autoPublishEnabled;
+    }
+  } catch {}
+  // Also try local config for subtitle
+  try {
+    const cfg = await fetch('/api/config').then(r=>r.json());
+    if (cfg.restaurantName && document.getElementById('pageTitle').textContent === 'Content Calendar') {
+      document.getElementById('pageTitle').textContent = `${cfg.restaurantName} — Content Calendar`;
+    }
+  } catch {}
 }
 
-// ── Render ─────────────────────────────────────────────────────────────────
-function renderSchedule(days) {
-  const grid   = document.getElementById('weekGrid');
-  const todayLabel = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+// ── Filter & render ────────────────────────────────────────────────────────
+function applyFilter() {
+  filteredPosts = activeFilter === 'all'
+    ? allPosts
+    : allPosts.filter(p => p.status === activeFilter);
+  renderCalendar();
+  renderStats();
+}
+
+function setFilter(f) {
+  activeFilter = f;
+  document.querySelectorAll('.chip').forEach(c => {
+    c.classList.remove('active-all','active-draft','active-scheduled','active-published','active-failed');
+    if (c.dataset.filter === f) c.classList.add(`active-${f}`);
+  });
+  applyFilter();
+}
+
+function renderStats() {
+  const all = allPosts; // stats always on full week, not filtered
+  document.getElementById('sSched').textContent = all.filter(p=>p.status==='scheduled').length;
+  document.getElementById('sPub').textContent   = all.filter(p=>p.status==='published').length;
+  document.getElementById('sDraft').textContent  = all.filter(p=>p.status==='draft').length;
+  document.getElementById('sTotal').textContent  = all.length;
+}
+
+function renderCalendar() {
+  const grid = document.getElementById('weekGrid');
+  const todayStr = new Date().toDateString();
+
+  const weekEnd = addDays(weekStart, 6);
+  document.getElementById('weekLabel').textContent =
+    `${fmtDateLabel(weekStart)} – ${fmtDateLabel(weekEnd)}`;
+  document.getElementById('pageSubtitle').textContent =
+    `Week of ${fmtDateLabel(weekStart)} · ${allPosts.length} post${allPosts.length !== 1 ? 's' : ''}`;
+
+  const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
   grid.innerHTML = days.map(day => {
-    const isToday = day.dateLabel === todayLabel;
+    const isToday = day.toDateString() === todayStr;
+    const dayStr  = day.toDateString();
 
-    const postsHtml = day.posts.length
-      ? day.posts.map(post => `
-          <div class="post-card" data-postid="${post.id}" onclick="togglePost(this)">
-            <div class="post-top">
-              ${platformDot(post.platform)}
-              ${postTypeBadge(post.type)}
-              <span class="post-time">${post.timeLabel}</span>
-            </div>
-            ${statusPill(post.status)}
-            <div class="post-caption-preview">${post.captionPreview}</div>
-            <div class="post-detail">
-              <div class="post-detail-label">Full caption</div>
-              ${escapeHtml(post.caption)}
-            </div>
-          </div>
-        `).join('')
+    const dayPosts = filteredPosts.filter(p => {
+      const pd = new Date(p.scheduledTime);
+      return pd.toDateString() === dayStr;
+    }).sort((a, b) => new Date(a.scheduledTime) - new Date(b.scheduledTime));
+
+    const postsHtml = dayPosts.length
+      ? dayPosts.map(p => renderPostCard(p)).join('')
       : '<div class="no-posts">No posts</div>';
+
+    // Default time for quick-add
+    const defaultTime = toDatetimeLocal(new Date(day.setHours(12,0,0,0)));
 
     return `
       <div class="day-col${isToday ? ' today' : ''}">
         <div class="day-head">
-          <div class="day-name">${day.dayLabel.slice(0,3)}</div>
-          <div class="day-date">${day.dateLabel}</div>
+          <div class="day-name">${fmtDayName(day)}</div>
+          <div class="day-date">${fmtDateLabel(day)}</div>
         </div>
         <div class="day-posts">${postsHtml}</div>
-      </div>
-    `;
+        <div class="day-add">
+          <button onclick="openNewPostAt('${defaultTime}')" title="Add post">+</button>
+        </div>
+      </div>`;
   }).join('');
-
-  // Stats
-  const allPosts = days.flatMap(d => d.posts);
-  document.getElementById('statTotal').textContent     = allPosts.length;
-  document.getElementById('statPublished').textContent = allPosts.filter(p => p.status === 'published').length;
-  document.getElementById('statReady').textContent     = allPosts.filter(p => p.status === 'ready').length;
-  document.getElementById('statGenerating').textContent= allPosts.filter(p => p.status === 'generating').length;
 }
 
-function togglePost(card) {
-  const wasExpanded = card.classList.contains('expanded');
-  // Collapse all
-  document.querySelectorAll('.post-card.expanded').forEach(c => c.classList.remove('expanded'));
-  if (!wasExpanded) card.classList.add('expanded');
+function renderPostCard(p) {
+  const pt  = POST_TYPES[p.postType] || { icon: '📄', label: p.postType };
+  const sc  = STATUS_CFG[p.status]  || { cls: 'sb-draft', label: p.status };
+  const cap = (p.caption || '').replace(/\n/g, ' ');
+
+  return `
+    <div class="post-card" onclick="openDetailModal(${p.id})">
+      <div class="pc-top">
+        <span class="pc-type-icon">${pt.icon}</span>
+        <span class="status-badge ${sc.cls}">${sc.label}</span>
+        <span class="pc-time">${fmtTime(p.scheduledTime)}</span>
+      </div>
+      <div class="pc-caption">${escHtml(cap)}</div>
+      <div class="pc-actions" onclick="event.stopPropagation()">
+        <button class="pc-btn" onclick="quickEdit(${p.id})">Edit</button>
+        <button class="pc-btn del" onclick="quickDelete(${p.id})">Delete</button>
+      </div>
+    </div>`;
 }
 
-function escapeHtml(str) {
-  return str
-    .replace(/&/g,'&amp;')
-    .replace(/</g,'&lt;')
-    .replace(/>/g,'&gt;')
-    .replace(/"/g,'&quot;');
+// ── Week navigation ────────────────────────────────────────────────────────
+async function shiftWeek(dir) {
+  weekStart = addDays(weekStart, dir * 7);
+  await loadPosts();
 }
 
-// ── Export ─────────────────────────────────────────────────────────────────
-function exportSchedule() {
-  if (!scheduleData.length) { toast('No schedule loaded yet'); return; }
-  const blob = new Blob([JSON.stringify(scheduleData, null, 2)], { type: 'application/json' });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href     = url;
-  a.download = 'content-calendar.json';
-  a.click();
-  URL.revokeObjectURL(url);
-  toast('Calendar exported', 'success');
+async function goToday() {
+  weekStart = getThisMonday();
+  await loadPosts();
+}
+
+// ── Detail modal ───────────────────────────────────────────────────────────
+async function openDetailModal(postId) {
+  const post = allPosts.find(p => p.id === postId);
+  if (!post) return;
+  activeModalPostId = postId;
+
+  const pt = POST_TYPES[post.postType] || { icon: '📄', label: post.postType };
+  document.getElementById('modalTitle').textContent = `${pt.icon} ${pt.label}`;
+
+  // Preview
+  const pane = document.getElementById('previewPane');
+  pane.className = 'preview-pane' + (post.postType === 'branded_image_story' ? ' story' : '');
+  if (post.contentUrl) {
+    const isVideo = /\.mp4|\.mov/i.test(post.contentUrl) || post.postType.includes('video');
+    pane.innerHTML = isVideo
+      ? `<video src="${escHtml(post.contentUrl)}" controls playsinline style="width:100%;height:100%;object-fit:contain"></video>`
+      : `<img src="${escHtml(post.contentUrl)}" alt="preview">`;
+  } else {
+    pane.innerHTML = `<span class="preview-placeholder">${pt.icon}</span>`;
+  }
+
+  // Info chips
+  const sc = STATUS_CFG[post.status] || { label: post.status };
+  document.getElementById('infoChips').innerHTML = `
+    <span class="info-chip">${pt.label}</span>
+    <span class="info-chip status-badge ${(STATUS_CFG[post.status]||{}).cls||''}" style="border:none">${sc.label}</span>
+    ${post.scriptTemplate ? `<span class="info-chip">Script: ${post.scriptTemplate.templateName}</span>` : ''}
+  `;
+
+  // Form values
+  document.getElementById('modalCaption').value = post.caption || '';
+  document.getElementById('modalTime').value    = toDatetimeLocal(post.scheduledTime);
+  document.getElementById('modalStatus').value  = post.status;
+
+  // Footer buttons
+  const igBtn   = document.getElementById('modalIgBtn');
+  const igLink  = document.getElementById('modalIgLink');
+  const nowBtn  = document.getElementById('modalPostNowBtn');
+
+  if (post.instagramPostId) {
+    igBtn.style.display  = 'none';
+    igLink.style.display = 'inline-flex';
+    igLink.href = `https://www.instagram.com/p/${post.instagramPostId}/`;
+    nowBtn.style.display = 'none';
+  } else if (post.status !== 'published') {
+    igBtn.style.display  = 'inline-flex';
+    igLink.style.display = 'none';
+    nowBtn.style.display = 'inline-flex';
+  } else {
+    igBtn.style.display  = 'none';
+    igLink.style.display = 'none';
+    nowBtn.style.display = 'none';
+  }
+
+  document.getElementById('detailBackdrop').classList.add('open');
+}
+
+function closeDetailModal() {
+  document.getElementById('detailBackdrop').classList.remove('open');
+  activeModalPostId = null;
+}
+
+function closeModal(e) {
+  if (e.target === e.currentTarget) closeDetailModal();
+}
+
+async function modalSave() {
+  if (!activeModalPostId) return;
+  const btn = document.getElementById('modalSaveBtn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try {
+    await api('PATCH', `/api/db/scheduled-posts/${activeModalPostId}`, {
+      caption:       document.getElementById('modalCaption').value,
+      scheduledTime: new Date(document.getElementById('modalTime').value).toISOString(),
+      status:        document.getElementById('modalStatus').value,
+    });
+    toast('Saved', 'ok');
+    closeDetailModal();
+    await loadPosts();
+  } catch (e) {
+    toast('Save failed: ' + e.message, 'err');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Save Changes';
+  }
+}
+
+async function modalDeletePost() {
+  if (!activeModalPostId) return;
+  if (!confirm('Delete this post?')) return;
+  try {
+    await api('DELETE', `/api/db/scheduled-posts/${activeModalPostId}`);
+    toast('Deleted', 'ok');
+    closeDetailModal();
+    await loadPosts();
+  } catch (e) {
+    toast('Delete failed: ' + e.message, 'err');
+  }
+}
+
+async function modalPostNow() {
+  if (!activeModalPostId) return;
+  try {
+    await api('PATCH', `/api/db/scheduled-posts/${activeModalPostId}`, {
+      status:      'published',
+      publishedAt: new Date().toISOString(),
+    });
+    toast('Marked as published', 'ok');
+    closeDetailModal();
+    await loadPosts();
+  } catch (e) {
+    toast('Failed: ' + e.message, 'err');
+  }
+}
+
+function modalPostInstagram() {
+  if (!activeModalPostId) return;
+  igTargetPostId = activeModalPostId;
+  igTargetJobId  = null;
+  const post = allPosts.find(p => p.id === activeModalPostId);
+  document.getElementById('igCaption').value = post?.caption || '';
+  document.getElementById('igError').style.display = 'none';
+  closeDetailModal();
+  document.getElementById('igBackdrop').classList.add('open');
+}
+
+// ── Quick actions (hover buttons on calendar cards) ────────────────────────
+function quickEdit(postId) {
+  openDetailModal(postId);
+}
+
+async function quickDelete(postId) {
+  if (!confirm('Delete this post?')) return;
+  try {
+    await api('DELETE', `/api/db/scheduled-posts/${postId}`);
+    toast('Deleted', 'ok');
+    await loadPosts();
+  } catch (e) {
+    toast('Delete failed: ' + e.message, 'err');
+  }
+}
+
+// ── New post modal ─────────────────────────────────────────────────────────
+function openNewPostModal() {
+  openNewPostAt(toDatetimeLocal(new Date()));
+}
+
+function openNewPostAt(defaultTime) {
+  document.getElementById('npType').value    = 'branded_image_feed';
+  document.getElementById('npTime').value    = defaultTime;
+  document.getElementById('npCaption').value = '';
+  document.getElementById('newPostBackdrop').classList.add('open');
+}
+
+function closeNewPostModal(e) {
+  if (e && e.target !== e.currentTarget) return;
+  document.getElementById('newPostBackdrop').classList.remove('open');
+}
+
+async function createPost() {
+  const postType     = document.getElementById('npType').value;
+  const scheduledTime= document.getElementById('npTime').value;
+  const caption      = document.getElementById('npCaption').value.trim();
+  if (!scheduledTime) { toast('Please pick a time', 'err'); return; }
+
+  try {
+    await api('POST', '/api/db/scheduled-posts', {
+      restaurantId,
+      postType,
+      scheduledTime: new Date(scheduledTime).toISOString(),
+      caption:       caption || null,
+      status:        'draft',
+    });
+    toast('Post created', 'ok');
+    closeNewPostModal({target: null, currentTarget: null});
+    document.getElementById('newPostBackdrop').classList.remove('open');
+    await loadPosts();
+  } catch (e) {
+    toast('Failed: ' + e.message, 'err');
+  }
+}
+
+// ── Instagram modal ────────────────────────────────────────────────────────
+function closeIgModal(e) {
+  if (e && e.target !== e.currentTarget) return;
+  document.getElementById('igBackdrop').classList.remove('open');
+  igTargetJobId = igTargetPostId = null;
+}
+
+async function igGenerateCaption() {
+  const btn = document.getElementById('igGenCapBtn');
+  if (!igTargetJobId) { toast('AI captions only work for generated content jobs', 'err'); return; }
+  btn.disabled = true; btn.textContent = '…generating';
+  try {
+    const data = await api('POST', `/api/output/${igTargetJobId}/caption`);
+    if (data.caption) document.getElementById('igCaption').value = data.caption;
+  } catch (e) {
+    document.getElementById('igError').textContent = e.message;
+    document.getElementById('igError').style.display = 'block';
+  } finally {
+    btn.disabled = false; btn.textContent = '✦ Generate caption with AI';
+  }
+}
+
+async function submitIgPost() {
+  const caption = document.getElementById('igCaption').value.trim();
+  if (!caption) {
+    document.getElementById('igError').textContent = 'Caption is required.';
+    document.getElementById('igError').style.display = 'block';
+    return;
+  }
+  const btn = document.getElementById('igPostBtn');
+  btn.disabled = true; btn.textContent = 'Posting…';
+  document.getElementById('igError').style.display = 'none';
+
+  try {
+    // If we have a filesystem job, use the existing Instagram route
+    if (igTargetJobId) {
+      await api('POST', `/api/output/${igTargetJobId}/post-instagram`, { caption });
+      toast('Posting to Instagram — check back shortly', 'ok');
+    }
+    // If we only have a DB post, mark it scheduled/published
+    if (igTargetPostId) {
+      await api('PATCH', `/api/db/scheduled-posts/${igTargetPostId}`, {
+        caption, status: 'published', publishedAt: new Date().toISOString(),
+      });
+      toast('Marked as published', 'ok');
+      await loadPosts();
+    }
+    document.getElementById('igBackdrop').classList.remove('open');
+  } catch (e) {
+    document.getElementById('igError').textContent = e.message;
+    document.getElementById('igError').style.display = 'block';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Post to Instagram';
+  }
+}
+
+// ── Auto-publish toggle ────────────────────────────────────────────────────
+async function toggleAutoPublish(enabled) {
+  try {
+    await api('PATCH', `/api/db/restaurants/${restaurantId}`, { autoPublishEnabled: enabled });
+    toast(enabled ? 'Auto-publish enabled' : 'Auto-publish disabled', 'ok');
+  } catch (e) {
+    toast('Failed to update setting', 'err');
+    document.getElementById('autoPublish').checked = !enabled;
+  }
 }
 
 // ── Init ───────────────────────────────────────────────────────────────────
 async function init() {
-  try {
-    const [schedule, config] = await Promise.all([
-      fetch('/api/schedule').then(r => r.json()),
-      fetch('/api/config').then(r => r.json()),
-    ]);
-
-    scheduleData = schedule;
-
-    const name = config.restaurantName || 'Restaurant';
-    document.getElementById('scheduleTitle').textContent = `${name} — Content Calendar`;
-
-    const weekStart = schedule[0]?.dateLabel || '';
-    const weekEnd   = schedule[6]?.dateLabel || '';
-    document.getElementById('scheduleSubtitle').textContent =
-      `Week of ${weekStart} – ${weekEnd}`;
-
-    renderSchedule(schedule);
-  } catch (e) {
-    document.getElementById('scheduleSubtitle').textContent = 'Failed to load schedule.';
-    console.error('Schedule load failed:', e);
-  }
+  await loadRestaurant();
+  await loadPosts();
 }
 
 init();
