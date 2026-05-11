@@ -496,6 +496,14 @@ app.get('/api/schedule', (req, res) => {
   res.json(buildSchedule(config));
 });
 
+// ── DB-backed routes ──────────────────────────────────────────────────────────
+
+app.use('/api/db/restaurants',      require('./routes/restaurants'));
+app.use('/api/db/scheduled-posts',  require('./routes/scheduledPosts'));
+app.use('/api/db/script-templates', require('./routes/scriptTemplates'));
+app.use('/api/db/food-photos',      require('./routes/foodPhotos'));
+app.use('/api/db/generation-jobs',  require('./routes/generationJobs'));
+
 // ── Start ─────────────────────────────────────────────────────────────────────
 
 app.listen(PORT, () => {

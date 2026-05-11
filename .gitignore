@@ -21,3 +21,10 @@ output/
 Thumbs.db
 *.swp
 *.swo
+
+/lib/generated/prisma
+
+# SQLite database files (local dev; Railway uses volume at /data)
+data/
+*.db
+*.db-journal

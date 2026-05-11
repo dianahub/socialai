@@ -13,7 +13,8 @@ Takes restaurant assets (logo, food photos, owner photo) and produces:
 - AI/Video: HeyGen API (avatar video + talking photo)
 - Image processing: Sharp (logo overlay, resizing)
 - Asset storage: Cloudinary (persistent across server restarts)
-- Scheduling UI: Mock only, no real social API keys needed for demo
+- Database: SQLite via Prisma 7 + libsql driver adapter (`data/restaurant.db`)
+- Scheduling UI: DB-backed scheduled_posts table; mock fallback at GET /api/schedule
 
 ## How to run
 ```
@@ -33,9 +34,23 @@ CLOUDINARY_CLOUD_NAME=dlbqagijb
 CLOUDINARY_API_KEY=593464484614269
 CLOUDINARY_API_SECRET=...
 PORT=3000
+DATABASE_URL=file:./data/restaurant.db   # local; Railway: file:/data/restaurant.db
 # DATA_DIR=/data  (only needed for local output/config without Cloudinary)
 ```
 All variables are set in Railway (production) and in local `.env`.
+
+## Database — Prisma + SQLite
+Schema: `prisma/schema.prisma` — 5 tables: Restaurant, FoodPhoto, ScriptTemplate, ScheduledPost, GenerationJob.
+Migrations: `prisma/migrations/` — run `npm run db:migrate` on first deploy.
+Seed: `npm run db:seed` — inserts demo restaurant "Osteria della Luna" with photos, templates, and 10 scheduled posts.
+Client: `lib/db.js` — Prisma singleton using `@prisma/adapter-libsql`.
+DB API routes (all under `/api/db/`):
+- `GET/POST /api/db/restaurants` + `GET/PATCH/DELETE /api/db/restaurants/:id`
+- `GET/POST /api/db/scheduled-posts` + `PATCH/DELETE /api/db/scheduled-posts/:id` (filter by restaurantId, status, from, to)
+- `GET/POST /api/db/script-templates` + `PATCH/DELETE /api/db/script-templates/:id`
+- `GET/POST /api/db/food-photos` + `DELETE /api/db/food-photos/:id`
+- `GET/POST /api/db/generation-jobs` + `PATCH /api/db/generation-jobs/:id`
+Railway: set `DATABASE_URL=file:/data/restaurant.db` and mount a volume at `/data`.
 
 ## Asset storage — Cloudinary
 Uploaded assets are stored in Cloudinary and survive Railway server restarts.
@@ -78,3 +93,5 @@ Key files:
 - All output (videos/images + metadata JSON) saved to /output on the server filesystem
 - Asset uploads (logo, photos, owner) persist in Cloudinary across restarts
 - config.json (restaurant name, colors, etc.) is still stored on local filesystem — re-enter after a cold restart if no DATA_DIR volume is mounted
+- Prisma 7 uses the libsql driver adapter — no binary engine; `PrismaLibSql` takes a `{ url }` config, not a pre-created client
+- `GET /api/schedule` (mock) is kept as-is; new DB-backed schedule lives at `/api/db/scheduled-posts`

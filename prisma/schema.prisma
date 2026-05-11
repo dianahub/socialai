@@ -1,0 +1,86 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Restaurant {
+  id                   Int      @id @default(autoincrement())
+  name                 String
+  cuisineType          String?
+  location             String?
+  brandColorPrimary    String?
+  brandColorAccent     String?
+  logoUrl              String?
+  ownerPortraitUrl     String?
+  instagramAccessToken String?
+  instagramUserId      String?
+  autoPublishEnabled   Boolean  @default(false)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  foodPhotos      FoodPhoto[]
+  scriptTemplates ScriptTemplate[]
+  scheduledPosts  ScheduledPost[]
+  generationJobs  GenerationJob[]
+}
+
+model FoodPhoto {
+  id           Int        @id @default(autoincrement())
+  restaurantId Int
+  photoUrl     String
+  caption      String?
+  createdAt    DateTime   @default(now())
+
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+}
+
+model ScriptTemplate {
+  id           Int      @id @default(autoincrement())
+  restaurantId Int
+  templateName String
+  scriptText   String
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  restaurant     Restaurant    @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  scheduledPosts ScheduledPost[]
+}
+
+// postType: owner_twin_video | cinematic_video | branded_image_feed | branded_image_story
+// status:   draft | scheduled | published | failed
+model ScheduledPost {
+  id               Int       @id @default(autoincrement())
+  restaurantId     Int
+  postType         String
+  contentUrl       String?
+  caption          String?
+  scheduledTime    DateTime
+  status           String    @default("draft")
+  instagramPostId  String?
+  scriptTemplateId Int?
+  createdAt        DateTime  @default(now())
+  publishedAt      DateTime?
+
+  restaurant     Restaurant      @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  scriptTemplate ScriptTemplate? @relation(fields: [scriptTemplateId], references: [id])
+}
+
+// jobType:  owner_twin_video | cinematic_video | branded_image_feed | branded_image_story
+// status:   pending | processing | completed | failed
+model GenerationJob {
+  id            Int       @id @default(autoincrement())
+  restaurantId  Int
+  jobType       String
+  externalJobId String?
+  status        String    @default("pending")
+  resultUrl     String?
+  createdAt     DateTime  @default(now())
+  completedAt   DateTime?
+
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+}
