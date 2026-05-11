@@ -153,19 +153,15 @@ async function uploadTalkingPhoto(imagePath) {
   const stat = fs.statSync(tmpPath);
   console.log('[uploadTalkingPhoto] temp file size:', stat.size, 'original dims:', meta.width, 'x', meta.height);
 
-  const form = new FormData();
-  form.append('talking_photo', fs.createReadStream(tmpPath), {
-    filename:    'owner.jpg',
-    contentType: 'image/jpeg',
-    knownLength: stat.size,
-  });
+  const imageBuffer = fs.readFileSync(tmpPath);
+  fs.unlink(tmpPath, () => {});
 
   let resp;
   try {
-    resp = await axios.post(`${UPLOAD_BASE}/v1/talking_photo`, form, {
+    resp = await axios.post(`${UPLOAD_BASE}/v1/talking_photo`, imageBuffer, {
       headers: {
-        'X-Api-Key': API_KEY,
-        ...form.getHeaders(),
+        'X-Api-Key':    API_KEY,
+        'Content-Type': 'image/jpeg',
       },
       maxBodyLength: Infinity,
       maxContentLength: Infinity,
@@ -174,11 +170,9 @@ async function uploadTalkingPhoto(imagePath) {
   } catch (axiosErr) {
     const body = axiosErr.response?.data;
     console.error('[uploadTalkingPhoto] HeyGen error body:', JSON.stringify(body).slice(0, 500));
-    fs.unlink(tmpPath, () => {});
     throw axiosErr;
   }
 
-  fs.unlink(tmpPath, () => {});
   console.log('[uploadTalkingPhoto] response:', resp.status, JSON.stringify(resp.data).slice(0, 200));
   return resp.data?.data?.talking_photo_id;
 }
