@@ -6,6 +6,8 @@ const fs      = require('fs');
 const { v4: uuidv4 } = require('uuid');
 const cld     = require('./lib/cloudinary');
 const db      = require('./lib/db');
+const { isAuthEnabled, createToken, requireAuth } = require('./lib/auth');
+const bcrypt  = require('bcryptjs');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -43,6 +45,91 @@ app.use(express.static(path.resolve('public')));
 app.use('/assets', express.static(ASSETS_DIR));
 app.use('/output',  express.static(OUTPUT_DIR));
 
+// ── Auth endpoints (always public — no auth middleware) ────────────────────
+
+// Tell the frontend whether auth is enabled
+app.get('/api/auth/config', (req, res) => {
+  res.json({ authEnabled: isAuthEnabled() });
+});
+
+// Login: email + password → JWT
+app.post('/api/auth/login', async (req, res) => {
+  if (!isAuthEnabled())
+    return res.status(400).json({ error: 'Auth is not enabled on this server (JWT_SECRET not set)' });
+  const { email, password } = req.body;
+  if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
+  try {
+    const r = await db.restaurant.findFirst({ where: { loginEmail: email.toLowerCase() } });
+    if (!r?.loginPasswordHash)
+      return res.status(401).json({ error: 'Invalid email or password' });
+    const ok = await bcrypt.compare(password, r.loginPasswordHash);
+    if (!ok) return res.status(401).json({ error: 'Invalid email or password' });
+    const token = createToken(r.id);
+    res.json({ token, restaurantId: r.id, restaurantName: r.name });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Logout is stateless — client removes the token
+app.post('/api/auth/logout', (req, res) => res.json({ success: true }));
+
+// Who am I? (requires token)
+app.get('/api/auth/me', requireAuth, async (req, res) => {
+  try {
+    const r = await db.restaurant.findUnique({
+      where: { id: req.restaurantId || 1 },
+      select: { id: true, name: true, loginEmail: true },
+    });
+    if (!r) return res.status(404).json({ error: 'Not found' });
+    res.json(r);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+
+// ── Global auth middleware (protects all /api/ except /api/auth/*) ─────────
+app.use((req, res, next) => {
+  if (!req.path.startsWith('/api/') || req.path.startsWith('/api/auth/')) return next();
+  // ADMIN_SECRET header bypasses JWT auth (for Diana's admin operations)
+  const adminSecret = req.headers['x-admin-secret'];
+  if (adminSecret && adminSecret === process.env.ADMIN_SECRET) return next();
+  requireAuth(req, res, next);
+});
+
+// Set/update login credentials — protected by global middleware (JWT or admin secret).
+// When auth is disabled: no check, open; restaurantId from body.
+// When auth enabled: req.restaurantId set by JWT (own restaurant) or admin secret (any).
+app.post('/api/auth/set-credentials', async (req, res) => {
+  // This route is under /api/auth/ so it bypasses the global middleware.
+  // We verify auth manually here.
+  if (isAuthEnabled()) {
+    const adminSecret = req.headers['x-admin-secret'];
+    const isAdmin = adminSecret && adminSecret === process.env.ADMIN_SECRET;
+    if (!isAdmin) {
+      const header = req.headers.authorization;
+      if (!header?.startsWith('Bearer '))
+        return res.status(403).json({ error: 'Requires your login token or admin secret' });
+      const { verifyToken } = require('./lib/auth');
+      const payload = verifyToken(header.slice(7));
+      if (!payload) return res.status(403).json({ error: 'Invalid token' });
+      req.restaurantId = payload.restaurantId; // lock to own restaurant
+    }
+  }
+  const { email, password } = req.body;
+  const restaurantId = req.restaurantId || Number(req.body.restaurantId) || 1;
+  if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
+  if (password.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters' });
+  try {
+    const hash = await bcrypt.hash(password, 12);
+    await db.restaurant.update({
+      where: { id: restaurantId },
+      data:  { loginEmail: email.toLowerCase(), loginPasswordHash: hash },
+    });
+    res.json({ success: true });
+  } catch (e) {
+    if (e.code === 'P2002') return res.status(409).json({ error: 'That email is already used by another restaurant' });
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ── Multer storage (memory — files are streamed to Cloudinary or saved locally) ─
 
 const uploadLogo   = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
@@ -62,7 +149,7 @@ function saveLocalAsset(subdir, filename, buffer) {
 
 app.post('/api/upload/logo', uploadLogo.single('file'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file received' });
-  const restaurantId = Number(req.body.restaurantId) || 1;
+  const restaurantId = req.restaurantId || Number(req.body.restaurantId) || 1;
 
   let buffer = req.file.buffer;
   const ext  = path.extname(req.file.originalname).toLowerCase();
@@ -97,7 +184,7 @@ app.post('/api/upload/logo', uploadLogo.single('file'), async (req, res) => {
 
 app.post('/api/upload/photos', uploadPhotos.array('files', 6), async (req, res) => {
   if (!req.files?.length) return res.status(400).json({ error: 'No files received' });
-  const restaurantId = Number(req.body.restaurantId) || 1;
+  const restaurantId = req.restaurantId || Number(req.body.restaurantId) || 1;
 
   if (cld.isConfigured()) {
     try {
@@ -131,7 +218,7 @@ app.post('/api/upload/photos', uploadPhotos.array('files', 6), async (req, res) 
 
 app.post('/api/upload/owner', uploadOwner.single('file'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file received' });
-  const restaurantId = Number(req.body.restaurantId) || 1;
+  const restaurantId = req.restaurantId || Number(req.body.restaurantId) || 1;
 
   if (cld.isConfigured()) {
     try {
@@ -159,7 +246,7 @@ app.post('/api/upload/owner', uploadOwner.single('file'), async (req, res) => {
 // ── Asset management ──────────────────────────────────────────────────────────
 
 app.get('/api/assets', async (req, res) => {
-  const restaurantId = Number(req.query.restaurantId) || 1;
+  const restaurantId = req.restaurantId || Number(req.query.restaurantId) || 1;
 
   if (cld.isConfigured()) {
     try {
@@ -203,7 +290,7 @@ app.get('/api/assets', async (req, res) => {
 
 app.delete('/api/assets/:type/:filename', async (req, res) => {
   const { type, filename } = req.params;
-  const restaurantId = Number(req.query.restaurantId) || 1;
+  const restaurantId = req.restaurantId || Number(req.query.restaurantId) || 1;
   if (!['logo', 'photos', 'owner'].includes(type))
     return res.status(400).json({ error: 'Invalid type' });
 
@@ -260,7 +347,7 @@ function restaurantToConfig(r) {
 app.post('/api/config', async (req, res) => {
   const { restaurantId: rId, restaurantName, cuisineType, ownerName, tagline,
           primaryColor, accentColor, bgColor, platforms, twinStyle, twinUsecase, ownerScript } = req.body;
-  const restaurantId = Number(rId) || 1;
+  const restaurantId = req.restaurantId || Number(rId) || 1;
   const data = {};
   if (restaurantName !== undefined) data.name                = restaurantName;
   if (cuisineType    !== undefined) data.cuisineType         = cuisineType;
@@ -286,7 +373,7 @@ app.post('/api/config', async (req, res) => {
 });
 
 app.get('/api/config', async (req, res) => {
-  const restaurantId = Number(req.query.restaurantId) || 1;
+  const restaurantId = req.restaurantId || Number(req.query.restaurantId) || 1;
   try {
     const r = await db.restaurant.findUnique({ where: { id: restaurantId } });
     if (r) return res.json(restaurantToConfig(r));
@@ -345,7 +432,7 @@ Requirements: first person, warm and personal, specific to the topic, end with a
 
 app.post('/api/generate', async (req, res) => {
   const { type, customScript, restaurantId: rId } = req.body;
-  const restaurantId = Number(rId) || 1;
+  const restaurantId = req.restaurantId || Number(rId) || 1;
   if (!['video', 'twin', 'image'].includes(type))
     return res.status(400).json({ error: 'Invalid type. Use: video, twin, image' });
 
@@ -551,7 +638,7 @@ app.post('/api/output/:jobId/post-instagram', async (req, res) => {
   // Load per-restaurant IG credentials (fall back to env vars in pipeline)
   let igCreds = {};
   try {
-    const restaurantId = Number(req.body.restaurantId) || 1;
+    const restaurantId = req.restaurantId || Number(req.body.restaurantId) || 1;
     const r = await db.restaurant.findUnique({ where: { id: restaurantId } });
     if (r?.instagramUserId && r?.instagramAccessToken) {
       igCreds = { accountId: r.instagramUserId, accessToken: r.instagramAccessToken };

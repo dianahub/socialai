@@ -21,6 +21,8 @@ model Restaurant {
   twinStyle            String?
   twinUsecase          String?
   ownerScript          String?
+  loginEmail           String?  @unique
+  loginPasswordHash    String?
   logoUrl              String?
   ownerPortraitUrl     String?
   instagramAccessToken String?

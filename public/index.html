@@ -580,6 +580,27 @@
     </div>
   </div>
 
+  <!-- ── Login Credentials ── -->
+  <div class="section" style="margin-top:1.5rem">
+    <div class="section-title">Login Credentials
+      <span class="section-subtitle">Email + password restaurant owners use to sign in</span>
+    </div>
+    <div class="form-grid" style="grid-template-columns:1fr 1fr;gap:1rem;margin-top:0.75rem">
+      <div class="field-group">
+        <label for="loginEmail">Email Address</label>
+        <input type="email" id="loginEmail" placeholder="owner@yourrestaurant.com">
+      </div>
+      <div class="field-group">
+        <label for="loginPassword">Password <span style="font-size:0.7rem;color:var(--text-muted)">(min 8 chars)</span></label>
+        <input type="password" id="loginPassword" placeholder="Set or update password">
+      </div>
+    </div>
+    <p style="font-size:0.75rem;color:var(--text-muted);margin-top:0.75rem">
+      Credentials are restaurant-specific — each owner logs in independently.
+      <button id="credSaveBtn" onclick="saveLoginCredentials()" style="margin-left:1rem;background:rgba(200,168,75,0.15);border:1px solid rgba(200,168,75,0.25);border-radius:6px;padding:0.25rem 0.75rem;color:var(--gold-light);cursor:pointer;font-size:0.78rem;font-family:inherit">Save Credentials</button>
+    </p>
+  </div>
+
   <!-- ── Instagram Credentials ── -->
   <div class="section" style="margin-top:1.5rem">
     <div class="section-title">Instagram Credentials
@@ -878,18 +899,41 @@ async function loadSavedState() {
 
     buildPhotoGrid();
 
-    // Load Instagram credentials (show account ID; mask token)
+    // Load Instagram credentials + login email
     try {
       const rest = await fetch(`/api/db/restaurants/${rid}`).then(r => r.json());
       if (rest.instagramUserId) document.getElementById('igAccountId').value = rest.instagramUserId;
       if (rest.instagramAccessToken) {
         document.getElementById('igAccessToken').placeholder = '••••••• (saved — enter new value to update)';
       }
+      if (rest.loginEmail) document.getElementById('loginEmail').value = rest.loginEmail;
     } catch {}
   } catch (e) {
     console.warn('Could not load saved state:', e.message);
     buildPhotoGrid();
   }
+}
+
+// ── Login credentials ──────────────────────────────────────────────────────
+async function saveLoginCredentials() {
+  const email    = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  if (!email || !password) { toast('Email and password are required', 'error'); return; }
+  if (password.length < 8)  { toast('Password must be at least 8 characters', 'error'); return; }
+  const btn = document.getElementById('credSaveBtn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try {
+    const res = await fetch('/api/auth/set-credentials', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ restaurantId: getRestaurantId(), email, password }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Save failed');
+    toast('Login credentials saved', 'success');
+    document.getElementById('loginPassword').value = '';
+  } catch (e) { toast(e.message, 'error'); }
+  finally { btn.disabled = false; btn.textContent = 'Save Credentials'; }
 }
 
 // ── Instagram credentials ──────────────────────────────────────────────────

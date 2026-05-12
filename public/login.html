@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Login — Restaurant Social AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg-deep:    #090910;
+    --bg-card:    #12121c;
+    --bg-surface: #1a1a28;
+    --gold:       #c8a84b;
+    --gold-light: #e5c97a;
+    --gold-dim:   rgba(200, 168, 75, 0.18);
+    --gold-border:rgba(200, 168, 75, 0.18);
+    --text:       #f0ede8;
+    --text-muted: #7a7773;
+    --border:     rgba(255,255,255,0.06);
+    --red:        #cc4444;
+    --green:      #4a9960;
+  }
+
+  body {
+    background: var(--bg-deep);
+    color: var(--text);
+    font-family: 'Inter', system-ui, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+  }
+
+  .login-card {
+    width: 100%;
+    max-width: 400px;
+    background: var(--bg-card);
+    border: 1px solid var(--gold-border);
+    border-radius: 16px;
+    padding: 2.5rem;
+  }
+
+  .login-logo {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 1.1rem;
+    color: var(--gold-light);
+    letter-spacing: 0.05em;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .login-title {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 0.4rem;
+  }
+
+  .login-sub {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-bottom: 2rem;
+  }
+
+  .field-group {
+    margin-bottom: 1.1rem;
+  }
+
+  .field-group label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 0.4rem;
+  }
+
+  .field-group input {
+    width: 100%;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.7rem 0.9rem;
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-size: 0.9rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .field-group input:focus {
+    border-color: rgba(200,168,75,0.4);
+  }
+
+  .btn-login {
+    width: 100%;
+    background: var(--gold-dim);
+    border: 1px solid var(--gold-border);
+    border-radius: 8px;
+    padding: 0.75rem;
+    color: var(--gold-light);
+    font-family: 'Inter', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 0.5rem;
+    transition: background 0.2s;
+  }
+
+  .btn-login:hover:not(:disabled) { background: rgba(200,168,75,0.3); }
+  .btn-login:disabled { opacity: 0.5; cursor: default; }
+
+  .error-msg {
+    display: none;
+    margin-top: 1rem;
+    padding: 0.65rem 0.9rem;
+    background: rgba(204,68,68,0.12);
+    border: 1px solid rgba(204,68,68,0.25);
+    border-radius: 8px;
+    color: #e87878;
+    font-size: 0.85rem;
+  }
+
+  .error-msg.show { display: block; }
+
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 2rem 0 1.5rem;
+  }
+
+  .footer-note {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+</style>
+</head>
+<body>
+
+<div class="login-card">
+  <div class="login-logo">✦ Restaurant Social AI</div>
+  <h1 class="login-title">Sign in</h1>
+  <p class="login-sub">Enter your restaurant credentials to continue.</p>
+
+  <form id="loginForm" onsubmit="doLogin(event)">
+    <div class="field-group">
+      <label for="email">Email</label>
+      <input type="email" id="email" placeholder="owner@yourrestaurant.com" autocomplete="email" required>
+    </div>
+    <div class="field-group">
+      <label for="password">Password</label>
+      <input type="password" id="password" placeholder="••••••••" autocomplete="current-password" required>
+    </div>
+    <button class="btn-login" type="submit" id="loginBtn">Sign in</button>
+    <div class="error-msg" id="errorMsg"></div>
+  </form>
+
+  <hr class="divider">
+  <p class="footer-note">Your credentials are specific to your restaurant — contact your administrator if you need access.</p>
+</div>
+
+<script>
+async function doLogin(e) {
+  e.preventDefault();
+  const email    = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+  const btn      = document.getElementById('loginBtn');
+  const errEl    = document.getElementById('errorMsg');
+
+  btn.disabled    = true;
+  btn.textContent = 'Signing in…';
+  errEl.classList.remove('show');
+
+  try {
+    const res  = await fetch('/api/auth/login', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Login failed');
+
+    localStorage.setItem('authToken', data.token);
+    window.location.href = '/index.html';
+  } catch (err) {
+    errEl.textContent = err.message;
+    errEl.classList.add('show');
+    btn.disabled    = false;
+    btn.textContent = 'Sign in';
+  }
+}
+</script>
+</body>
+</html>
