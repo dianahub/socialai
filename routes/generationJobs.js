@@ -43,7 +43,7 @@ router.post('/', async (req, res) => {
 
 // PATCH /api/db/generation-jobs/:id  — update status / resultUrl
 router.patch('/:id', async (req, res) => {
-  const { status, resultUrl, externalJobId } = req.body;
+  const { status, resultUrl, externalJobId, errorMessage } = req.body;
   const data = {};
   if (status         !== undefined) {
     if (!VALID_STATUSES.includes(status))
@@ -53,6 +53,7 @@ router.patch('/:id', async (req, res) => {
   }
   if (resultUrl     !== undefined) data.resultUrl     = resultUrl;
   if (externalJobId !== undefined) data.externalJobId = externalJobId;
+  if (errorMessage  !== undefined) data.errorMessage  = errorMessage;
   try {
     const row = await db.generationJob.update({ where: { id: Number(req.params.id) }, data });
     res.json(row);

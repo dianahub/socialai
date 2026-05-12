@@ -503,6 +503,7 @@ app.use('/api/db/scheduled-posts',  require('./routes/scheduledPosts'));
 app.use('/api/db/script-templates', require('./routes/scriptTemplates'));
 app.use('/api/db/food-photos',      require('./routes/foodPhotos'));
 app.use('/api/db/generation-jobs',  require('./routes/generationJobs'));
+app.use('/api/generate-week',       require('./routes/generateWeek'));
 
 // ── Start ─────────────────────────────────────────────────────────────────────
 
@@ -511,4 +512,5 @@ app.listen(PORT, () => {
   console.log(`  ─────────────────────────────`);
   console.log(`  http://localhost:${PORT}`);
   console.log(`  Data: ${DATA_DIR}\n`);
+  require('./lib/jobQueue').startWorker();
 });
