@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Script Templates — Restaurant Social AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg-deep:     #090910;
+  --bg-card:     #12121c;
+  --bg-surface:  #1a1a28;
+  --bg-modal:    #0f0f1a;
+  --gold:        #c8a84b;
+  --gold-light:  #e5c97a;
+  --gold-dim:    rgba(200,168,75,0.12);
+  --gold-border: rgba(200,168,75,0.18);
+  --text:        #f0ede8;
+  --text-muted:  #7a7773;
+  --green:       #4a9960;
+  --green-dim:   rgba(74,153,96,0.14);
+  --blue:        #4a7fc1;
+  --blue-dim:    rgba(74,127,193,0.14);
+  --amber:       #d97706;
+  --amber-dim:   rgba(217,119,6,0.14);
+  --red:         #cc4444;
+  --red-dim:     rgba(204,68,68,0.14);
+  --border:      rgba(255,255,255,0.05);
+  --radius:      10px;
+}
+
+body { background: var(--bg-deep); color: var(--text); font-family: 'Inter', system-ui, sans-serif; line-height: 1.6; min-height: 100vh; }
+
+nav {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 2.5rem; height: 64px;
+  background: rgba(9,9,16,0.96); border-bottom: 1px solid var(--gold-border);
+  position: sticky; top: 0; z-index: 200; backdrop-filter: blur(12px);
+}
+.nav-brand { font-family: 'Playfair Display', Georgia, serif; font-size: 1.1rem; color: var(--gold-light); letter-spacing: 0.05em; }
+.nav-links { display: flex; }
+.nav-links a {
+  color: var(--text-muted); text-decoration: none; font-size: 0.8rem;
+  font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase;
+  padding: 0.4rem 1rem; border-bottom: 2px solid transparent;
+  transition: color 0.2s, border-color 0.2s;
+}
+.nav-links a:hover { color: var(--text); }
+.nav-links a.active { color: var(--gold-light); border-bottom-color: var(--gold); }
+
+/* ── Layout ── */
+.layout {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 0;
+  height: calc(100vh - 64px);
+}
+
+/* ── Sidebar ── */
+.sidebar {
+  background: var(--bg-card);
+  border-right: 1px solid var(--gold-border);
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+.sidebar-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 1.25rem 1.2rem; border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.sidebar-title {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 1rem; color: var(--gold-light);
+}
+.sidebar-list { overflow-y: auto; flex: 1; padding: 0.5rem; }
+
+.tmpl-card {
+  padding: 0.75rem 0.85rem; border-radius: 8px; cursor: pointer;
+  border: 1px solid transparent; margin-bottom: 0.3rem;
+  transition: background 0.15s, border-color 0.15s;
+}
+.tmpl-card:hover { background: var(--bg-surface); }
+.tmpl-card.selected { background: var(--gold-dim); border-color: var(--gold-border); }
+
+.tc-top { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.3rem; }
+.tc-name { font-size: 0.85rem; font-weight: 600; color: var(--text); flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tc-active-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.tc-active-dot.on  { background: var(--green); }
+.tc-active-dot.off { background: rgba(255,255,255,0.15); }
+
+.tc-topic {
+  font-size: 0.62rem; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase;
+  padding: 0.1rem 0.4rem; border-radius: 4px; margin-bottom: 0.3rem;
+  display: inline-block;
+}
+.tc-preview { font-size: 0.72rem; color: var(--text-muted); line-height: 1.4; }
+.tc-meta { font-size: 0.62rem; color: rgba(255,255,255,0.2); margin-top: 0.3rem; }
+
+.empty-list { padding: 2rem 1rem; text-align: center; color: var(--text-muted); font-size: 0.8rem; }
+
+/* ── Editor ── */
+.editor {
+  display: flex; flex-direction: column;
+  overflow-y: auto; padding: 2rem 2.5rem 4rem;
+}
+
+.editor-empty {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 1rem;
+  color: var(--text-muted); text-align: center;
+}
+.editor-empty .icon { font-size: 3rem; opacity: 0.2; }
+.editor-empty h2 { font-family: 'Playfair Display', Georgia, serif; font-size: 1.2rem; color: var(--text); }
+.editor-empty p  { font-size: 0.85rem; max-width: 300px; }
+
+.editor-form { max-width: 680px; width: 100%; }
+
+.editor-heading {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 1.4rem; color: var(--text); margin-bottom: 1.75rem;
+}
+
+.form-group { display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 1.25rem; }
+.form-label {
+  font-size: 0.7rem; font-weight: 600; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--text-muted);
+}
+.form-input, .form-textarea, .form-select {
+  background: var(--bg-surface); border: 1px solid rgba(255,255,255,0.08);
+  color: var(--text); padding: 0.65rem 0.9rem; border-radius: 8px;
+  font-size: 0.875rem; font-family: 'Inter', sans-serif; outline: none;
+  transition: border-color 0.15s;
+}
+.form-input:focus, .form-textarea:focus, .form-select:focus { border-color: var(--gold-border); }
+.form-textarea { resize: vertical; min-height: 130px; line-height: 1.6; }
+
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.25rem; }
+
+/* Script counter */
+.script-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 0.4rem; }
+.script-count { font-size: 0.72rem; color: var(--text-muted); }
+.script-count.warn { color: #f59e0b; }
+.script-count.ok   { color: var(--green); }
+
+/* AI writer */
+.ai-section {
+  background: var(--bg-surface); border: 1px solid var(--border);
+  border-radius: 10px; padding: 1rem 1.1rem; margin-bottom: 1.25rem;
+  display: none; flex-direction: column; gap: 0.75rem;
+}
+.ai-section.open { display: flex; }
+.ai-row { display: flex; gap: 0.6rem; }
+
+/* Active toggle */
+.toggle-row {
+  display: flex; align-items: center; gap: 0.75rem;
+  padding: 0.85rem 1rem; background: var(--bg-surface);
+  border: 1px solid var(--border); border-radius: 8px; margin-bottom: 1.5rem;
+}
+.toggle-info { flex: 1; }
+.toggle-info-title { font-size: 0.85rem; font-weight: 600; color: var(--text); }
+.toggle-info-desc  { font-size: 0.72rem; color: var(--text-muted); margin-top: 0.1rem; }
+.toggle {
+  position: relative; width: 40px; height: 22px; cursor: pointer; flex-shrink: 0;
+}
+.toggle input { opacity: 0; width: 0; height: 0; }
+.toggle-track {
+  position: absolute; inset: 0; background: rgba(255,255,255,0.08);
+  border-radius: 99px; transition: background 0.2s; border: 1px solid rgba(255,255,255,0.1);
+}
+.toggle input:checked ~ .toggle-track { background: var(--green); border-color: var(--green); }
+.toggle-thumb {
+  position: absolute; top: 4px; left: 4px;
+  width: 14px; height: 14px; background: white; border-radius: 50%;
+  transition: transform 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+}
+.toggle input:checked ~ .toggle-thumb { transform: translateX(18px); }
+
+/* Buttons */
+.btn {
+  display: inline-flex; align-items: center; gap: 0.45rem;
+  padding: 0.6rem 1.3rem; border-radius: 7px;
+  font-size: 0.82rem; font-weight: 600; letter-spacing: 0.04em;
+  cursor: pointer; border: none; text-decoration: none;
+  transition: opacity 0.18s, transform 0.12s; white-space: nowrap; font-family: 'Inter', sans-serif;
+}
+.btn:active { transform: scale(0.97); }
+.btn-primary { background: var(--gold); color: #090910; }
+.btn-primary:hover { opacity: 0.88; }
+.btn-ghost {
+  background: transparent; color: var(--text-muted);
+  border: 1px solid rgba(255,255,255,0.09);
+}
+.btn-ghost:hover { color: var(--text); border-color: rgba(255,255,255,0.18); }
+.btn-danger { background: var(--red-dim); color: #f87171; border: 1px solid rgba(204,68,68,0.3); }
+.btn-danger:hover { opacity: 0.8; }
+.btn-sm { padding: 0.35rem 0.85rem; font-size: 0.75rem; }
+.btn-ai {
+  background: var(--gold-dim); color: var(--gold-light);
+  border: 1px solid var(--gold-border); font-size: 0.8rem;
+  padding: 0.5rem 1rem; border-radius: 7px; cursor: pointer;
+  font-family: 'Inter', sans-serif; font-weight: 600; letter-spacing: 0.04em;
+  transition: opacity 0.15s; display: inline-flex; align-items: center; gap: 0.4rem;
+}
+.btn-ai:hover { opacity: 0.8; }
+
+.action-row { display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap; }
+.action-row-left { flex: 1; }
+
+/* Topic colors */
+.topic-welcome          { background: rgba(99,102,241,0.15); color: #a5b4fc; }
+.topic-weekend_special  { background: rgba(245,158,11,0.15); color: #fcd34d; }
+.topic-happy_hour       { background: rgba(236,72,153,0.15); color: #f9a8d4; }
+.topic-new_menu_item    { background: rgba(74,153,96,0.15);  color: #6dbb88; }
+.topic-holiday          { background: rgba(239,68,68,0.15);  color: #fca5a5; }
+.topic-general_update   { background: rgba(255,255,255,0.08);color: #9ca3af; }
+.topic-behind_the_scenes{ background: rgba(200,168,75,0.15); color: #e5c97a; }
+.topic-seasonal_menu    { background: rgba(52,211,153,0.15); color: #6ee7b7; }
+
+/* Toast */
+#toast {
+  position: fixed; bottom: 1.75rem; right: 1.75rem;
+  background: var(--bg-surface); border: 1px solid var(--gold-border);
+  border-radius: 8px; padding: 0.75rem 1.1rem; color: var(--text);
+  font-size: 0.84rem; opacity: 0; transform: translateY(8px);
+  transition: opacity 0.25s, transform 0.25s; z-index: 999;
+  pointer-events: none; max-width: 300px;
+}
+#toast.show { opacity: 1; transform: translateY(0); }
+#toast.ok   { border-color: var(--green); color: #6dbb88; }
+#toast.err  { border-color: var(--red);   color: #f87171; }
+
+/* Spinner */
+.spinner {
+  display: inline-block; width: 12px; height: 12px;
+  border: 2px solid rgba(200,168,75,0.25); border-top-color: var(--gold);
+  border-radius: 50%; animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+@media (max-width: 768px) {
+  .layout { grid-template-columns: 1fr; height: auto; }
+  .sidebar { height: auto; max-height: 40vh; }
+  .editor  { padding: 1.5rem 1rem 3rem; }
+  .form-row { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <span class="nav-brand">✦ Restaurant Social AI</span>
+  <div class="nav-links">
+    <a href="index.html">Assets</a>
+    <a href="generate.html">Generate</a>
+    <a href="schedule.html">Schedule</a>
+    <a href="scripts.html" class="active">Scripts</a>
+    <a href="approve.html">Approve</a>
+  </div>
+</nav>
+
+<div class="layout">
+
+  <!-- ── Sidebar ── -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <span class="sidebar-title">Script Templates</span>
+      <button class="btn btn-primary btn-sm" onclick="newTemplate()">+ New</button>
+    </div>
+    <div class="sidebar-list" id="sidebarList">
+      <div class="empty-list">Loading…</div>
+    </div>
+  </aside>
+
+  <!-- ── Editor ── -->
+  <main class="editor" id="editor">
+    <div class="editor-empty" id="editorEmpty">
+      <div class="icon">✦</div>
+      <h2>Script Templates</h2>
+      <p>Select a template from the sidebar or create a new one. Active templates rotate automatically when generating videos.</p>
+      <button class="btn btn-primary" onclick="newTemplate()" style="margin-top:0.5rem">+ New Template</button>
+    </div>
+
+    <div class="editor-form" id="editorForm" style="display:none">
+      <h2 class="editor-heading" id="editorHeading">New Template</h2>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Template Name</label>
+          <input type="text" class="form-input" id="fName" placeholder="e.g. Weekend Welcome">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Topic / Occasion</label>
+          <select class="form-select" id="fTopic">
+            <option value="">— Select topic —</option>
+            <option value="welcome">Welcome Message</option>
+            <option value="weekend_special">Weekend Special</option>
+            <option value="happy_hour">Happy Hour</option>
+            <option value="new_menu_item">New Menu Item</option>
+            <option value="holiday">Holiday / Event</option>
+            <option value="general_update">General Update</option>
+            <option value="behind_the_scenes">Behind the Scenes</option>
+            <option value="seasonal_menu">Seasonal Menu</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Script Text</label>
+        <textarea class="form-textarea" id="fScript" rows="5"
+          placeholder="Write your 15–20 second script (aim for 40–55 words)…"
+          oninput="updateCounter()"></textarea>
+        <div class="script-footer">
+          <span class="script-count" id="scriptCounter">0 words · ~0 sec</span>
+          <button class="btn-ai" onclick="toggleAiSection()">✦ Write with AI</button>
+        </div>
+      </div>
+
+      <!-- AI writer -->
+      <div class="ai-section" id="aiSection">
+        <p style="font-size:0.78rem;color:var(--text-muted)">
+          Describe what you want to say — Claude will write a 15–20 second script.
+        </p>
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label">Details <span style="font-weight:400;opacity:0.5">(optional)</span></label>
+          <input type="text" class="form-input" id="aiDetails"
+            placeholder='e.g. "Truffle tasting menu, $195pp, this Saturday only"'>
+        </div>
+        <div class="ai-row">
+          <button class="btn btn-primary btn-sm" id="aiGenBtn" onclick="generateWithAi()">
+            ✦ Generate Script
+          </button>
+          <button class="btn btn-ghost btn-sm" onclick="toggleAiSection()">Cancel</button>
+        </div>
+      </div>
+
+      <!-- Active toggle -->
+      <div class="toggle-row">
+        <div class="toggle-info">
+          <div class="toggle-info-title">Active</div>
+          <div class="toggle-info-desc">Only active templates are used in video rotation</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="fActive" checked>
+          <span class="toggle-track"></span>
+          <span class="toggle-thumb"></span>
+        </label>
+      </div>
+
+      <!-- Actions -->
+      <div class="action-row">
+        <div class="action-row-left">
+          <button class="btn btn-danger btn-sm" id="deleteBtn" onclick="deleteTemplate()" style="display:none">
+            Delete
+          </button>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="cancelEdit()">Cancel</button>
+        <button class="btn btn-primary" id="saveBtn" onclick="saveTemplate()">Save Template</button>
+      </div>
+    </div>
+  </main>
+
+</div>
+
+<div id="toast"></div>
+
+<script>
+const TOPICS = {
+  welcome:           'Welcome',
+  weekend_special:   'Weekend Special',
+  happy_hour:        'Happy Hour',
+  new_menu_item:     'New Menu Item',
+  holiday:           'Holiday',
+  general_update:    'General Update',
+  behind_the_scenes: 'Behind the Scenes',
+  seasonal_menu:     'Seasonal Menu',
+};
+
+let templates    = [];
+let selectedId   = null;  // null = new
+let restaurantId = 1;
+let restaurant   = null;
+
+// ── Toast ──────────────────────────────────────────────────────────────────
+let toastTimer;
+function toast(msg, type = '') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'show ' + type;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.className = '', 3500);
+}
+
+// ── API ────────────────────────────────────────────────────────────────────
+async function api(method, path, body) {
+  const opts = { method, headers: { 'Content-Type': 'application/json' } };
+  if (body) opts.body = JSON.stringify(body);
+  const r = await fetch(path, opts);
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(d.error || r.status);
+  return d;
+}
+
+// ── Load ───────────────────────────────────────────────────────────────────
+async function load() {
+  try {
+    const rows = await api('GET', '/api/db/restaurants');
+    if (rows?.length) { restaurant = rows[0]; restaurantId = rows[0].id; }
+  } catch {}
+  await loadTemplates();
+}
+
+async function loadTemplates() {
+  try {
+    templates = await api('GET', `/api/db/script-templates?restaurantId=${restaurantId}`);
+  } catch {
+    templates = [];
+  }
+  renderSidebar();
+}
+
+// ── Sidebar ────────────────────────────────────────────────────────────────
+function renderSidebar() {
+  const list = document.getElementById('sidebarList');
+  if (!templates.length) {
+    list.innerHTML = '<div class="empty-list">No templates yet.<br>Click + New to get started.</div>';
+    return;
+  }
+  list.innerHTML = templates.map(t => {
+    const topicCls = t.topic ? `topic-${t.topic}` : 'topic-general_update';
+    const topicLabel = t.topic ? TOPICS[t.topic] || t.topic : '';
+    const preview = (t.scriptText || '').slice(0, 55) + (t.scriptText?.length > 55 ? '…' : '');
+    const lastUsed = t.lastUsedAt
+      ? `Last used ${new Date(t.lastUsedAt).toLocaleDateString()}`
+      : 'Never used';
+    return `
+      <div class="tmpl-card${selectedId === t.id ? ' selected' : ''}" onclick="selectTemplate(${t.id})">
+        <div class="tc-top">
+          <span class="tc-name">${escHtml(t.templateName)}</span>
+          <span class="tc-active-dot ${t.isActive ? 'on' : 'off'}" title="${t.isActive ? 'Active' : 'Inactive'}"></span>
+        </div>
+        ${topicLabel ? `<span class="tc-topic ${topicCls}">${topicLabel}</span>` : ''}
+        <div class="tc-preview">${escHtml(preview)}</div>
+        <div class="tc-meta">${lastUsed}</div>
+      </div>`;
+  }).join('');
+}
+
+function escHtml(s) {
+  return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Select / Edit ──────────────────────────────────────────────────────────
+function selectTemplate(id) {
+  const t = templates.find(x => x.id === id);
+  if (!t) return;
+  selectedId = id;
+  renderSidebar();
+  showForm();
+  document.getElementById('editorHeading').textContent = t.templateName || 'Edit Template';
+  document.getElementById('fName').value   = t.templateName || '';
+  document.getElementById('fTopic').value  = t.topic || '';
+  document.getElementById('fScript').value = t.scriptText || '';
+  document.getElementById('fActive').checked = t.isActive !== false;
+  document.getElementById('deleteBtn').style.display = 'inline-flex';
+  updateCounter();
+  closeAiSection();
+}
+
+function newTemplate() {
+  selectedId = null;
+  renderSidebar();
+  showForm();
+  document.getElementById('editorHeading').textContent = 'New Template';
+  document.getElementById('fName').value   = '';
+  document.getElementById('fTopic').value  = '';
+  document.getElementById('fScript').value = '';
+  document.getElementById('fActive').checked = true;
+  document.getElementById('deleteBtn').style.display = 'none';
+  updateCounter();
+  closeAiSection();
+  document.getElementById('fName').focus();
+}
+
+function cancelEdit() {
+  selectedId = null;
+  renderSidebar();
+  document.getElementById('editorEmpty').style.display = 'flex';
+  document.getElementById('editorForm').style.display  = 'none';
+}
+
+function showForm() {
+  document.getElementById('editorEmpty').style.display = 'none';
+  document.getElementById('editorForm').style.display  = 'block';
+}
+
+// ── Word counter ───────────────────────────────────────────────────────────
+function updateCounter() {
+  const text  = document.getElementById('fScript').value.trim();
+  const words = text ? text.split(/\s+/).length : 0;
+  const secs  = Math.round(words / 2.5);
+  const el    = document.getElementById('scriptCounter');
+  el.textContent = `${words} words · ~${secs} sec`;
+  el.className = 'script-count' + (words < 30 || words > 70 ? ' warn' : words >= 40 && words <= 55 ? ' ok' : '');
+}
+
+// ── AI writer ──────────────────────────────────────────────────────────────
+function toggleAiSection() {
+  const s = document.getElementById('aiSection');
+  s.classList.toggle('open');
+  if (s.classList.contains('open')) document.getElementById('aiDetails').focus();
+}
+
+function closeAiSection() {
+  document.getElementById('aiSection').classList.remove('open');
+}
+
+async function generateWithAi() {
+  const btn     = document.getElementById('aiGenBtn');
+  const topic   = document.getElementById('fTopic').value;
+  const details = document.getElementById('aiDetails').value.trim();
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Generating…';
+
+  try {
+    const data = await api('POST', '/api/db/script-templates/generate-with-ai', {
+      restaurantId,
+      topic:   topic || 'welcome',
+      details: details || '',
+    });
+    document.getElementById('fScript').value = data.script || '';
+    updateCounter();
+    closeAiSection();
+    if (data.note) toast(data.note);
+    else toast('Script ready — review and save', 'ok');
+  } catch (e) {
+    toast('AI error: ' + e.message, 'err');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '✦ Generate Script';
+  }
+}
+
+// ── Save ───────────────────────────────────────────────────────────────────
+async function saveTemplate() {
+  const name   = document.getElementById('fName').value.trim();
+  const topic  = document.getElementById('fTopic').value;
+  const script = document.getElementById('fScript').value.trim();
+  const active = document.getElementById('fActive').checked;
+
+  if (!name)   { toast('Template name is required', 'err'); return; }
+  if (!script) { toast('Script text is required', 'err');   return; }
+
+  const btn = document.getElementById('saveBtn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+
+  try {
+    if (selectedId) {
+      await api('PATCH', `/api/db/script-templates/${selectedId}`, {
+        templateName: name, topic, scriptText: script, isActive: active,
+      });
+      toast('Template saved', 'ok');
+    } else {
+      const created = await api('POST', '/api/db/script-templates', {
+        restaurantId, templateName: name, topic, scriptText: script, isActive: active,
+      });
+      selectedId = created.id;
+      toast('Template created', 'ok');
+    }
+    await loadTemplates();
+    renderSidebar();
+    document.getElementById('editorHeading').textContent = name;
+    document.getElementById('deleteBtn').style.display = 'inline-flex';
+  } catch (e) {
+    toast('Save failed: ' + e.message, 'err');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Save Template';
+  }
+}
+
+// ── Delete ─────────────────────────────────────────────────────────────────
+async function deleteTemplate() {
+  if (!selectedId) return;
+  const t = templates.find(x => x.id === selectedId);
+  if (!confirm(`Delete "${t?.templateName || 'this template'}"? This cannot be undone.`)) return;
+  try {
+    await api('DELETE', `/api/db/script-templates/${selectedId}`);
+    toast('Deleted', 'ok');
+    cancelEdit();
+    await loadTemplates();
+  } catch (e) {
+    toast('Delete failed: ' + e.message, 'err');
+  }
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────
+load();
+</script>
+</body>
+</html>

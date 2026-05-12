@@ -328,6 +328,7 @@
     <a href="index.html">Assets</a>
     <a href="generate.html" class="active">Generate</a>
     <a href="schedule.html">Schedule</a>
+    <a href="scripts.html">Scripts</a>
     <a href="approve.html">Approve</a>
   </div>
 </nav>
@@ -353,7 +354,21 @@
       <h3>Script Writer</h3>
       <span class="sw-tag">Owner Twin</span>
     </div>
-    <p class="sw-desc">Tell Claude what to talk about — it writes the script, you generate the twin video.</p>
+    <p class="sw-desc">Pick from your script library or write a new one with AI.</p>
+
+    <!-- Template picker -->
+    <div id="tmplPickerWrap" style="margin-bottom:0.75rem;display:none">
+      <div class="sw-row" style="align-items:center;gap:0.75rem;flex-wrap:wrap">
+        <div class="sw-group" style="flex:1;min-width:180px">
+          <label>Use saved template</label>
+          <select id="tmplPicker" onchange="pickTemplate()">
+            <option value="">— Pick a template —</option>
+          </select>
+        </div>
+        <a href="scripts.html" style="font-size:0.75rem;color:var(--gold);text-decoration:none;white-space:nowrap;margin-top:1.1rem">Manage templates →</a>
+      </div>
+    </div>
+
     <div class="sw-form">
       <div class="sw-row">
         <div class="sw-group topic">
@@ -835,8 +850,40 @@ function renderGallery(items) {
 }
 
 // ── Init ───────────────────────────────────────────────────────────────────
+async function loadScriptTemplates() {
+  try {
+    const rows = await fetch('/api/db/script-templates?restaurantId=1&isActive=true')
+      .then(r => r.json()).catch(() => []);
+    if (!rows.length) return;
+    const picker = document.getElementById('tmplPicker');
+    rows.forEach(t => {
+      const opt = document.createElement('option');
+      opt.value = t.scriptText;
+      opt.textContent = t.templateName + (t.topic ? ` (${t.topic.replace(/_/g,' ')})` : '');
+      picker.appendChild(opt);
+    });
+    document.getElementById('tmplPickerWrap').style.display = 'block';
+  } catch {}
+}
+
+function pickTemplate() {
+  const val = document.getElementById('tmplPicker').value;
+  if (!val) return;
+  customScript = val;
+  const ta = document.getElementById('scriptText');
+  ta.value = val;
+  ta.addEventListener('input', () => {
+    customScript = ta.value;
+    localStorage.setItem('ownerScript', customScript);
+    saveScriptToConfig(customScript);
+  });
+  document.getElementById('scriptPreview').style.display = 'block';
+  document.getElementById('tmplPicker').value = '';
+}
+
 async function init() {
   await loadHeader();
+  await loadScriptTemplates();
 
   // Restore saved script — prefer server config, fall back to localStorage
   try {

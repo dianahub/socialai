@@ -3,6 +3,58 @@ const db = require('../lib/db');
 
 const router = Router();
 
+// POST /api/db/script-templates/generate-with-ai
+// Must be before /:id routes so Express doesn't treat "generate-with-ai" as an id
+router.post('/generate-with-ai', async (req, res) => {
+  const { topic, details, restaurantId } = req.body;
+
+  let restaurantName = 'our restaurant';
+  let ownerName      = 'the chef';
+  let cuisineType    = 'fine dining';
+
+  if (restaurantId) {
+    try {
+      const r = await db.restaurant.findUnique({ where: { id: Number(restaurantId) } });
+      if (r) {
+        restaurantName = r.name      || restaurantName;
+        cuisineType    = r.cuisineType || cuisineType;
+      }
+    } catch {}
+  }
+
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return res.json({
+      script: `Hello, I'm ${ownerName} from ${restaurantName}. ${details ? `I'm excited to share: ${details}. ` : ''}We pour our heart into every experience here — I'd love to welcome you to our table soon.`,
+      note: 'Template script — add ANTHROPIC_API_KEY to enable AI-written scripts.',
+    });
+  }
+
+  try {
+    const Anthropic = require('@anthropic-ai/sdk');
+    const client    = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const msg = await client.messages.create({
+      model:      'claude-haiku-4-5-20251001',
+      max_tokens: 300,
+      system:     'You write short spoken scripts for restaurant owner digital twin social videos. Output only the spoken words — no stage directions, no labels, no quotes.',
+      messages: [{
+        role:    'user',
+        content: `Write a 15–20 second spoken script (40–55 words) for a restaurant owner video post on Instagram.
+
+Owner: ${ownerName}
+Restaurant: ${restaurantName}
+Cuisine: ${cuisineType}
+Topic: ${topic || 'welcome'}
+Details: ${details || 'none'}
+
+Requirements: first person, warm and personal, specific to the topic, end with a natural invitation to visit or follow.`,
+      }],
+    });
+    res.json({ script: msg.content[0].text.trim() });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // GET /api/db/script-templates?restaurantId=&isActive=
 router.get('/', async (req, res) => {
   const { restaurantId, isActive } = req.query;
@@ -10,7 +62,10 @@ router.get('/', async (req, res) => {
   if (restaurantId) where.restaurantId = Number(restaurantId);
   if (isActive !== undefined) where.isActive = isActive === 'true';
   try {
-    const rows = await db.scriptTemplate.findMany({ where, orderBy: { templateName: 'asc' } });
+    const rows = await db.scriptTemplate.findMany({
+      where,
+      orderBy: [{ lastUsedAt: 'asc' }, { createdAt: 'asc' }],
+    });
     res.json(rows);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -26,13 +81,19 @@ router.get('/:id', async (req, res) => {
 
 // POST /api/db/script-templates
 router.post('/', async (req, res) => {
-  const { restaurantId, templateName, scriptText, isActive = true } = req.body;
-  if (!restaurantId)  return res.status(400).json({ error: 'restaurantId is required' });
-  if (!templateName)  return res.status(400).json({ error: 'templateName is required' });
-  if (!scriptText)    return res.status(400).json({ error: 'scriptText is required' });
+  const { restaurantId, templateName, topic, scriptText, isActive = true } = req.body;
+  if (!restaurantId) return res.status(400).json({ error: 'restaurantId is required' });
+  if (!templateName) return res.status(400).json({ error: 'templateName is required' });
+  if (!scriptText)   return res.status(400).json({ error: 'scriptText is required' });
   try {
     const row = await db.scriptTemplate.create({
-      data: { restaurantId: Number(restaurantId), templateName, scriptText, isActive: Boolean(isActive) },
+      data: {
+        restaurantId: Number(restaurantId),
+        templateName,
+        topic:    topic    || null,
+        scriptText,
+        isActive: Boolean(isActive),
+      },
     });
     res.status(201).json(row);
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -40,11 +101,13 @@ router.post('/', async (req, res) => {
 
 // PATCH /api/db/script-templates/:id
 router.patch('/:id', async (req, res) => {
-  const { templateName, scriptText, isActive } = req.body;
+  const { templateName, topic, scriptText, isActive, lastUsedAt } = req.body;
   const data = {};
   if (templateName !== undefined) data.templateName = templateName;
+  if (topic        !== undefined) data.topic        = topic || null;
   if (scriptText   !== undefined) data.scriptText   = scriptText;
-  if (isActive     !== undefined) data.isActive      = Boolean(isActive);
+  if (isActive     !== undefined) data.isActive     = Boolean(isActive);
+  if (lastUsedAt   !== undefined) data.lastUsedAt   = lastUsedAt ? new Date(lastUsedAt) : null;
   try {
     const row = await db.scriptTemplate.update({ where: { id: Number(req.params.id) }, data });
     res.json(row);

@@ -38,14 +38,17 @@ model FoodPhoto {
   restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
 }
 
+// topic: welcome | weekend_special | happy_hour | new_menu_item | holiday | general_update | behind_the_scenes | seasonal_menu
 model ScriptTemplate {
-  id           Int      @id @default(autoincrement())
+  id           Int       @id @default(autoincrement())
   restaurantId Int
   templateName String
+  topic        String?
   scriptText   String
-  isActive     Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  isActive     Boolean   @default(true)
+  lastUsedAt   DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   restaurant     Restaurant    @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
   scheduledPosts ScheduledPost[]

@@ -104,10 +104,10 @@ router.post('/', async (req, res) => {
     let typeIdx    = 0;
     let tmplIdx    = 0;
 
-    // Load active script templates for rotation
+    // Load active script templates sorted by lastUsedAt ASC (never used first → true round-robin)
     const templates = await db.scriptTemplate.findMany({
       where:   { restaurantId: Number(restaurantId), isActive: true },
-      orderBy: { id: 'asc' },
+      orderBy: [{ lastUsedAt: 'asc' }, { id: 'asc' }],
     });
 
     const createdPosts = [];
