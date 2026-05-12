@@ -5,6 +5,7 @@ const path    = require('path');
 const fs      = require('fs');
 const { v4: uuidv4 } = require('uuid');
 const cld     = require('./lib/cloudinary');
+const db      = require('./lib/db');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -61,6 +62,7 @@ function saveLocalAsset(subdir, filename, buffer) {
 
 app.post('/api/upload/logo', uploadLogo.single('file'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file received' });
+  const restaurantId = Number(req.body.restaurantId) || 1;
 
   let buffer = req.file.buffer;
   const ext  = path.extname(req.file.originalname).toLowerCase();
@@ -74,11 +76,12 @@ app.post('/api/upload/logo', uploadLogo.single('file'), async (req, res) => {
   if (cld.isConfigured()) {
     try {
       const result = await cld.uploadBuffer(buffer, {
-        public_id:    'restaurant-social-ai/logo',
+        public_id:    `restaurant-social-ai/${restaurantId}/logo`,
         overwrite:    true,
         quality:      'auto',
         fetch_format: 'auto',
       });
+      await db.restaurant.update({ where: { id: restaurantId }, data: { logoUrl: result.url } }).catch(() => {});
       return res.json({ success: true, url: result.url, path: result.url });
     } catch (e) {
       console.error('[logo] Cloudinary upload failed:', e.message);
@@ -94,13 +97,14 @@ app.post('/api/upload/logo', uploadLogo.single('file'), async (req, res) => {
 
 app.post('/api/upload/photos', uploadPhotos.array('files', 6), async (req, res) => {
   if (!req.files?.length) return res.status(400).json({ error: 'No files received' });
+  const restaurantId = Number(req.body.restaurantId) || 1;
 
   if (cld.isConfigured()) {
     try {
       const uploads = await Promise.all(req.files.map(f => {
         const ts = Date.now();
         return cld.uploadBuffer(f.buffer, {
-          public_id:    `restaurant-social-ai/photos/photo_${ts}_${Math.random().toString(36).slice(2, 7)}`,
+          public_id:    `restaurant-social-ai/${restaurantId}/photos/photo_${ts}_${Math.random().toString(36).slice(2, 7)}`,
           overwrite:    false,
           quality:      'auto',
           fetch_format: 'auto',
@@ -127,15 +131,17 @@ app.post('/api/upload/photos', uploadPhotos.array('files', 6), async (req, res) 
 
 app.post('/api/upload/owner', uploadOwner.single('file'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file received' });
+  const restaurantId = Number(req.body.restaurantId) || 1;
 
   if (cld.isConfigured()) {
     try {
       const result = await cld.uploadBuffer(req.file.buffer, {
-        public_id:    'restaurant-social-ai/owner',
+        public_id:    `restaurant-social-ai/${restaurantId}/owner`,
         overwrite:    true,
         quality:      'auto',
         fetch_format: 'auto',
       });
+      await db.restaurant.update({ where: { id: restaurantId }, data: { ownerPortraitUrl: result.url } }).catch(() => {});
       return res.json({ success: true, url: result.url, path: result.url });
     } catch (e) {
       console.error('[owner] Cloudinary upload failed:', e.message);
@@ -153,17 +159,28 @@ app.post('/api/upload/owner', uploadOwner.single('file'), async (req, res) => {
 // ── Asset management ──────────────────────────────────────────────────────────
 
 app.get('/api/assets', async (req, res) => {
+  const restaurantId = Number(req.query.restaurantId) || 1;
+
   if (cld.isConfigured()) {
     try {
       const result = { logo: null, photos: [], owner: null };
-      const [logo, owner, photos] = await Promise.all([
-        cld.getAssetUrl('restaurant-social-ai/logo'),
-        cld.getAssetUrl('restaurant-social-ai/owner'),
-        cld.listFolder('restaurant-social-ai/photos/'),
+
+      // Get logo and owner from Restaurant DB record; fall back to Cloudinary path
+      const restaurant = await db.restaurant.findUnique({ where: { id: restaurantId } }).catch(() => null);
+      result.logo  = restaurant?.logoUrl  || null;
+      result.owner = restaurant?.ownerPortraitUrl || null;
+
+      // Cloudinary fallback lookups (supports restaurant 1 with old-style paths)
+      const [logo, owner, photosNew, photosOld] = await Promise.all([
+        result.logo  ? Promise.resolve(null) : cld.getAssetUrl(`restaurant-social-ai/${restaurantId}/logo`),
+        result.owner ? Promise.resolve(null) : cld.getAssetUrl(`restaurant-social-ai/${restaurantId}/owner`),
+        cld.listFolder(`restaurant-social-ai/${restaurantId}/photos/`),
+        restaurantId === 1 ? cld.listFolder('restaurant-social-ai/photos/') : Promise.resolve([]),
       ]);
-      result.logo   = logo;
-      result.owner  = owner;
-      result.photos = photos.map(p => p.url);
+      if (!result.logo)  result.logo  = logo  || (restaurantId === 1 ? await cld.getAssetUrl('restaurant-social-ai/logo')  : null);
+      if (!result.owner) result.owner = owner || (restaurantId === 1 ? await cld.getAssetUrl('restaurant-social-ai/owner') : null);
+      result.photos = [...photosNew, ...photosOld].map(p => p.url);
+
       return res.json(result);
     } catch (e) {
       console.error('[assets] Cloudinary list failed:', e.message);
@@ -186,20 +203,26 @@ app.get('/api/assets', async (req, res) => {
 
 app.delete('/api/assets/:type/:filename', async (req, res) => {
   const { type, filename } = req.params;
+  const restaurantId = Number(req.query.restaurantId) || 1;
   if (!['logo', 'photos', 'owner'].includes(type))
     return res.status(400).json({ error: 'Invalid type' });
 
   if (cld.isConfigured()) {
     try {
-      let publicId;
-      if (type === 'logo')  publicId = 'restaurant-social-ai/logo';
-      else if (type === 'owner') publicId = 'restaurant-social-ai/owner';
-      else {
-        // photos: derive public_id from filename by stripping extension
-        const base = path.basename(filename, path.extname(filename));
-        publicId = `restaurant-social-ai/photos/${base}`;
+      const base = path.basename(filename, path.extname(filename));
+      // Try per-restaurant path first; also clean up restaurant 1 old-style paths
+      if (type === 'logo') {
+        await cld.deleteAsset(`restaurant-social-ai/${restaurantId}/logo`);
+        if (restaurantId === 1) await cld.deleteAsset('restaurant-social-ai/logo').catch(() => {});
+        await db.restaurant.update({ where: { id: restaurantId }, data: { logoUrl: null } }).catch(() => {});
+      } else if (type === 'owner') {
+        await cld.deleteAsset(`restaurant-social-ai/${restaurantId}/owner`);
+        if (restaurantId === 1) await cld.deleteAsset('restaurant-social-ai/owner').catch(() => {});
+        await db.restaurant.update({ where: { id: restaurantId }, data: { ownerPortraitUrl: null } }).catch(() => {});
+      } else {
+        await cld.deleteAsset(`restaurant-social-ai/${restaurantId}/photos/${base}`);
+        if (restaurantId === 1) await cld.deleteAsset(`restaurant-social-ai/photos/${base}`).catch(() => {});
       }
-      await cld.deleteAsset(publicId);
       return res.json({ success: true });
     } catch (e) {
       return res.status(500).json({ error: 'Cloud delete failed: ' + e.message });
@@ -218,15 +241,60 @@ app.delete('/api/assets/:type/:filename', async (req, res) => {
 
 const CONFIG_PATH = path.join(ASSETS_DIR, 'config.json');
 
-app.post('/api/config', (req, res) => {
-  fs.writeFileSync(CONFIG_PATH, JSON.stringify(req.body, null, 2));
-  res.json({ success: true });
+function restaurantToConfig(r) {
+  return {
+    restaurantName: r.name,
+    cuisineType:    r.cuisineType    || '',
+    ownerName:      r.ownerName      || '',
+    tagline:        r.tagline        || '',
+    primaryColor:   r.brandColorPrimary || '#c8a84b',
+    accentColor:    r.brandColorAccent  || '#e5c97a',
+    bgColor:        r.brandColorBg      || '#090910',
+    platforms:      r.platforms ? JSON.parse(r.platforms) : [],
+    twinStyle:      r.twinStyle     || '',
+    twinUsecase:    r.twinUsecase   || '',
+    ownerScript:    r.ownerScript   || '',
+  };
+}
+
+app.post('/api/config', async (req, res) => {
+  const { restaurantId: rId, restaurantName, cuisineType, ownerName, tagline,
+          primaryColor, accentColor, bgColor, platforms, twinStyle, twinUsecase, ownerScript } = req.body;
+  const restaurantId = Number(rId) || 1;
+  const data = {};
+  if (restaurantName !== undefined) data.name                = restaurantName;
+  if (cuisineType    !== undefined) data.cuisineType         = cuisineType;
+  if (ownerName      !== undefined) data.ownerName           = ownerName;
+  if (tagline        !== undefined) data.tagline             = tagline;
+  if (primaryColor   !== undefined) data.brandColorPrimary   = primaryColor;
+  if (accentColor    !== undefined) data.brandColorAccent    = accentColor;
+  if (bgColor        !== undefined) data.brandColorBg        = bgColor;
+  if (platforms      !== undefined) data.platforms           = JSON.stringify(platforms);
+  if (twinStyle      !== undefined) data.twinStyle           = twinStyle;
+  if (twinUsecase    !== undefined) data.twinUsecase         = twinUsecase;
+  if (ownerScript    !== undefined) data.ownerScript         = ownerScript;
+  try {
+    await db.restaurant.update({ where: { id: restaurantId }, data });
+    // Also write file fallback so local dev without DB still works
+    fs.writeFileSync(CONFIG_PATH, JSON.stringify({ ...req.body }, null, 2));
+    res.json({ success: true });
+  } catch (e) {
+    // DB update failed (e.g. restaurant not found) — fall back to file only
+    fs.writeFileSync(CONFIG_PATH, JSON.stringify({ ...req.body }, null, 2));
+    res.json({ success: true });
+  }
 });
 
-app.get('/api/config', (req, res) => {
+app.get('/api/config', async (req, res) => {
+  const restaurantId = Number(req.query.restaurantId) || 1;
+  try {
+    const r = await db.restaurant.findUnique({ where: { id: restaurantId } });
+    if (r) return res.json(restaurantToConfig(r));
+  } catch { /* fall through to file */ }
+  // File fallback
   if (fs.existsSync(CONFIG_PATH)) {
     try { return res.json(JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'))); }
-    catch { return res.json({}); }
+    catch {}
   }
   res.json({});
 });
@@ -276,15 +344,25 @@ Requirements: first person, warm and personal, specific to the topic, end with a
 // ── Generate ──────────────────────────────────────────────────────────────────
 
 app.post('/api/generate', async (req, res) => {
-  const { type, customScript } = req.body;
+  const { type, customScript, restaurantId: rId } = req.body;
+  const restaurantId = Number(rId) || 1;
   if (!['video', 'twin', 'image'].includes(type))
     return res.status(400).json({ error: 'Invalid type. Use: video, twin, image' });
 
   let config = {};
   try {
-    if (fs.existsSync(CONFIG_PATH))
-      config = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
-  } catch { /* use empty config */ }
+    const r = await db.restaurant.findUnique({ where: { id: restaurantId } });
+    if (r) {
+      config = restaurantToConfig(r);
+      config._logoUrl  = r.logoUrl;
+      config._ownerUrl = r.ownerPortraitUrl;
+    }
+  } catch { /* fall through */ }
+  if (!config.restaurantName) {
+    try {
+      if (fs.existsSync(CONFIG_PATH)) config = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
+    } catch { }
+  }
 
   const jobId = uuidv4();
   const job   = { id: jobId, type, status: 'generating', created: new Date().toISOString() };
@@ -292,22 +370,27 @@ app.post('/api/generate', async (req, res) => {
 
   res.json({ success: true, jobId, status: 'generating' });
 
-  runGeneration(jobId, type, config, customScript);
+  runGeneration(jobId, type, config, customScript, restaurantId);
 });
 
-async function runGeneration(jobId, type, config, customScript) {
+async function runGeneration(jobId, type, config, customScript, restaurantId = 1) {
   try {
     const { generateVideo, generateTwinClip, generateImagePost } = require('./pipeline/1_generate_content');
     const { brandOverlay } = require('./pipeline/2_brand_overlay');
 
-    // Inject cloud asset URLs so pipeline functions can download them
-    if (cld.isConfigured()) {
-      const [logoUrl, ownerUrl] = await Promise.all([
-        cld.getAssetUrl('restaurant-social-ai/logo'),
-        cld.getAssetUrl('restaurant-social-ai/owner'),
+    // Inject cloud asset URLs (already set from DB if available; otherwise look up Cloudinary)
+    if (cld.isConfigured() && (!config._logoUrl || !config._ownerUrl)) {
+      const [logoNew, ownerNew] = await Promise.all([
+        config._logoUrl  ? null : cld.getAssetUrl(`restaurant-social-ai/${restaurantId}/logo`),
+        config._ownerUrl ? null : cld.getAssetUrl(`restaurant-social-ai/${restaurantId}/owner`),
       ]);
-      if (logoUrl)  config._logoUrl  = logoUrl;
-      if (ownerUrl) config._ownerUrl = ownerUrl;
+      // For restaurant 1, also fall back to legacy paths
+      const [logoOld, ownerOld] = restaurantId === 1 ? await Promise.all([
+        logoNew  || config._logoUrl  ? null : cld.getAssetUrl('restaurant-social-ai/logo'),
+        ownerNew || config._ownerUrl ? null : cld.getAssetUrl('restaurant-social-ai/owner'),
+      ]) : [null, null];
+      if (!config._logoUrl)  config._logoUrl  = logoNew  || logoOld  || null;
+      if (!config._ownerUrl) config._ownerUrl = ownerNew || ownerOld || null;
     }
 
     let result;

@@ -12,8 +12,15 @@ model Restaurant {
   name                 String
   cuisineType          String?
   location             String?
+  ownerName            String?
+  tagline              String?
   brandColorPrimary    String?
   brandColorAccent     String?
+  brandColorBg         String?
+  platforms            String?
+  twinStyle            String?
+  twinUsecase          String?
+  ownerScript          String?
   logoUrl              String?
   ownerPortraitUrl     String?
   instagramAccessToken String?

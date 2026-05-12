@@ -6,6 +6,7 @@
 <title>Content Generator — Restaurant Social AI</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="/nav.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -498,10 +499,11 @@ function platformBadge(p) {
 
 // ── Load restaurant header ─────────────────────────────────────────────────
 async function loadHeader() {
+  const rid = getRestaurantId();
   try {
     const [assets, config] = await Promise.all([
-      fetch('/api/assets').then(r => r.json()),
-      fetch('/api/config').then(r => r.json()),
+      fetch(`/api/assets?restaurantId=${rid}`).then(r => r.json()),
+      fetch(`/api/config?restaurantId=${rid}`).then(r => r.json()),
     ]);
     if (config.restaurantName) {
       document.getElementById('headerName').textContent = config.restaurantName;
@@ -528,7 +530,7 @@ async function writeScript() {
 
   try {
     let config = {};
-    try { config = await fetch('/api/config').then(r => r.json()); } catch {}
+    try { config = await fetch(`/api/config?restaurantId=${getRestaurantId()}`).then(r => r.json()); } catch {}
 
     const res  = await fetch('/api/generate/script', {
       method: 'POST',
@@ -654,11 +656,11 @@ function clearScript() {
 
 async function saveScriptToConfig(script) {
   try {
-    const cfg = await fetch('/api/config').then(r => r.json()).catch(() => ({}));
+    const rid = getRestaurantId();
     await fetch('/api/config', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...cfg, ownerScript: script }),
+      body: JSON.stringify({ restaurantId: rid, ownerScript: script }),
     });
   } catch {}
 }
@@ -674,7 +676,7 @@ async function generate(type) {
   startPolling();
 
   try {
-    const body = { type };
+    const body = { type, restaurantId: getRestaurantId() };
     if (type === 'twin' && customScript) body.customScript = customScript;
     const res  = await fetch('/api/generate', {
       method: 'POST',
@@ -852,7 +854,7 @@ function renderGallery(items) {
 // ── Init ───────────────────────────────────────────────────────────────────
 async function loadScriptTemplates() {
   try {
-    const rows = await fetch('/api/db/script-templates?restaurantId=1&isActive=true')
+    const rows = await fetch(`/api/db/script-templates?restaurantId=${getRestaurantId()}&isActive=true`)
       .then(r => r.json()).catch(() => []);
     if (!rows.length) return;
     const picker = document.getElementById('tmplPicker');
@@ -887,7 +889,7 @@ async function init() {
 
   // Restore saved script — prefer server config, fall back to localStorage
   try {
-    const cfg = await fetch('/api/config').then(r => r.json()).catch(() => ({}));
+    const cfg = await fetch(`/api/config?restaurantId=${getRestaurantId()}`).then(r => r.json()).catch(() => ({}));
     const saved = cfg.ownerScript || localStorage.getItem('ownerScript');
     if (saved) {
       customScript = saved;

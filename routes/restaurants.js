@@ -22,13 +22,15 @@ router.get('/:id', async (req, res) => {
 
 // POST /api/db/restaurants
 router.post('/', async (req, res) => {
-  const { name, cuisineType, location, brandColorPrimary, brandColorAccent,
+  const { name, cuisineType, location, ownerName, tagline, brandColorPrimary, brandColorAccent,
+          brandColorBg, platforms, twinStyle, twinUsecase, ownerScript,
           logoUrl, ownerPortraitUrl, instagramAccessToken, instagramUserId,
           autoPublishEnabled } = req.body;
   if (!name) return res.status(400).json({ error: 'name is required' });
   try {
     const row = await db.restaurant.create({
-      data: { name, cuisineType, location, brandColorPrimary, brandColorAccent,
+      data: { name, cuisineType, location, ownerName, tagline, brandColorPrimary, brandColorAccent,
+              brandColorBg, platforms, twinStyle, twinUsecase, ownerScript,
               logoUrl, ownerPortraitUrl, instagramAccessToken, instagramUserId,
               autoPublishEnabled: Boolean(autoPublishEnabled) },
     });
@@ -38,8 +40,10 @@ router.post('/', async (req, res) => {
 
 // PATCH /api/db/restaurants/:id
 router.patch('/:id', async (req, res) => {
-  const allowed = ['name','cuisineType','location','brandColorPrimary','brandColorAccent',
-                   'logoUrl','ownerPortraitUrl','instagramAccessToken','instagramUserId','autoPublishEnabled'];
+  const allowed = ['name','cuisineType','location','ownerName','tagline','brandColorPrimary',
+                   'brandColorAccent','brandColorBg','platforms','twinStyle','twinUsecase',
+                   'ownerScript','logoUrl','ownerPortraitUrl','instagramAccessToken',
+                   'instagramUserId','autoPublishEnabled'];
   const data = Object.fromEntries(Object.entries(req.body).filter(([k]) => allowed.includes(k)));
   try {
     const row = await db.restaurant.update({ where: { id: Number(req.params.id) }, data });

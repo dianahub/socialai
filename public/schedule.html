@@ -6,6 +6,7 @@
 <title>Content Calendar — Restaurant Social AI</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="/nav.js"></script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -738,7 +739,7 @@ let weekStart    = getThisMonday();
 let allPosts     = [];
 let filteredPosts= [];
 let activeFilter = 'all';
-let restaurantId = 1;
+let restaurantId = getRestaurantId();
 let activeModalPostId = null;
 let igTargetJobId     = null;   // for old filesystem-based jobs
 let igTargetPostId    = null;   // for DB scheduled posts
@@ -815,19 +816,9 @@ async function loadPosts() {
 
 async function loadRestaurant() {
   try {
-    const rows = await api('GET', '/api/db/restaurants');
-    if (rows?.length) {
-      restaurantId = rows[0].id;
-      document.getElementById('pageTitle').textContent = `${rows[0].name} — Content Calendar`;
-      document.getElementById('autoPublish').checked = rows[0].autoPublishEnabled;
-    }
-  } catch {}
-  // Also try local config for subtitle
-  try {
-    const cfg = await fetch('/api/config').then(r=>r.json());
-    if (cfg.restaurantName && document.getElementById('pageTitle').textContent === 'Content Calendar') {
-      document.getElementById('pageTitle').textContent = `${cfg.restaurantName} — Content Calendar`;
-    }
+    const r = await api('GET', `/api/db/restaurants/${restaurantId}`);
+    document.getElementById('pageTitle').textContent = `${r.name} — Content Calendar`;
+    document.getElementById('autoPublish').checked = r.autoPublishEnabled;
   } catch {}
 }
 

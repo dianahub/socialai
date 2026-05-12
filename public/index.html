@@ -6,6 +6,7 @@
 <title>Asset Manager — Restaurant Social AI</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="/nav.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -639,7 +640,7 @@ document.getElementById('platformRow').addEventListener('change', e => {
 
 // ── Logo upload ────────────────────────────────────────────────────────────
 setupDropZone('logoZone', 'logoInput', 'logo', async (file) => {
-  await uploadFile('/api/upload/logo', 'file', file);
+  await uploadFile('/api/upload/logo', 'file', file, { restaurantId: getRestaurantId() });
   logoUploaded = file.name;
   showPreview('logoPreview', 'logoIcon', 'logoLabel', URL.createObjectURL(file));
   toast('Logo uploaded', 'success');
@@ -647,7 +648,7 @@ setupDropZone('logoZone', 'logoInput', 'logo', async (file) => {
 
 // ── Owner upload ───────────────────────────────────────────────────────────
 setupDropZone('ownerZone', 'ownerInput', 'owner', async (file) => {
-  await uploadFile('/api/upload/owner', 'file', file);
+  await uploadFile('/api/upload/owner', 'file', file, { restaurantId: getRestaurantId() });
   ownerUploaded = file.name;
   showPreview('ownerPreview', 'ownerIcon', 'ownerLabel', URL.createObjectURL(file));
   toast('Chef photo uploaded', 'success');
@@ -692,7 +693,7 @@ function setupSlotDrag(slot, idx) {
 
 async function handlePhotoUpload(idx, file) {
   try {
-    const data = await uploadFile('/api/upload/photos', 'files', file);
+    const data = await uploadFile('/api/upload/photos', 'files', file, { restaurantId: getRestaurantId() });
     if (data.files?.[0]) {
       photoSlots[idx] = data.files[0];
       buildPhotoGrid();
@@ -707,7 +708,7 @@ async function removePhoto(idx, slot) {
   if (!photoSlots[idx]) return;
   try {
     const filename = photoSlots[idx].filename;
-    await fetch(`/api/assets/photos/${encodeURIComponent(filename)}`, { method: 'DELETE' });
+    await fetch(`/api/assets/photos/${encodeURIComponent(filename)}?restaurantId=${getRestaurantId()}`, { method: 'DELETE' });
     photoSlots[idx] = null;
     buildPhotoGrid();
     toast('Photo removed');
@@ -717,9 +718,10 @@ async function removePhoto(idx, slot) {
 }
 
 // ── Upload helpers ─────────────────────────────────────────────────────────
-async function uploadFile(url, field, file) {
+async function uploadFile(url, field, file, extras = {}) {
   const fd = new FormData();
   fd.append(field, file);
+  Object.entries(extras).forEach(([k, v]) => fd.append(k, v));
   const res = await fetch(url, { method: 'POST', body: fd });
   if (!res.ok) throw new Error('Upload error ' + res.status);
   return res.json();
@@ -761,6 +763,7 @@ async function saveAndGenerate() {
     .map(cb => cb.value);
 
   const config = {
+    restaurantId:   getRestaurantId(),
     restaurantName: name,
     cuisineType:    document.getElementById('cuisineType').value,
     ownerName:      document.getElementById('ownerName').value.trim(),
@@ -797,10 +800,11 @@ async function saveAndGenerate() {
 
 // ── Load saved state ───────────────────────────────────────────────────────
 async function loadSavedState() {
+  const rid = getRestaurantId();
   try {
     const [assets, config] = await Promise.all([
-      fetch('/api/assets').then(r => r.json()),
-      fetch('/api/config').then(r => r.json()),
+      fetch(`/api/assets?restaurantId=${rid}`).then(r => r.json()),
+      fetch(`/api/config?restaurantId=${rid}`).then(r => r.json()),
     ]);
 
     // Restore config fields

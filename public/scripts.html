@@ -6,6 +6,7 @@
 <title>Script Templates — Restaurant Social AI</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="/nav.js"></script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -381,7 +382,7 @@ const TOPICS = {
 
 let templates    = [];
 let selectedId   = null;  // null = new
-let restaurantId = 1;
+let restaurantId = getRestaurantId();
 let restaurant   = null;
 
 // ── Toast ──────────────────────────────────────────────────────────────────
@@ -407,8 +408,7 @@ async function api(method, path, body) {
 // ── Load ───────────────────────────────────────────────────────────────────
 async function load() {
   try {
-    const rows = await api('GET', '/api/db/restaurants');
-    if (rows?.length) { restaurant = rows[0]; restaurantId = rows[0].id; }
+    restaurant = await api('GET', `/api/db/restaurants/${restaurantId}`);
   } catch {}
   await loadTemplates();
 }
