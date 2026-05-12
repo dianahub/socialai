@@ -1,5 +1,46 @@
 # Changelog
 
+## May 12, 2026 (Session 5) — Script Template Management
+
+### New page: `/scripts.html`
+Full template management UI accessible from every page's nav.
+
+**Sidebar (left):**
+- Lists all templates sorted by `lastUsedAt ASC` (rotation order)
+- Each card: name, topic badge (color-coded), first 55 chars of script, active/inactive dot, "Last used" date
+- + New button
+
+**Editor (main area):**
+- Template Name input
+- Topic / Occasion dropdown: Welcome, Weekend Special, Happy Hour, New Menu Item, Holiday, General Update, Behind the Scenes, Seasonal Menu
+- Script textarea with live word counter + estimated speak time (green = 40–55 words / ~16–22 sec, amber = outside range)
+- **Write with AI** — expands inline panel with details input; calls `POST /api/db/script-templates/generate-with-ai` → Claude Haiku
+- Active toggle (only active templates enter rotation)
+- Save / Delete / Cancel
+
+### Schema changes (migration `20260512010000_script_template_topic_lastused`)
+Two new columns on `ScriptTemplate`:
+- `topic String?` — occasion tag (welcome, weekend_special, happy_hour, new_menu_item, holiday, general_update, behind_the_scenes, seasonal_menu)
+- `lastUsedAt DateTime?` — stamped each time the template is used in a generated video
+
+### Rotation logic
+- `GET /api/db/script-templates` now sorts by `lastUsedAt ASC NULLS FIRST` → never-used templates go first, then least-recently-used → true round-robin
+- `lib/jobQueue.js`: stamps `lastUsedAt = now()` on the template after each completed video job
+- `routes/generateWeek.js`: fetches templates in rotation order before assigning to batch slots
+
+### Backend: `POST /api/db/script-templates/generate-with-ai`
+Added to `routes/scriptTemplates.js` (must be defined before `/:id` routes to avoid Express param collision).
+Body: `{ restaurantId, topic, details }` → returns `{ script }` from Claude Haiku.
+Falls back to a template script if `ANTHROPIC_API_KEY` is not set.
+
+### Generate page updates
+- Template picker dropdown appears above the AI script writer when active DB templates exist
+- Selecting a template pre-fills the script textarea
+- "Manage templates →" link to scripts.html
+- "Scripts" nav link added to all pages (index, generate, schedule, scripts, approve)
+
+---
+
 ## May 12, 2026 (Session 4) — Batch Week Generation
 
 ### POST /api/generate-week (`routes/generateWeek.js`)
