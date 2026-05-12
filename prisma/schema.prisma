@@ -29,6 +29,9 @@ model Restaurant {
   instagramUserId      String?
   tokenExpiresAt       DateTime?
   autoPublishEnabled   Boolean  @default(false)
+  voiceTone            String?
+  defaultHashtags      String?
+  includeLocation      Boolean  @default(true)
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 

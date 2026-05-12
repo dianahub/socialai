@@ -45,6 +45,26 @@
   // ── CSS ──────────────────────────────────────────────────────────────────
   const style = document.createElement('style');
   style.textContent = `
+    /* Mobile nav */
+    .nav-hamburger {
+      display: none; background: none; border: none; color: var(--gold-light, #e5c97a);
+      font-size: 1.35rem; cursor: pointer; padding: 0.3rem 0.5rem; line-height: 1;
+    }
+    @media (max-width: 768px) {
+      .nav-hamburger { display: block; }
+      .nav-links {
+        display: none !important; flex-direction: column !important;
+        position: fixed; top: 64px; left: 0; right: 0;
+        background: rgba(9,9,16,0.98); border-bottom: 1px solid rgba(200,168,75,0.18);
+        padding: 0.5rem 0; z-index: 198; backdrop-filter: blur(12px);
+      }
+      .nav-links.mobile-open { display: flex !important; }
+      .nav-links a { padding: 0.75rem 1.5rem !important; border-bottom: none !important;
+        border-left: 2px solid transparent; text-align: left; }
+      .nav-links a.active { border-left-color: var(--gold, #c8a84b); }
+      main { padding-left: 1rem !important; padding-right: 1rem !important; }
+    }
+
     .nav-switcher {
       display: flex; align-items: center; gap: 0.4rem; margin: 0 1rem;
     }
@@ -126,6 +146,40 @@
     .nav-modal-create:disabled { opacity: 0.5; cursor: default; }
   `;
   document.head.appendChild(style);
+
+  // ── Mobile hamburger + Settings link ─────────────────────────────────────
+  document.addEventListener('DOMContentLoaded', function () {
+    const nav = document.querySelector('nav');
+    if (!nav) return;
+
+    // Inject Settings link if not present
+    const navLinks = nav.querySelector('.nav-links');
+    if (navLinks && !navLinks.querySelector('a[href*="settings"]')) {
+      const a = document.createElement('a');
+      a.href = 'settings.html';
+      a.textContent = 'Settings';
+      if (window.location.pathname.endsWith('/settings.html')) a.className = 'active';
+      navLinks.appendChild(a);
+    }
+
+    // Hamburger button
+    const hamburger = document.createElement('button');
+    hamburger.className = 'nav-hamburger';
+    hamburger.setAttribute('aria-label', 'Menu');
+    hamburger.textContent = '☰';
+    hamburger.addEventListener('click', function () {
+      if (navLinks) navLinks.classList.toggle('mobile-open');
+      hamburger.textContent = navLinks?.classList.contains('mobile-open') ? '✕' : '☰';
+    });
+    // Close on outside click
+    document.addEventListener('click', function (e) {
+      if (!nav.contains(e.target) && navLinks?.classList.contains('mobile-open')) {
+        navLinks.classList.remove('mobile-open');
+        hamburger.textContent = '☰';
+      }
+    });
+    nav.appendChild(hamburger);
+  });
 
   // ── Init on DOMContentLoaded ─────────────────────────────────────────────
   document.addEventListener('DOMContentLoaded', async function () {

@@ -626,13 +626,43 @@ input[type="range"]::-webkit-slider-thumb {
       <button class="modal-close" onclick="closeIgModal()">✕</button>
     </div>
     <div class="modal-body">
-      <div class="form-group">
-        <button class="btn btn-ghost btn-sm" id="igGenCapBtn" onclick="igGenerateCaption()">✦ Generate caption with AI</button>
+
+      <!-- Voice tone + generate row -->
+      <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;margin-bottom:0.75rem">
+        <select id="igVoiceTone" class="form-select" style="flex:1;min-width:120px;font-size:0.78rem;padding:0.3rem 0.5rem">
+          <option value="elegant">Elegant</option>
+          <option value="friendly">Friendly</option>
+          <option value="professional">Professional</option>
+          <option value="playful">Playful</option>
+          <option value="casual">Casual</option>
+        </select>
+        <button class="btn btn-ghost btn-sm" id="igGenCapBtn" onclick="igGenerateCaption()">✦ Generate Caption</button>
+        <button class="btn btn-ghost btn-sm" id="igRegenCapBtn" onclick="igGenerateCaption()" style="display:none">↻ Regenerate</button>
       </div>
+
+      <!-- Caption textarea with char counter -->
       <div class="form-group">
-        <label class="form-label">Caption</label>
-        <textarea class="form-textarea" id="igCaption" rows="5" placeholder="Write your caption…"></textarea>
+        <label class="form-label" style="display:flex;justify-content:space-between;align-items:baseline">
+          <span>Caption</span>
+          <span id="igCharCount" style="font-weight:400;font-size:0.72rem;color:var(--text-muted)">0 / 150</span>
+        </label>
+        <textarea class="form-textarea" id="igCaption" rows="4" placeholder="Write your caption…" oninput="updateIgCharCount()"></textarea>
       </div>
+
+      <!-- Hashtag chips -->
+      <div class="form-group">
+        <label class="form-label" style="display:flex;justify-content:space-between;align-items:center">
+          <span>Hashtags</span>
+          <button class="btn btn-ghost btn-sm" id="igHashtagSuggestBtn" onclick="igSuggestHashtags()">✦ Suggest</button>
+        </label>
+        <div id="igHashtagChips" style="display:flex;flex-wrap:wrap;gap:0.3rem;min-height:1.8rem;margin-bottom:0.4rem"></div>
+        <div style="display:flex;gap:0.4rem">
+          <input id="igHashtagInput" class="form-input" style="font-size:0.78rem;padding:0.3rem 0.6rem;flex:1"
+            placeholder="#hashtag" onkeydown="if(event.key==='Enter'){event.preventDefault();igAddHashtag()}">
+          <button class="btn btn-ghost btn-sm" onclick="igAddHashtag()">+ Add</button>
+        </div>
+      </div>
+
       <p id="igError" style="color:#f87171;font-size:0.8rem;display:none"></p>
     </div>
     <div class="modal-footer" style="justify-content:flex-end">
@@ -828,11 +858,18 @@ async function loadPosts() {
   applyFilter();
 }
 
+let restVoiceTone = 'elegant';
+
 async function loadRestaurant() {
   try {
     const r = await api('GET', `/api/db/restaurants/${restaurantId}`);
     document.getElementById('pageTitle').textContent = `${r.name} — Content Calendar`;
     document.getElementById('autoPublish').checked = r.autoPublishEnabled;
+    if (r.voiceTone) {
+      restVoiceTone = r.voiceTone;
+      const sel = document.getElementById('igVoiceTone');
+      if (sel) sel.value = r.voiceTone;
+    }
   } catch {}
 }
 
@@ -1131,37 +1168,115 @@ async function createPost() {
 }
 
 // ── Instagram modal ────────────────────────────────────────────────────────
+let igHashtags = [];
+
 function closeIgModal(e) {
   if (e && e.target !== e.currentTarget) return;
   document.getElementById('igBackdrop').classList.remove('open');
   igTargetJobId = igTargetPostId = null;
+  igHashtags = [];
+  igRenderHashtags();
+}
+
+function updateIgCharCount() {
+  const len = (document.getElementById('igCaption').value || '').length;
+  const el  = document.getElementById('igCharCount');
+  el.textContent = `${len} / 150`;
+  el.style.color = len > 150 ? '#f87171' : len > 120 ? '#e5c97a' : 'var(--text-muted)';
+}
+
+function igRenderHashtags() {
+  const chips = document.getElementById('igHashtagChips');
+  if (!chips) return;
+  chips.innerHTML = igHashtags.map((tag, i) =>
+    `<span style="display:inline-flex;align-items:center;gap:0.2rem;padding:0.18rem 0.45rem;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.22);border-radius:20px;font-size:0.7rem;color:#818cf8">
+      ${escHtml(tag)}
+      <button onclick="igRemoveHashtag(${i})" style="background:none;border:none;color:#818cf8;cursor:pointer;font-size:0.75rem;line-height:1;padding:0 0 0 1px">×</button>
+    </span>`
+  ).join('');
+}
+
+function igRemoveHashtag(i) { igHashtags.splice(i, 1); igRenderHashtags(); }
+
+function igAddHashtag() {
+  const input = document.getElementById('igHashtagInput');
+  let tag = (input.value || '').trim();
+  if (!tag) return;
+  if (!tag.startsWith('#')) tag = '#' + tag;
+  if (!igHashtags.includes(tag)) { igHashtags.push(tag); igRenderHashtags(); }
+  input.value = '';
+}
+
+async function igSuggestHashtags() {
+  const btn = document.getElementById('igHashtagSuggestBtn');
+  btn.disabled = true; btn.textContent = '…loading';
+  try {
+    const data = await api('POST', '/api/generate-hashtags', { restaurantId });
+    if (data.hashtags?.length) {
+      igHashtags = [...new Set([...igHashtags, ...data.hashtags])].slice(0, 15);
+      igRenderHashtags();
+    }
+  } catch (e) {
+    toast('Hashtag suggestion failed: ' + e.message, 'err');
+  } finally {
+    btn.disabled = false; btn.textContent = '✦ Suggest';
+  }
 }
 
 async function igGenerateCaption() {
-  const btn = document.getElementById('igGenCapBtn');
-  if (!igTargetJobId) { toast('AI captions only work for generated content jobs', 'err'); return; }
-  btn.disabled = true; btn.textContent = '…generating';
+  const genBtn   = document.getElementById('igGenCapBtn');
+  const regenBtn = document.getElementById('igRegenCapBtn');
+  const hasCap   = !!document.getElementById('igCaption').value.trim();
+  const activeBtn = hasCap ? regenBtn : genBtn;
+  activeBtn.disabled = true;
+  const origText = activeBtn.textContent;
+  activeBtn.textContent = '…generating';
+  document.getElementById('igError').style.display = 'none';
   try {
-    const data = await api('POST', `/api/output/${igTargetJobId}/caption`);
-    if (data.caption) document.getElementById('igCaption').value = data.caption;
+    let caption;
+    if (igTargetJobId && !hasCap) {
+      const data = await api('POST', `/api/output/${igTargetJobId}/caption`);
+      caption = data.caption;
+    } else {
+      const post = igTargetPostId ? allPosts.find(p => p.id === igTargetPostId) : null;
+      const tone = document.getElementById('igVoiceTone')?.value || 'elegant';
+      const data = await api('POST', '/api/generate-caption', {
+        restaurantId, postType: post?.postType || 'branded_image_feed', voiceTone: tone,
+      });
+      caption = data.caption;
+    }
+    if (caption) {
+      document.getElementById('igCaption').value = caption;
+      updateIgCharCount();
+      genBtn.style.display   = 'none';
+      regenBtn.style.display = 'inline-flex';
+    }
   } catch (e) {
     document.getElementById('igError').textContent = e.message;
     document.getElementById('igError').style.display = 'block';
   } finally {
-    btn.disabled = false; btn.textContent = '✦ Generate caption with AI';
+    activeBtn.disabled    = false;
+    activeBtn.textContent = origText;
   }
 }
 
 async function submitIgPost() {
-  const caption = document.getElementById('igCaption').value.trim();
+  let caption = document.getElementById('igCaption').value.trim();
   if (!caption) {
     document.getElementById('igError').textContent = 'Caption is required.';
     document.getElementById('igError').style.display = 'block';
     return;
   }
+  // Append hashtags if any
+  if (igHashtags.length) caption += '\n\n' + igHashtags.join(' ');
+
   const btn = document.getElementById('igPostBtn');
   btn.disabled = true; btn.textContent = 'Posting…';
   document.getElementById('igError').style.display = 'none';
+
+  // Reset regenerate state for next open
+  document.getElementById('igGenCapBtn').style.display   = 'inline-flex';
+  document.getElementById('igRegenCapBtn').style.display = 'none';
 
   try {
     // If we have a filesystem job, use the existing Instagram route

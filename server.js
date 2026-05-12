@@ -665,6 +665,97 @@ app.post('/api/output/:jobId/post-instagram', async (req, res) => {
   })();
 });
 
+// ── Caption generation ────────────────────────────────────────────────────────
+
+app.post('/api/generate-caption', async (req, res) => {
+  try {
+    const {
+      restaurantId,
+      postType         = 'branded_image',
+      contentDescription = '',
+      occasion         = 'general',
+    } = req.body;
+
+    const rid = req.restaurantId || Number(restaurantId) || 1;
+    const r   = await db.restaurant.findUnique({ where: { id: rid } });
+    const name      = r?.name         || 'our restaurant';
+    const cuisine   = r?.cuisineType  || '';
+    const location  = r?.location     || '';
+    const voiceTone = r?.voiceTone    || 'elegant';
+    const inclLoc   = r?.includeLocation !== false;
+
+    const Anthropic = require('@anthropic-ai/sdk');
+    const client    = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+    const prompt = `You are writing an Instagram caption for ${name}${cuisine ? `, a ${cuisine} restaurant` : ''}.
+
+Post type: ${postType.replace(/_/g, ' ')}
+${contentDescription ? `Content: ${contentDescription}` : ''}
+${occasion !== 'general' ? `Occasion: ${occasion}` : ''}
+Brand voice: ${voiceTone}
+
+Write an engaging Instagram caption that:
+- Is 125-150 characters (Instagram optimal length)
+- Includes 1-2 subtle relevant emojis
+- Has a clear call-to-action (visit us, try our, join us, reserve your table, etc.)
+- Matches the ${voiceTone} tone precisely
+- NO hashtags (added separately)
+${inclLoc && location ? `- Naturally mention ${location}` : ''}
+
+Return ONLY the caption text, nothing else.`;
+
+    const msg     = await client.messages.create({ model: 'claude-haiku-4-5-20251001', max_tokens: 200, messages: [{ role: 'user', content: prompt }] });
+    const caption = msg.content[0].text.trim();
+    res.json({ caption });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/generate-hashtags', async (req, res) => {
+  try {
+    const { restaurantId, dishType = '', occasion = 'general' } = req.body;
+    const rid = req.restaurantId || Number(restaurantId) || 1;
+    const r   = await db.restaurant.findUnique({ where: { id: rid } });
+
+    const name     = (r?.name         || '').replace(/\s+/g, '').replace(/[^a-zA-Z0-9]/g, '');
+    const cuisine  = (r?.cuisineType  || '').replace(/\s+/g, '');
+    const location = (r?.location     || '').replace(/[\s,]+/g, '');
+
+    // Start with restaurant's saved defaults, then build smart additions
+    let defaults = [];
+    try { if (r?.defaultHashtags) defaults = JSON.parse(r.defaultHashtags); } catch {}
+
+    const tags = [...defaults];
+
+    if (name)     tags.push(`#${name}`);
+    if (location) tags.push(`#${location}Eats`, `#${location}Foodie`, `#${location}Restaurants`);
+    if (cuisine)  tags.push(`#${cuisine}Food`, `#${cuisine}Restaurant`);
+
+    const occasionTags = {
+      welcome:         ['#GrandOpening', '#NewRestaurant', '#NowOpen'],
+      weekend_promo:   ['#WeekendVibes', '#WeekendEats', '#SaturdayNightOut'],
+      happy_hour:      ['#HappyHour', '#HappyHourDeals', '#DrinkSpecials'],
+      holiday:         ['#HolidayDinner', '#SpecialOccasion', '#CelebrateInStyle'],
+      new_menu_item:   ['#NewDish', '#ChefSpecial', '#MustTry'],
+      behind_scenes:   ['#BehindTheScenes', '#KitchenLife', '#ChefLife'],
+      general:         [],
+    };
+    tags.push(...(occasionTags[occasion] || []));
+
+    if (dishType) tags.push('#' + dishType.replace(/\s+/g, ''));
+
+    // Always include some general food tags
+    tags.push('#FoodPhotography', '#Foodie', '#InstaFood', '#FoodLovers', '#FineDining', '#GourmetFood');
+
+    // Deduplicate, filter empty, limit to 15
+    const unique = [...new Set(tags.filter(Boolean))].slice(0, 15);
+    res.json({ hashtags: unique });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ── Schedule ──────────────────────────────────────────────────────────────────
 
 app.get('/api/schedule', (req, res) => {
