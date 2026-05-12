@@ -8,6 +8,7 @@ const cld     = require('./lib/cloudinary');
 const db      = require('./lib/db');
 const { isAuthEnabled, createToken, requireAuth } = require('./lib/auth');
 const bcrypt  = require('bcryptjs');
+const cron    = require('node-cron');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -693,4 +694,9 @@ app.listen(PORT, () => {
   console.log(`  http://localhost:${PORT}`);
   console.log(`  Data: ${DATA_DIR}\n`);
   require('./lib/jobQueue').startWorker();
+
+  // Auto-publish cron: check every 5 minutes for due scheduled posts
+  const { runAutoPublish } = require('./lib/autopublish');
+  cron.schedule('*/5 * * * *', runAutoPublish);
+  console.log('[autopublish] Cron started (every 5 minutes)');
 });

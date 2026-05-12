@@ -565,6 +565,9 @@ input[type="range"]::-webkit-slider-thumb {
         </div>
       </div>
 
+      <!-- Error banner for failed posts -->
+      <p id="modalLastError" style="display:none;margin-top:0.5rem;padding:0.5rem 0.75rem;background:rgba(204,68,68,0.1);border:1px solid rgba(204,68,68,0.25);border-radius:6px;color:#f87171;font-size:0.78rem;word-break:break-word"></p>
+
     </div>
     <div class="modal-footer">
       <div class="modal-footer-left">
@@ -955,6 +958,15 @@ async function openDetailModal(postId) {
   document.getElementById('modalTime').value    = toDatetimeLocal(post.scheduledTime);
   document.getElementById('modalStatus').value  = post.status;
 
+  // Error banner (failed posts)
+  const errEl = document.getElementById('modalLastError');
+  if (post.lastError && post.status === 'failed') {
+    errEl.textContent  = 'Last error: ' + post.lastError;
+    errEl.style.display = 'block';
+  } else {
+    errEl.style.display = 'none';
+  }
+
   // Footer buttons
   const igBtn   = document.getElementById('modalIgBtn');
   const igLink  = document.getElementById('modalIgLink');
@@ -1022,16 +1034,21 @@ async function modalDeletePost() {
 
 async function modalPostNow() {
   if (!activeModalPostId) return;
+  const post = allPosts.find(p => p.id === activeModalPostId);
+  if (!post?.contentUrl) {
+    toast('No media content on this post — attach media first', 'err');
+    return;
+  }
+  const btn = document.getElementById('modalPostNowBtn');
+  btn.disabled = true; btn.textContent = 'Posting…';
   try {
-    await api('PATCH', `/api/db/scheduled-posts/${activeModalPostId}`, {
-      status:      'published',
-      publishedAt: new Date().toISOString(),
-    });
-    toast('Marked as published', 'ok');
+    await api('POST', `/api/db/scheduled-posts/${activeModalPostId}/post-now`);
+    toast('Publishing to Instagram — check back in a moment', 'ok');
     closeDetailModal();
-    await loadPosts();
+    setTimeout(() => loadPosts(), 4000);
   } catch (e) {
     toast('Failed: ' + e.message, 'err');
+    btn.disabled = false; btn.textContent = 'Post Now';
   }
 }
 

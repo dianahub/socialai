@@ -105,4 +105,23 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
+// POST /api/db/scheduled-posts/:id/post-now — publish immediately, bypassing schedule
+router.post('/:id/post-now', async (req, res) => {
+  const postId = Number(req.params.id);
+  try {
+    const post = await db.scheduledPost.findUnique({ where: { id: postId } });
+    if (!post)           return res.status(404).json({ error: 'Not found' });
+    if (!post.contentUrl) return res.status(400).json({ error: 'No content URL on this post — attach media first' });
+
+    res.json({ success: true, message: 'Publishing to Instagram in background…' });
+
+    const { publishPost } = require('../lib/autopublish');
+    publishPost(postId).catch(err =>
+      console.error(`[post-now] Post ${postId} failed: ${err.message}`)
+    );
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 module.exports = router;

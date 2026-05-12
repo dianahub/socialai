@@ -75,6 +75,8 @@ model ScheduledPost {
   status           String    @default("draft")
   instagramPostId  String?
   scriptTemplateId Int?
+  publishAttempts  Int       @default(0)
+  lastError        String?
   createdAt        DateTime  @default(now())
   publishedAt      DateTime?
 
