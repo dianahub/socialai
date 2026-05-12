@@ -1,5 +1,55 @@
 # Changelog
 
+## May 12, 2026 (Session 4) — Batch Week Generation
+
+### POST /api/generate-week (`routes/generateWeek.js`)
+New endpoint that creates a full week of content in one click.
+
+**Parameters:**
+| Field | Default | Options |
+|-------|---------|---------|
+| `restaurantId` | 1 | — |
+| `startDate` | tomorrow | YYYY-MM-DD |
+| `days` | 7 | integer |
+| `postFrequency` | `3x_week` | `daily`, `twice_daily`, `5x_week`, `3x_week`, `every_other_day` |
+| `contentMix` | `{owner_twin_video:40, cinematic_video:30, branded_image_feed:20, branded_image_story:10}` | percentage per type |
+
+**What it does:**
+1. Calculates day slots from frequency (e.g. 3x_week → Mon/Wed/Fri)
+2. Distributes types across slots using interleaved round-robin from mix percentages
+3. Assigns preferred hours per type (twin=6pm, cinematic=10am, feed=12pm, story=7pm)
+4. Rotates active script templates across video posts
+5. Creates `ScheduledPost` (status=`draft`) + `GenerationJob` (status=`pending`) linked via `scheduledPostId`
+6. Returns `{ scheduledPosts, generationJobs, totalPosts, estimatedMinutes }`
+
+### Background Worker (`lib/jobQueue.js`)
+In-process job queue using `setInterval` (no Redis/Bull required).
+
+- Starts automatically inside `app.listen()` callback in `server.js`
+- Polls DB every 10s for the oldest `pending` GenerationJob
+- Claims it atomically (`updateMany` on `status=pending`) to avoid double-processing
+- Builds restaurant config from DB (maps `brandColorPrimary/Accent` → `primaryColor/accentColor`)
+- Calls the same `generateTwinClip` / `generateVideo` / `generateImagePost` + `brandOverlay` pipeline
+- On complete: sets `generationJob.resultUrl`, `scheduledPost.contentUrl`, `scheduledPost.status=scheduled`
+- On failure: sets `generationJob.errorMessage`, `scheduledPost.status=failed`
+- On startup: resets any stuck `processing` jobs to `failed` (handles server restarts mid-job)
+
+### Schema change (migration `20260512000000_add_generation_job_fields`)
+Two new columns on `GenerationJob`:
+- `scheduledPostId Int?` — links job to its target scheduled post
+- `errorMessage Text?` — stores failure reason
+
+### Frontend (`schedule.html`)
+- **"⚡ Generate This Week" button** replaces old "⚡ Generate Content" link
+- **Config modal:** start date picker, frequency dropdown, four content-mix sliders with live % labels and ETA preview
+- **Progress banner** (between toolbar and stats):
+  - Appears after starting a batch
+  - Polls `/api/db/generation-jobs?restaurantId=1` every 12s
+  - Shows overall progress bar + per-type chips (`👤 Twin 0/1`, `🎬 Cinematic 1/1`, etc.)
+  - Auto-refreshes calendar when all jobs finish; auto-hides banner 5s later
+
+---
+
 ## May 11, 2026 (Session 3) — Commit & Deploy
 
 - Restored `prisma.config.ts` (accidentally deleted during abandoned Prisma 5 downgrade attempt; required for `prisma migrate deploy` on Railway)
