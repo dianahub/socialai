@@ -606,7 +606,30 @@
     <div class="section-title">Instagram Credentials
       <span class="section-subtitle">Per-restaurant — stored securely in the database</span>
     </div>
-    <div class="form-grid" style="grid-template-columns:1fr 1fr;gap:1rem;margin-top:0.75rem">
+
+    <!-- OAuth connect button (shown when FB_APP_ID is configured on the server) -->
+    <div id="igOauthRow" style="display:none;margin-bottom:1rem">
+      <a id="igConnectBtn" href="#" onclick="connectInstagram(event)"
+         style="display:inline-flex;align-items:center;gap:0.5rem;background:linear-gradient(135deg,#e1306c,#833ab4);border:none;border-radius:8px;padding:0.5rem 1.1rem;color:#fff;font-family:inherit;font-size:0.85rem;font-weight:600;cursor:pointer;text-decoration:none">
+        Connect with Instagram
+      </a>
+      <button id="igReconnectBtn" onclick="connectInstagram(event)" style="display:none;margin-left:0.5rem;background:none;border:1px solid rgba(255,255,255,0.15);border-radius:6px;padding:0.35rem 0.75rem;color:var(--text-muted);font-family:inherit;font-size:0.78rem;cursor:pointer">
+        Reconnect
+      </button>
+    </div>
+
+    <!-- Token status chip -->
+    <div id="igStatusRow" style="display:none;margin-bottom:0.75rem">
+      <span id="igStatusChip" style="display:inline-flex;align-items:center;gap:0.4rem;padding:0.25rem 0.65rem;border-radius:20px;font-size:0.75rem;font-weight:500"></span>
+    </div>
+
+    <!-- Token expiry warning -->
+    <div id="igExpiryWarn" style="display:none;margin-bottom:0.75rem;padding:0.5rem 0.75rem;background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.25);border-radius:8px">
+      <span id="igExpiryMsg" style="color:#fbbf24;font-size:0.78rem"></span>
+      <button onclick="refreshIgToken()" style="margin-left:0.75rem;background:rgba(251,191,36,0.15);border:1px solid rgba(251,191,36,0.3);border-radius:6px;padding:0.2rem 0.6rem;color:#fbbf24;font-family:inherit;font-size:0.75rem;cursor:pointer">Refresh Now</button>
+    </div>
+
+    <div class="form-grid" style="grid-template-columns:1fr 1fr;gap:1rem;margin-top:0.25rem">
       <div class="field-group">
         <label for="igAccountId">Instagram Account ID</label>
         <input type="text" id="igAccountId" placeholder="e.g. 17841400000000000">
@@ -908,6 +931,7 @@ async function loadSavedState() {
       }
       if (rest.loginEmail) document.getElementById('loginEmail').value = rest.loginEmail;
     } catch {}
+    await loadIgStatus();
   } catch (e) {
     console.warn('Could not load saved state:', e.message);
     buildPhotoGrid();
@@ -949,8 +973,84 @@ async function saveIgCreds() {
     });
     if (!res.ok) throw new Error((await res.json()).error);
     toast('Instagram credentials saved', 'success');
+    await loadIgStatus();
   } catch (e) { toast('Save failed: ' + e.message, 'error'); }
 }
+
+async function loadIgStatus() {
+  try {
+    const rid  = getRestaurantId();
+    const data = await fetch(`/api/instagram/status?restaurantId=${rid}`).then(r => r.json());
+
+    // OAuth connect button
+    const oauthRow = document.getElementById('igOauthRow');
+    if (data.oauthEnabled) {
+      oauthRow.style.display = 'block';
+      document.getElementById('igConnectBtn').style.display   = data.connected ? 'none'        : 'inline-flex';
+      document.getElementById('igReconnectBtn').style.display = data.connected ? 'inline-block' : 'none';
+    }
+
+    // Status chip
+    const statusRow  = document.getElementById('igStatusRow');
+    const statusChip = document.getElementById('igStatusChip');
+    if (data.connected) {
+      statusRow.style.display = 'block';
+      if (data.expired) {
+        statusChip.textContent = '⚠ Token expired';
+        statusChip.style.cssText = 'display:inline-flex;align-items:center;gap:0.4rem;padding:0.25rem 0.65rem;border-radius:20px;font-size:0.75rem;font-weight:500;background:rgba(204,68,68,0.12);color:#f87171;border:1px solid rgba(204,68,68,0.25)';
+      } else {
+        const label = data.daysLeft !== null ? `Connected · ${data.daysLeft}d left` : 'Connected';
+        statusChip.textContent = '✓ ' + label;
+        statusChip.style.cssText = 'display:inline-flex;align-items:center;gap:0.4rem;padding:0.25rem 0.65rem;border-radius:20px;font-size:0.75rem;font-weight:500;background:rgba(74,153,96,0.12);color:#6dbb88;border:1px solid rgba(74,153,96,0.25)';
+      }
+    } else {
+      statusRow.style.display = 'none';
+    }
+
+    // Expiry warning
+    const warnEl = document.getElementById('igExpiryWarn');
+    const msgEl  = document.getElementById('igExpiryMsg');
+    if (data.expireSoon && !data.expired) {
+      warnEl.style.display = 'block';
+      msgEl.textContent    = `⚠ Your Instagram token expires in ${data.daysLeft} day${data.daysLeft !== 1 ? 's' : ''}. Refresh it to avoid publishing failures.`;
+    } else if (data.expired) {
+      warnEl.style.display = 'block';
+      msgEl.textContent    = '⚠ Your Instagram token has expired. Reconnect to resume publishing.';
+    } else {
+      warnEl.style.display = 'none';
+    }
+  } catch { /* non-fatal */ }
+}
+
+function connectInstagram(e) {
+  e.preventDefault();
+  window.location.href = `/auth/instagram?restaurantId=${getRestaurantId()}`;
+}
+
+async function refreshIgToken() {
+  try {
+    const rid = getRestaurantId();
+    const res = await fetch(`/api/instagram/refresh`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ restaurantId: rid }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    toast('Token refreshed successfully', 'success');
+    await loadIgStatus();
+  } catch (e) { toast('Refresh failed: ' + e.message, 'error'); }
+}
+
+// Handle OAuth redirect back (ig_connected / ig_error query params)
+(function checkOauthRedirect() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('ig_connected')) toast('Instagram connected successfully!', 'success');
+  if (params.get('ig_error'))     toast('Instagram connect failed: ' + params.get('ig_error'), 'error');
+  if (params.has('ig_connected') || params.has('ig_error')) {
+    history.replaceState({}, '', window.location.pathname);
+  }
+})()
 
 loadSavedState();
 </script>

@@ -27,6 +27,7 @@ model Restaurant {
   ownerPortraitUrl     String?
   instagramAccessToken String?
   instagramUserId      String?
+  tokenExpiresAt       DateTime?
   autoPublishEnabled   Boolean  @default(false)
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt

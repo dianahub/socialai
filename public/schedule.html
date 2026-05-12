@@ -603,7 +603,8 @@ input[type="range"]::-webkit-slider-thumb {
       </div>
       <div class="form-group">
         <label class="form-label">Scheduled Time</label>
-        <input type="datetime-local" class="form-input" id="npTime">
+        <input type="datetime-local" class="form-input" id="npTime" oninput="updateTimeHint()">
+        <p id="npTimeHint" style="font-size:0.72rem;color:#6dbb88;margin-top:0.25rem;display:none"></p>
       </div>
       <div class="form-group">
         <label class="form-label">Caption <span style="font-weight:400;opacity:0.5">(optional)</span></label>
@@ -651,6 +652,16 @@ input[type="range"]::-webkit-slider-thumb {
       <button class="modal-close" onclick="closeGenWeekModal()">✕</button>
     </div>
     <div class="modal-body">
+
+      <!-- Posting preset -->
+      <div class="form-group">
+        <label class="form-label">Posting Schedule Preset</label>
+        <select class="form-select" id="gwPreset" onchange="onPresetChange()">
+          <!-- populated from /api/generate-week/presets -->
+        </select>
+        <p id="gwPresetPreview" style="font-size:0.72rem;color:#6dbb88;margin-top:0.3rem"></p>
+      </div>
+
       <div class="form-row">
         <div class="form-group">
           <label class="form-label">Start Date</label>
@@ -1186,6 +1197,43 @@ async function toggleAutoPublish(enabled) {
   }
 }
 
+// ── Scheduling presets ─────────────────────────────────────────────────────
+const DOW_NAMES        = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const OPTIMAL_WINDOWS  = { 0:['12pm'], 1:['11am–1pm','5pm–7pm'], 2:['11am–1pm','5pm–7pm'],
+                           3:['11am–1pm','5pm–7pm'], 4:['11am–1pm','5pm–7pm'],
+                           5:['11am–1pm','5pm–7pm'], 6:['10am–12pm'] };
+
+let gwPresets = [];
+
+async function loadGwPresets() {
+  try {
+    gwPresets = await api('GET', '/api/generate-week/presets');
+    const sel = document.getElementById('gwPreset');
+    sel.innerHTML = gwPresets.map(p =>
+      `<option value="${p.id}">${p.label}</option>`
+    ).join('');
+    onPresetChange();
+  } catch { /* keep empty */ }
+}
+
+function onPresetChange() {
+  const sel     = document.getElementById('gwPreset');
+  const preview = document.getElementById('gwPresetPreview');
+  const preset  = gwPresets.find(p => p.id === sel.value);
+  preview.textContent = preset ? preset.preview : '';
+}
+
+function updateTimeHint() {
+  const val  = document.getElementById('npTime').value;
+  const hint = document.getElementById('npTimeHint');
+  if (!val) { hint.style.display = 'none'; return; }
+  const dow    = new Date(val).getDay();
+  const name   = DOW_NAMES[dow];
+  const windows = OPTIMAL_WINDOWS[dow] || [];
+  hint.textContent  = windows.length ? `Optimal for ${name}: ${windows.join(', ')}` : '';
+  hint.style.display = windows.length ? 'block' : 'none';
+}
+
 // ── Generate-Week modal ────────────────────────────────────────────────────
 function openGenWeekModal() {
   // Default start date = tomorrow
@@ -1194,6 +1242,7 @@ function openGenWeekModal() {
   document.getElementById('gwStartDate').value = tomorrow.toISOString().slice(0, 10);
   document.getElementById('gwError').style.display = 'none';
   updateGwEst();
+  loadGwPresets();
   document.getElementById('genWeekBackdrop').classList.add('open');
 }
 
@@ -1245,9 +1294,10 @@ async function startGenerateWeek() {
     const result = await api('POST', '/api/generate-week', {
       restaurantId,
       startDate,
-      days:          7,
-      postFrequency: freq,
+      days:           7,
+      postFrequency:  freq,
       contentMix,
+      schedulePreset: document.getElementById('gwPreset').value || 'smart',
     });
 
     closeGenWeekModal();

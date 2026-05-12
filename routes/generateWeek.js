@@ -1,15 +1,13 @@
 const { Router } = require('express');
 const db = require('../lib/db');
+const { PRESETS, getOptimalHour } = require('../lib/schedulingPresets');
 
 const router = Router();
 
-// Preferred posting hour for each type
-const TYPE_HOURS = {
-  owner_twin_video:    18,
-  cinematic_video:     10,
-  branded_image_feed:  12,
-  branded_image_story: 19,
-};
+// GET /api/generate-week/presets — return preset list for the frontend
+router.get('/presets', (req, res) => {
+  res.json(Object.values(PRESETS).map(({ id, label, preview }) => ({ id, label, preview })));
+});
 
 // Estimated generation time in seconds per job
 const TYPE_EST_SECS = {
@@ -72,12 +70,15 @@ function buildTypeSequence(mix, totalSlots) {
 router.post('/', async (req, res) => {
   try {
     const {
-      restaurantId  = 1,
+      restaurantId   = 1,
       startDate,
-      days          = 7,
-      postFrequency = '3x_week',
+      days           = 7,
+      postFrequency  = '3x_week',
       contentMix,
+      schedulePreset = 'smart',
     } = req.body;
+
+    const preset = PRESETS[schedulePreset] || PRESETS.smart;
 
     const mix = contentMix || {
       owner_twin_video:    40,
@@ -120,12 +121,16 @@ router.post('/', async (req, res) => {
       for (let slot = 0; slot < slotsThisDay; slot++) {
         const postType = typeSeq[typeIdx++] || 'branded_image_feed';
 
-        // Time: use type default, unless twice_daily forces AM/PM split
-        let hour = TYPE_HOURS[postType];
-        if (isTwiceDaily) hour = slot === 0 ? 10 : 18;
-
+        // Compute date first so we can inspect the day of week for smart scheduling
         const scheduledTime = new Date(start);
         scheduledTime.setDate(start.getDate() + offset);
+
+        let hour;
+        if (isTwiceDaily) {
+          hour = slot === 0 ? 9 : 18;  // AM: 9am (Reels break), PM: 6pm (dinner)
+        } else {
+          hour = getOptimalHour(postType, scheduledTime, preset);
+        }
         scheduledTime.setHours(hour, 0, 0, 0);
 
         // Rotate through active script templates for video types

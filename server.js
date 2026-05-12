@@ -686,6 +686,11 @@ app.use('/api/db/food-photos',      require('./routes/foodPhotos'));
 app.use('/api/db/generation-jobs',  require('./routes/generationJobs'));
 app.use('/api/generate-week',       require('./routes/generateWeek'));
 
+// Instagram OAuth routes (not under /api/ so they bypass auth middleware)
+const { router: igAuthRouter, refreshExpiringTokens } = require('./routes/instagramAuth');
+app.use('/auth/instagram',      igAuthRouter);
+app.use('/api/instagram',       igAuthRouter);
+
 // ── Start ─────────────────────────────────────────────────────────────────────
 
 app.listen(PORT, () => {
@@ -699,4 +704,8 @@ app.listen(PORT, () => {
   const { runAutoPublish } = require('./lib/autopublish');
   cron.schedule('*/5 * * * *', runAutoPublish);
   console.log('[autopublish] Cron started (every 5 minutes)');
+
+  // Token refresh cron: daily at midnight — refresh IG tokens expiring within 7 days
+  cron.schedule('0 0 * * *', refreshExpiringTokens);
+  console.log('[ig-token] Daily refresh cron started');
 });

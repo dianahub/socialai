@@ -43,7 +43,7 @@ router.patch('/:id', async (req, res) => {
   const allowed = ['name','cuisineType','location','ownerName','tagline','brandColorPrimary',
                    'brandColorAccent','brandColorBg','platforms','twinStyle','twinUsecase',
                    'ownerScript','logoUrl','ownerPortraitUrl','instagramAccessToken',
-                   'instagramUserId','autoPublishEnabled'];
+                   'instagramUserId','tokenExpiresAt','autoPublishEnabled'];
   const data = Object.fromEntries(Object.entries(req.body).filter(([k]) => allowed.includes(k)));
   try {
     const row = await db.restaurant.update({ where: { id: Number(req.params.id) }, data });
