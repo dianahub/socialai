@@ -548,11 +548,21 @@ app.post('/api/output/:jobId/post-instagram', async (req, res) => {
 
   res.json({ success: true, status: 'posting', message: 'Posting to Instagram in background...' });
 
+  // Load per-restaurant IG credentials (fall back to env vars in pipeline)
+  let igCreds = {};
+  try {
+    const restaurantId = Number(req.body.restaurantId) || 1;
+    const r = await db.restaurant.findUnique({ where: { id: restaurantId } });
+    if (r?.instagramUserId && r?.instagramAccessToken) {
+      igCreds = { accountId: r.instagramUserId, accessToken: r.instagramAccessToken };
+    }
+  } catch { /* use env var fallback */ }
+
   // Post in background
   (async () => {
     try {
       const { postReel, postImage } = require('./pipeline/4_instagram');
-      const result = isVideo ? await postReel(publicUrl, caption) : await postImage(publicUrl, caption);
+      const result = isVideo ? await postReel(publicUrl, caption, igCreds) : await postImage(publicUrl, caption, igCreds);
       meta.instagram_media_id = result.mediaId;
       meta.instagram_url      = result.permalink;
       meta.instagram_posted_at = new Date().toISOString();

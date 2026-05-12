@@ -580,6 +580,28 @@
     </div>
   </div>
 
+  <!-- ── Instagram Credentials ── -->
+  <div class="section" style="margin-top:1.5rem">
+    <div class="section-title">Instagram Credentials
+      <span class="section-subtitle">Per-restaurant — stored securely in the database</span>
+    </div>
+    <div class="form-grid" style="grid-template-columns:1fr 1fr;gap:1rem;margin-top:0.75rem">
+      <div class="field-group">
+        <label for="igAccountId">Instagram Account ID</label>
+        <input type="text" id="igAccountId" placeholder="e.g. 17841400000000000">
+      </div>
+      <div class="field-group">
+        <label for="igAccessToken">Access Token</label>
+        <input type="password" id="igAccessToken" placeholder="Long-lived Meta Graph API token">
+      </div>
+    </div>
+    <p style="font-size:0.75rem;color:var(--text-muted);margin-top:0.75rem">
+      Saved per restaurant. Falls back to <code style="font-size:0.7rem;color:var(--gold)">INSTAGRAM_ACCOUNT_ID</code> /
+      <code style="font-size:0.7rem;color:var(--gold)">INSTAGRAM_ACCESS_TOKEN</code> env vars if blank.
+      <button id="igSaveBtn" onclick="saveIgCreds()" style="margin-left:1rem;background:rgba(200,168,75,0.15);border:1px solid rgba(200,168,75,0.25);border-radius:6px;padding:0.25rem 0.75rem;color:var(--gold-light);cursor:pointer;font-size:0.78rem;font-family:inherit">Save Instagram</button>
+    </p>
+  </div>
+
   <div class="save-bar">
     <button class="btn btn-ghost" onclick="window.location.href='generate.html'">Go to Generate →</button>
     <button class="btn btn-primary" id="saveBtn" onclick="saveAndGenerate()">
@@ -855,10 +877,35 @@ async function loadSavedState() {
     }
 
     buildPhotoGrid();
+
+    // Load Instagram credentials (show account ID; mask token)
+    try {
+      const rest = await fetch(`/api/db/restaurants/${rid}`).then(r => r.json());
+      if (rest.instagramUserId) document.getElementById('igAccountId').value = rest.instagramUserId;
+      if (rest.instagramAccessToken) {
+        document.getElementById('igAccessToken').placeholder = '••••••• (saved — enter new value to update)';
+      }
+    } catch {}
   } catch (e) {
     console.warn('Could not load saved state:', e.message);
     buildPhotoGrid();
   }
+}
+
+// ── Instagram credentials ──────────────────────────────────────────────────
+async function saveIgCreds() {
+  const rid   = getRestaurantId();
+  const id    = document.getElementById('igAccountId').value.trim();
+  const token = document.getElementById('igAccessToken').value.trim();
+  try {
+    const res = await fetch(`/api/db/restaurants/${rid}`, {
+      method:  'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ instagramUserId: id, instagramAccessToken: token }),
+    });
+    if (!res.ok) throw new Error((await res.json()).error);
+    toast('Instagram credentials saved', 'success');
+  } catch (e) { toast('Save failed: ' + e.message, 'error'); }
 }
 
 loadSavedState();

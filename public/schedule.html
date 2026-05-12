@@ -1138,7 +1138,7 @@ async function submitIgPost() {
   try {
     // If we have a filesystem job, use the existing Instagram route
     if (igTargetJobId) {
-      await api('POST', `/api/output/${igTargetJobId}/post-instagram`, { caption });
+      await api('POST', `/api/output/${igTargetJobId}/post-instagram`, { caption, restaurantId });
       toast('Posting to Instagram — check back shortly', 'ok');
     }
     // If we only have a DB post, mark it scheduled/published
