@@ -17,7 +17,7 @@ const TYPE_EST_SECS = {
   branded_image_story: 30,
 };
 
-const ALL_TYPES = Object.keys(TYPE_HOURS);
+const ALL_TYPES = Object.keys(TYPE_EST_SECS);
 
 // Returns day offsets (from startDate) on which to post
 function dayOffsets(frequency, days) {
