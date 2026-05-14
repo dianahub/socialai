@@ -48,9 +48,12 @@ app.use('/output',  express.static(OUTPUT_DIR));
 
 // ── Auth endpoints (always public — no auth middleware) ────────────────────
 
-// Tell the frontend whether auth is enabled
+// Tell the frontend whether auth / Google OAuth is enabled
 app.get('/api/auth/config', (req, res) => {
-  res.json({ authEnabled: isAuthEnabled() });
+  res.json({
+    authEnabled:   isAuthEnabled(),
+    googleEnabled: !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET && process.env.APP_URL),
+  });
 });
 
 // Login: email + password → JWT
@@ -85,6 +88,114 @@ app.get('/api/auth/me', requireAuth, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+
+// Sign up: create new restaurant + credentials → JWT
+app.post('/api/auth/signup', async (req, res) => {
+  const { restaurantName, email, password } = req.body;
+  if (!restaurantName || !email || !password)
+    return res.status(400).json({ error: 'Restaurant name, email, and password are required' });
+  if (password.length < 8)
+    return res.status(400).json({ error: 'Password must be at least 8 characters' });
+  try {
+    const hash       = await bcrypt.hash(password, 12);
+    const restaurant = await db.restaurant.create({
+      data: { name: restaurantName, loginEmail: email.toLowerCase(), loginPasswordHash: hash },
+    });
+    const token = createToken(restaurant.id);
+    res.json({ token, restaurantId: restaurant.id, restaurantName: restaurant.name });
+  } catch (e) {
+    if (e.code === 'P2002') return res.status(409).json({ error: 'That email is already registered' });
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── Google OAuth ──────────────────────────────────────────────────────────────
+
+function googleEnabled() {
+  return !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET && process.env.APP_URL);
+}
+
+function getCookie(req, name) {
+  for (const part of (req.headers.cookie || '').split(';')) {
+    const [k, v] = part.trim().split('=');
+    if (k === name) return decodeURIComponent(v || '');
+  }
+  return null;
+}
+
+// Start Google OAuth flow
+app.get('/auth/google', (req, res) => {
+  if (!googleEnabled()) return res.status(503).send('Google OAuth not configured.');
+  const crypto = require('crypto');
+  const state  = crypto.randomBytes(16).toString('hex');
+  const params = new URLSearchParams({
+    client_id:     process.env.GOOGLE_CLIENT_ID,
+    redirect_uri:  `${process.env.APP_URL}/auth/google/callback`,
+    response_type: 'code',
+    scope:         'openid email profile',
+    state,
+    access_type:   'online',
+    prompt:        'select_account',
+  });
+  res.setHeader('Set-Cookie', `g_oauth_state=${state}; HttpOnly; Secure; SameSite=Lax; Max-Age=600; Path=/`);
+  res.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params}`);
+});
+
+// Google OAuth callback
+app.get('/auth/google/callback', async (req, res) => {
+  const { code, state, error } = req.query;
+  const storedState = getCookie(req, 'g_oauth_state');
+  const failUrl     = '/login.html?error=oauth_failed';
+
+  if (error || !code || !storedState || state !== storedState) {
+    console.error('[google-oauth] failed — error:', error, 'state match:', state === storedState);
+    return res.redirect(failUrl);
+  }
+
+  try {
+    const axios = require('axios');
+
+    // Exchange code for access token
+    const tokenRes = await axios.post('https://oauth2.googleapis.com/token', {
+      code,
+      client_id:     process.env.GOOGLE_CLIENT_ID,
+      client_secret: process.env.GOOGLE_CLIENT_SECRET,
+      redirect_uri:  `${process.env.APP_URL}/auth/google/callback`,
+      grant_type:    'authorization_code',
+    });
+    const { access_token } = tokenRes.data;
+
+    // Get Google user info
+    const userRes = await axios.get('https://www.googleapis.com/oauth2/v2/userinfo', {
+      headers: { Authorization: `Bearer ${access_token}` },
+    });
+    const { id: googleId, email, name } = userRes.data;
+    if (!email || !googleId) return res.redirect(failUrl);
+
+    // Find or create restaurant linked to this Google account
+    let restaurant = await db.restaurant.findFirst({ where: { googleId } });
+    if (!restaurant) {
+      // Try to link to existing account with same email
+      restaurant = await db.restaurant.findFirst({ where: { loginEmail: email.toLowerCase() } });
+      if (restaurant) {
+        restaurant = await db.restaurant.update({ where: { id: restaurant.id }, data: { googleId } });
+      } else {
+        // New restaurant — use their name as a placeholder; they'll fill in details on Assets page
+        restaurant = await db.restaurant.create({
+          data: { name: name || email.split('@')[0], loginEmail: email.toLowerCase(), googleId },
+        });
+      }
+    }
+
+    const token = createToken(restaurant.id);
+    res.setHeader('Set-Cookie', 'g_oauth_state=; HttpOnly; Secure; Max-Age=0; Path=/');
+    // Pass token via URL hash (never hits the server) so the callback page can store in localStorage
+    res.redirect(`/auth-callback.html#token=${encodeURIComponent(token)}`);
+  } catch (e) {
+    console.error('[google-oauth] error:', e.message);
+    res.redirect(failUrl);
+  }
+});
 
 // ── Global auth middleware (protects all /api/ except /api/auth/*) ─────────
 app.use((req, res, next) => {

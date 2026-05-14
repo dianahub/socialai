@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sign Up — Restaurant Social AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg-deep:    #090910;
+    --bg-card:    #12121c;
+    --bg-surface: #1a1a28;
+    --gold:       #c8a84b;
+    --gold-light: #e5c97a;
+    --gold-border:rgba(200,168,75,0.22);
+    --text:       #f0ede8;
+    --text-muted: #7a7773;
+    --border:     rgba(255,255,255,0.07);
+    --green:      #4a9960;
+    --red:        #cc4444;
+  }
+  body {
+    background: var(--bg-deep); color: var(--text);
+    font-family: 'Inter', system-ui, sans-serif;
+    min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    padding: 2rem 1rem;
+  }
+  .card {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 16px; padding: 2.5rem 2rem; width: 100%; max-width: 400px;
+  }
+  .brand {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 1.25rem; color: var(--gold-light);
+    letter-spacing: 0.05em; text-align: center; margin-bottom: 0.4rem;
+  }
+  h1 { font-size: 1rem; font-weight: 500; color: var(--text-muted);
+       text-align: center; margin-bottom: 2rem; }
+
+  /* Google button */
+  .btn-google {
+    width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.65rem;
+    background: var(--bg-surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 0.7rem 1rem;
+    color: var(--text); font-family: 'Inter', sans-serif; font-size: 0.88rem;
+    font-weight: 500; cursor: pointer; transition: border-color 0.2s, background 0.2s;
+    text-decoration: none;
+  }
+  .btn-google:hover { border-color: var(--gold-border); background: #1e1e2e; }
+  .btn-google svg { flex-shrink: 0; }
+
+  .divider {
+    display: flex; align-items: center; gap: 0.75rem;
+    margin: 1.25rem 0; color: var(--text-muted); font-size: 0.75rem;
+  }
+  .divider::before, .divider::after {
+    content: ''; flex: 1; border-top: 1px solid var(--border);
+  }
+
+  .field-group { margin-bottom: 1rem; }
+  .field-group label {
+    display: block; font-size: 0.72rem; font-weight: 600;
+    letter-spacing: 0.07em; text-transform: uppercase;
+    color: var(--text-muted); margin-bottom: 0.35rem;
+  }
+  .field-group input {
+    width: 100%; background: var(--bg-surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 0.6rem 0.85rem; color: var(--text);
+    font-family: 'Inter', sans-serif; font-size: 0.88rem; outline: none;
+  }
+  .field-group input:focus { border-color: var(--gold-border); }
+
+  .btn-submit {
+    width: 100%; margin-top: 0.5rem;
+    background: var(--gold); color: #090910;
+    border: none; border-radius: 10px; padding: 0.75rem 1rem;
+    font-family: 'Inter', sans-serif; font-size: 0.9rem; font-weight: 600;
+    cursor: pointer; transition: opacity 0.2s;
+  }
+  .btn-submit:hover { opacity: 0.88; }
+  .btn-submit:disabled { opacity: 0.5; cursor: default; }
+
+  .error-msg { color: #f87171; font-size: 0.8rem; margin-top: 0.75rem;
+               text-align: center; display: none; }
+  .error-msg.show { display: block; }
+
+  .footer-note {
+    text-align: center; margin-top: 1.5rem;
+    font-size: 0.78rem; color: var(--text-muted);
+  }
+  .footer-note a { color: var(--gold-light); text-decoration: none; }
+  .footer-note a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="brand">Restaurant Social AI</div>
+  <h1>Create your account</h1>
+
+  <!-- Google OAuth -->
+  <a class="btn-google" id="googleBtn" href="/auth/google">
+    <svg width="18" height="18" viewBox="0 0 18 18">
+      <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/>
+      <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/>
+      <path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"/>
+      <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/>
+    </svg>
+    Continue with Google
+  </a>
+
+  <div class="divider">or sign up with email</div>
+
+  <form id="signupForm" onsubmit="doSignup(event)">
+    <div class="field-group">
+      <label for="restaurantName">Restaurant Name</label>
+      <input type="text" id="restaurantName" placeholder="e.g. The Golden Fork" autocomplete="organization" required>
+    </div>
+    <div class="field-group">
+      <label for="email">Email</label>
+      <input type="email" id="email" placeholder="owner@yourrestaurant.com" autocomplete="email" required>
+    </div>
+    <div class="field-group">
+      <label for="password">Password</label>
+      <input type="password" id="password" placeholder="Min. 8 characters" autocomplete="new-password" required minlength="8">
+    </div>
+    <div class="field-group">
+      <label for="confirmPassword">Confirm Password</label>
+      <input type="password" id="confirmPassword" placeholder="Repeat your password" autocomplete="new-password" required>
+    </div>
+    <button type="submit" class="btn-submit" id="submitBtn">Create Account</button>
+    <div class="error-msg" id="errorMsg"></div>
+  </form>
+
+  <p class="footer-note">Already have an account? <a href="/login.html">Sign in</a></p>
+</div>
+
+<script>
+async function doSignup(e) {
+  e.preventDefault();
+  const name     = document.getElementById('restaurantName').value.trim();
+  const email    = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+  const confirm  = document.getElementById('confirmPassword').value;
+  const btn      = document.getElementById('submitBtn');
+  const errEl    = document.getElementById('errorMsg');
+
+  errEl.classList.remove('show');
+
+  if (password !== confirm) {
+    errEl.textContent = 'Passwords do not match.';
+    errEl.classList.add('show');
+    return;
+  }
+
+  btn.disabled    = true;
+  btn.textContent = 'Creating account…';
+
+  try {
+    const res  = await fetch('/api/auth/signup', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ restaurantName: name, email, password }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Sign up failed');
+    localStorage.setItem('authToken', data.token);
+    window.location.href = '/index.html';
+  } catch (err) {
+    errEl.textContent = err.message;
+    errEl.classList.add('show');
+    btn.disabled    = false;
+    btn.textContent = 'Create Account';
+  }
+}
+
+// Hide Google button if OAuth not available
+fetch('/api/auth/config').then(r => r.json()).then(cfg => {
+  if (!cfg.googleEnabled) document.getElementById('googleBtn').style.display = 'none';
+}).catch(() => {});
+</script>
+</body>
+</html>

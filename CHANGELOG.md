@@ -1,5 +1,207 @@
 # Changelog
 
+## May 12, 2026 (Session 6) — Multi-Restaurant, Auth, Auto-Publishing, Scheduling, Captions, Settings
+
+### Multi-restaurant support
+
+Every page now handles multiple restaurants simultaneously. A nav switcher (admin/dev mode) or a restaurant name chip + logout button (auth mode) appears in the top nav on every page.
+
+**Changes:**
+- `public/nav.js` — completely rewritten. Fetches `/api/auth/config` on load. If auth is enabled and no token → redirect to `/login.html`. If token → show restaurant name chip + logout. If no token → show restaurant switcher dropdown + "+" new restaurant modal.
+- `window.getRestaurantId()` — decodes restaurantId from JWT payload in auth mode; falls back to `localStorage.selectedRestaurantId`.
+- All `index.html`, `generate.html`, `schedule.html`, `scripts.html`, `approve.html` pages pass `restaurantId: getRestaurantId()` on every API call.
+- Cloudinary paths moved to per-restaurant: `restaurant-social-ai/{restaurantId}/logo|owner|photos/`. Restaurant 1 falls back to old shared paths for backward compat until re-upload.
+- Upload endpoints save `logoUrl` / `ownerPortraitUrl` back to the Restaurant DB record.
+- `GET /api/assets` reads Restaurant DB for asset URLs first, then falls back to Cloudinary per-restaurant path, then old shared path.
+- `POST /api/config` / `GET /api/config` now read/write from the Restaurant DB record via `restaurantToConfig(r)` helper (maps `brandColorPrimary/Accent` → `primaryColor/accentColor`, etc.).
+- `POST /api/generate` loads config from Restaurant DB and passes `restaurantId` to `runGeneration`.
+
+### Per-restaurant Instagram credentials
+
+Restaurant owners set their own Instagram Account ID and Access Token, stored in the Restaurant DB record.
+
+- Asset Manager: "Instagram Credentials" section with Account ID + token inputs → `PATCH /api/db/restaurants/:id`.
+- `pipeline/4_instagram.js`: `postReel()` and `postImage()` accept optional `creds = { accountId, accessToken }` — falls back to env vars if blank.
+- All Instagram posting endpoints load per-restaurant credentials before calling the pipeline.
+
+### JWT Authentication (`lib/auth.js`)
+
+Owner authentication — enabled only when `JWT_SECRET` env var is set; disabled = all routes open (admin mode).
+
+**Auth flow:**
+- `GET /api/auth/config` → `{ authEnabled: bool }` — always public
+- `POST /api/auth/login` → validates email+password (bcrypt), returns 30-day JWT containing `{ restaurantId }`
+- `POST /api/auth/logout` → stateless (client removes token)
+- `GET /api/auth/me` → `{ id, name, loginEmail }` from JWT
+- `POST /api/auth/set-credentials` → sets email+password; open when auth disabled; requires own JWT or `X-Admin-Secret` when enabled
+
+**Global middleware** registered after auth endpoints, before all other routes:
+- Auth disabled (no `JWT_SECRET`) → all routes pass through
+- `X-Admin-Secret` header matching `ADMIN_SECRET` env var → bypass JWT (Diana's admin operations)
+- Valid `Authorization: Bearer <token>` → sets `req.restaurantId` from JWT payload and overrides `req.query.restaurantId` / `req.body.restaurantId` so all route handlers are automatically scoped
+
+**Fetch interceptor** in `nav.js`: monkey-patches `window.fetch` to add `Authorization: Bearer <token>` to all `/api/` calls except public auth paths; on 401 → clears token + redirects to login.
+
+**New files:**
+- `lib/auth.js` — `isAuthEnabled()`, `createToken()`, `verifyToken()`, `requireAuth` middleware
+- `public/login.html` — dark-themed login form; stores token in localStorage on success
+
+**Schema additions** (migrations `20260512020000` + `20260512030000`):
+```
+Restaurant: ownerName, tagline, brandColorBg, platforms, twinStyle, twinUsecase,
+            ownerScript, loginEmail (unique), loginPasswordHash
+```
+
+**Dependencies added:** `jsonwebtoken ^9.0.3`, `bcryptjs ^3.0.3`
+
+**Production setup:**
+1. While `JWT_SECRET` is NOT set, open Asset Manager → Login Credentials section → set email + password.
+2. Set `JWT_SECRET` in Railway → all pages immediately require login.
+3. `ADMIN_SECRET` (optional) — lets Diana access all routes without logging in.
+
+**Mock credentials (restaurant 1, Osteria della Luna):** `owner@osteria.com` / `pasta1234`
+
+---
+
+### Auto-publishing (`lib/autopublish.js`)
+
+node-cron job runs every 5 minutes checking for due scheduled posts.
+
+**New endpoint:** `POST /api/db/scheduled-posts/:id/post-now` — triggers immediate publish to Instagram (posts in background, returns immediately).
+
+**Publish logic:**
+- Finds all `scheduled` posts where `scheduledTime ≤ now` and `contentUrl` is set, for restaurants with `autoPublishEnabled = true`
+- Detects video vs image from `postType` (`owner_twin_video`, `cinematic_video` → Reel; `branded_image_feed`, `branded_image_story` → image post)
+- 3 attempts with 2s / 4s exponential backoff
+- On success: sets `status = published`, `instagramPostId`, `publishedAt`
+- On permanent failure: sets `status = failed`, `lastError`
+
+**schedule.html changes:**
+- "Post Now" button calls the real Instagram API (was: mark as published only)
+- Failed posts show a red error banner in the detail modal with the exact API error message
+- Auto-refreshes calendar 4s after "Post Now"
+
+**Schema addition** (migration `20260512040000`):
+```
+ScheduledPost: publishAttempts Int @default(0), lastError String?
+```
+
+**Dependencies added:** `node-cron ^3.x`
+
+---
+
+### Intelligent scheduling presets (`lib/schedulingPresets.js`)
+
+Research-backed posting time presets for restaurants. Replaces hardcoded `TYPE_HOURS` in generateWeek.
+
+**5 presets:**
+
+| ID | Label | Times |
+|----|-------|-------|
+| `smart` | Smart (day-aware) | Best time per day of week — Wed 12pm, Fri 5pm, Sat 11am… |
+| `optimal_3x` | 3× Week Optimal | Mon 5pm · Wed 12pm · Fri 5pm |
+| `lunch` | Daily Lunch Push | Every day 11am |
+| `evening` | Evening Engagement | Every day 6pm |
+| `mixed` | Mixed Schedule | Mon/Wed/Fri 12pm · Tue/Thu 6pm |
+
+**Day-aware logic:**
+- Stories → always 9am (morning scroll)
+- Videos/Reels → 9am Mon, 12pm Wed, 3pm Thu (break times)
+- Feed images → 5pm Mon/Thu/Fri, 12pm Tue/Wed (lunch)
+
+**New endpoint:** `GET /api/generate-week/presets` — returns preset list for the frontend
+
+**`routes/generateWeek.js`** now accepts `schedulePreset` param; uses `getOptimalHour(postType, date, preset)` for each slot
+
+**schedule.html — Generate Week modal changes:**
+- New "Posting Schedule Preset" dropdown at the top, populated from `/api/generate-week/presets`
+- Preview text shows the preset description ("Mon 5pm · Wed 12pm · Fri 5pm")
+- New Post modal shows a green hint when a date is selected: "Optimal for Wednesday: 11am–1pm, 5pm–7pm"
+
+---
+
+### Instagram OAuth + token management (`routes/instagramAuth.js`)
+
+Full Facebook OAuth flow for connecting Instagram — works alongside existing manual token entry.
+
+**Routes:**
+- `GET /auth/instagram?restaurantId=X` → redirect to Facebook OAuth dialog
+- `GET /auth/instagram/callback` → exchanges code for long-lived token (60 days), gets IG account ID, saves to DB, redirects to `/index.html?ig_connected=true`
+- `GET /api/instagram/status` → `{ connected, oauthEnabled, daysLeft, expireSoon, expired }`
+- `POST /api/instagram/refresh` → manually refresh an expiring long-lived token
+
+**Daily cron (midnight):** auto-refreshes any token expiring within 7 days.
+
+**Schema addition** (migration `20260512050000`):
+```
+Restaurant: tokenExpiresAt DateTime?
+```
+
+**index.html — Instagram Credentials section changes:**
+- "Connect with Instagram" button (purple gradient) — appears when `FB_APP_ID`/`FB_APP_SECRET` are set
+- Connected status chip: "✓ Connected · 42d left"
+- Yellow warning banner when < 7 days: "Refresh Now" button
+- Red expired banner with reconnect prompt
+- Handles `?ig_connected` / `?ig_error` query params on redirect back
+
+**Required env vars (optional — manual token entry still works without):**
+```
+FB_APP_ID=...
+FB_APP_SECRET=...
+APP_URL=https://socialai-production-4507.up.railway.app  (already set)
+```
+
+**Redirect URI to whitelist in Facebook App dashboard:**
+```
+https://socialai-production-4507.up.railway.app/auth/instagram/callback
+```
+
+---
+
+### AI Caption Generation + Hashtag Chips
+
+**New endpoints:**
+- `POST /api/generate-caption` — Claude Haiku generates 125–150 character captions; uses restaurant's saved `voiceTone`, `location`, and `includeLocation` preference; accepts `postType`, `contentDescription`, `occasion`
+- `POST /api/generate-hashtags` — builds 15 smart hashtags: branded + location + cuisine + occasion + general food tags, seeded from restaurant's `defaultHashtags`
+
+**Redesigned Instagram modal (schedule.html):**
+- Voice tone selector (Elegant / Friendly / Professional / Playful / Casual) — pre-populated from restaurant settings
+- Character counter: `0 / 150` — turns amber >120, red >150
+- **Generate Caption** → first click; **Regenerate** → appears after first generation
+- **Hashtag section:** `✦ Suggest` fills chips from API; `+ Add` input with Enter support; `×` removes individual chips; chips appended as `\n\n#tag1 #tag2 …` when posting
+
+**Schema addition** (migration `20260512060000`):
+```
+Restaurant: voiceTone String?, defaultHashtags String?, includeLocation Boolean @default(true)
+```
+
+---
+
+### Settings Page (`public/settings.html`)
+
+New dedicated settings page accessible from every page's nav ("Settings" link).
+
+**Tabs:**
+
+| Tab | Contents |
+|-----|----------|
+| **Captions** | Voice tone dropdown, include-location toggle, default hashtag chip editor (add/remove/save) |
+| **Scheduling** | Preset dropdown, frequency selector, live 7-day schedule preview (day + optimal time) |
+| **Instagram** | Connection status chip, OAuth connect/reconnect buttons, token expiry warning + Refresh Now, auto-publish toggle, manual Account ID + token entry |
+| **Account** | Restaurant name/cuisine/location/owner/tagline · Login email + password update |
+
+---
+
+### Mobile nav hamburger
+
+`nav.js` now injects on every page:
+- A `☰` hamburger button (hidden on desktop, visible on mobile < 768px)
+- CSS that collapses `.nav-links` on mobile and toggles `.mobile-open` class on click
+- Closes on outside click
+- "Settings" link automatically added to every page's nav-links if not already present
+
+---
+
 ## May 12, 2026 (Session 5) — Script Template Management
 
 ### New page: `/scripts.html`

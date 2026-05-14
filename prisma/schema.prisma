@@ -23,6 +23,7 @@ model Restaurant {
   ownerScript          String?
   loginEmail           String?  @unique
   loginPasswordHash    String?
+  googleId             String?  @unique @map("google_id")
   logoUrl              String?
   ownerPortraitUrl     String?
   instagramAccessToken String?

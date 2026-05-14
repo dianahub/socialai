@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Signing in…</title>
+<style>
+  body { background: #090910; color: #f0ede8; font-family: 'Inter', sans-serif;
+         display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
+  p { color: #7a7773; font-size: 0.9rem; }
+</style>
+</head>
+<body>
+<p>Signing you in…</p>
+<script>
+  const hash   = window.location.hash.slice(1);
+  const params = new URLSearchParams(hash);
+  const token  = params.get('token');
+  if (token) {
+    localStorage.setItem('authToken', token);
+    window.location.replace('/index.html');
+  } else {
+    window.location.replace('/login.html?error=oauth_failed');
+  }
+</script>
+</body>
+</html>

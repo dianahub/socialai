@@ -192,8 +192,8 @@
 
     const token = getAuthToken();
 
-    if (authEnabled && !token && !window.location.pathname.endsWith('/login.html')) {
-      // Auth required but no token — redirect to login
+    const publicPages = ['/login.html', '/signup.html', '/auth-callback.html'];
+    if (authEnabled && !token && !publicPages.some(p => window.location.pathname.endsWith(p))) {
       window.location.href = '/login.html';
       return;
     }
