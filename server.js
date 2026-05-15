@@ -657,18 +657,24 @@ async function runGeneration(jobId, type, config, customScript, restaurantId = 1
             restaurantId === 1 ? cld.listFolder('restaurant-social-ai/photos/') : Promise.resolve([]),
           ]);
           photoUrls = [...newPhotos, ...oldPhotos].map(p => p.url).filter(Boolean);
-        } catch {}
+          console.log(`[image] Found ${photoUrls.length} photos in Cloudinary for restaurant ${restaurantId}`);
+        } catch (e) {
+          console.warn('[image] Cloudinary photo fetch failed:', e.message);
+        }
+      } else {
+        console.log('[image] Cloudinary not configured, trying local');
       }
       if (!photoUrls.length) {
-        // Fall back to local filesystem photos
         const photosDir = path.join(ASSETS_DIR, 'photos');
         if (fs.existsSync(photosDir)) {
           photoUrls = fs.readdirSync(photosDir)
             .filter(f => /\.(jpg|jpeg|png|webp)$/i.test(f))
             .map(f => `/assets/photos/${f}`);
+          console.log(`[image] Found ${photoUrls.length} local photos`);
         }
       }
       config._photoUrls = photoUrls;
+      console.log(`[image] Total photos available: ${photoUrls.length}`);
     }
 
     let result;
