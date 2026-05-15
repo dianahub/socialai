@@ -262,6 +262,30 @@
     main { padding: 2rem 1rem 6rem; }
   }
 
+  /* ── Weekly Brief ── */
+  .brief-section {
+    background: var(--bg-card); border: 1px solid var(--gold-border);
+    border-radius: 12px; padding: 1.5rem 2rem; margin-bottom: 1.5rem;
+  }
+  .brief-heading { display: flex; align-items: baseline; gap: 0.75rem; margin-bottom: 1rem; }
+  .brief-heading h3 { margin: 0; font-family: 'Playfair Display', Georgia, serif; font-size: 1.05rem; color: var(--gold-light); }
+  .brief-week { font-size: 0.75rem; color: var(--text-muted); }
+  .brief-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+  .brief-group { display: flex; flex-direction: column; gap: 0.3rem; }
+  .brief-group label { font-size: 0.7rem; font-weight: 500; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text-muted); }
+  .brief-group input {
+    background: var(--bg-surface); border: 1px solid var(--border);
+    color: var(--text); padding: 0.55rem 0.8rem; border-radius: 8px;
+    font-size: 0.88rem; font-family: inherit; outline: none;
+  }
+  .brief-group input:focus { border-color: var(--gold-border); }
+  .brief-group input::placeholder { color: var(--text-muted); opacity: 0.6; }
+  .brief-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 0.9rem; }
+  .brief-hint { font-size: 0.75rem; color: var(--text-muted); }
+  .brief-saved { font-size: 0.75rem; color: var(--green); opacity: 0; transition: opacity 0.3s; margin-right: 0.75rem; }
+  .brief-saved.show { opacity: 1; }
+  @media (max-width: 580px) { .brief-grid { grid-template-columns: 1fr; } }
+
   /* ── Script Writer ── */
   .script-section {
     background: var(--bg-card); border: 1px solid var(--gold-border);
@@ -352,6 +376,39 @@
       <p id="headerMeta">Fine Dining Restaurant</p>
     </div>
     <a href="index.html" class="rh-link btn btn-ghost" style="font-size:0.78rem">← Edit Assets</a>
+  </div>
+
+  <!-- This Week's Brief -->
+  <div class="brief-section">
+    <div class="brief-heading">
+      <h3>📋 This Week</h3>
+      <span class="brief-week" id="briefWeekLabel"></span>
+    </div>
+    <div class="brief-grid">
+      <div class="brief-group">
+        <label>Featured dish or special</label>
+        <input type="text" id="briefDish" placeholder='e.g. "Truffle risotto"'>
+      </div>
+      <div class="brief-group">
+        <label>Event this week</label>
+        <input type="text" id="briefEvent" placeholder='e.g. "Wine tasting Thursday 7pm"'>
+      </div>
+      <div class="brief-group">
+        <label>Promotion or offer</label>
+        <input type="text" id="briefPromo" placeholder='e.g. "Happy hour 5–7pm daily"'>
+      </div>
+      <div class="brief-group">
+        <label>Notes for AI</label>
+        <input type="text" id="briefNotes" placeholder='e.g. "Romantic Valentine's vibe this week"'>
+      </div>
+    </div>
+    <div class="brief-footer">
+      <span class="brief-hint">The AI uses these details when generating all content this week.</span>
+      <div style="display:flex;align-items:center">
+        <span class="brief-saved" id="briefSaved">✓ Saved</span>
+        <button class="btn-ai" onclick="saveBrief()">Save Brief</button>
+      </div>
+    </div>
   </div>
 
   <!-- AI Script Writer -->
@@ -559,6 +616,50 @@ async function loadHeader() {
       document.getElementById('headerLogoFallback').style.display = 'none';
     }
   } catch (e) { console.warn('Header load failed:', e.message); }
+}
+
+// ── Weekly Brief ──────────────────────────────────────────────────────────
+function getMondayLabel() {
+  const d   = new Date();
+  const day = d.getDay();
+  d.setDate(d.getDate() - (day === 0 ? 6 : day - 1));
+  return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
+}
+
+async function loadBrief() {
+  document.getElementById('briefWeekLabel').textContent = `Week of ${getMondayLabel()}`;
+  try {
+    const rid  = getRestaurantId();
+    const data = await fetch(`/api/weekly-brief?restaurantId=${rid}`).then(r => r.json());
+    if (data.featuredDish) document.getElementById('briefDish').value  = data.featuredDish;
+    if (data.event)        document.getElementById('briefEvent').value = data.event;
+    if (data.promotion)    document.getElementById('briefPromo').value = data.promotion;
+    if (data.notes)        document.getElementById('briefNotes').value = data.notes;
+  } catch {}
+}
+
+let briefSavedTimer;
+async function saveBrief() {
+  const rid = getRestaurantId();
+  try {
+    await fetch('/api/weekly-brief', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        restaurantId: rid,
+        featuredDish: document.getElementById('briefDish').value.trim()  || null,
+        event:        document.getElementById('briefEvent').value.trim() || null,
+        promotion:    document.getElementById('briefPromo').value.trim() || null,
+        notes:        document.getElementById('briefNotes').value.trim() || null,
+      }),
+    });
+    const el = document.getElementById('briefSaved');
+    el.classList.add('show');
+    clearTimeout(briefSavedTimer);
+    briefSavedTimer = setTimeout(() => el.classList.remove('show'), 2000);
+  } catch (e) {
+    toast('Could not save brief: ' + e.message, 'error');
+  }
 }
 
 // ── Script Writer ──────────────────────────────────────────────────────────
@@ -920,7 +1021,7 @@ function pickTemplate() {
 
 async function init() {
   await loadHeader();
-  await loadScriptTemplates();
+  await Promise.all([loadBrief(), loadScriptTemplates()]);
 
   // Restore saved script — prefer server config, fall back to localStorage
   try {

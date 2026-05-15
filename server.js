@@ -499,16 +499,65 @@ app.get('/api/config', async (req, res) => {
   res.json({});
 });
 
+// ── Weekly Brief ──────────────────────────────────────────────────────────────
+
+function getMondayOfWeek(date = new Date()) {
+  const d   = new Date(date);
+  const day = d.getDay();
+  d.setDate(d.getDate() - (day === 0 ? 6 : day - 1));
+  return d.toISOString().split('T')[0];
+}
+
+app.get('/api/weekly-brief', async (req, res) => {
+  const restaurantId = req.restaurantId || Number(req.query.restaurantId) || 1;
+  const weekOf       = getMondayOfWeek();
+  try {
+    const row = await db.weeklyBrief.findUnique({ where: { restaurantId_weekOf: { restaurantId, weekOf } } });
+    res.json(row || { restaurantId, weekOf });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/weekly-brief', async (req, res) => {
+  const restaurantId = req.restaurantId || Number(req.body.restaurantId) || 1;
+  const weekOf       = getMondayOfWeek();
+  const { featuredDish, event, promotion, notes } = req.body;
+  try {
+    const row = await db.weeklyBrief.upsert({
+      where:  { restaurantId_weekOf: { restaurantId, weekOf } },
+      update: { featuredDish, event, promotion, notes },
+      create: { restaurantId, weekOf, featuredDish, event, promotion, notes },
+    });
+    res.json(row);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // ── AI Script generation ──────────────────────────────────────────────────────
 
 app.post('/api/generate/script', async (req, res) => {
   const { topic, details, ownerName, restaurantName, cuisineType } = req.body;
+  const restaurantId = req.restaurantId || Number(req.body.restaurantId) || 1;
+
+  // Fetch this week's brief for extra context
+  let brief = {};
+  try {
+    brief = await db.weeklyBrief.findUnique({
+      where: { restaurantId_weekOf: { restaurantId, weekOf: getMondayOfWeek() } }
+    }) || {};
+  } catch {}
+
+  const briefContext = [
+    brief.featuredDish && `Featured dish this week: ${brief.featuredDish}`,
+    brief.event        && `Event: ${brief.event}`,
+    brief.promotion    && `Promotion: ${brief.promotion}`,
+    brief.notes        && `Extra notes: ${brief.notes}`,
+  ].filter(Boolean).join('\n');
 
   if (!process.env.ANTHROPIC_API_KEY) {
     const owner = ownerName || 'the chef';
     const name  = restaurantName || 'our restaurant';
+    const extra = briefContext || (details ? `I'm excited to share: ${details}.` : '');
     return res.json({
-      script: `Hello, I'm ${owner} from ${name}. ${details ? `I'm excited to share: ${details}. ` : ''}We pour our heart into every experience here, and I'd love to welcome you to our table soon.`,
+      script: `Hello, I'm ${owner} from ${name}. ${extra} We pour our heart into every experience here, and I'd love to welcome you to our table soon.`,
       note: 'Template script — add ANTHROPIC_API_KEY to enable AI-written scripts.'
     });
   }
@@ -530,8 +579,9 @@ Restaurant: ${restaurantName || 'the restaurant'}
 Cuisine: ${cuisineType || 'fine dining'}
 Topic: ${topic || 'welcome'}
 Details: ${details || 'none'}
+${briefContext ? `\nThis week's context:\n${briefContext}` : ''}
 
-Requirements: first person, warm and personal, specific to the topic, end with a natural invitation to visit or follow.`
+Requirements: first person, warm and personal, specific to the topic and any weekly context above, end with a natural invitation to visit or follow.`
       }]
     });
 
@@ -551,11 +601,15 @@ app.post('/api/generate', async (req, res) => {
 
   let config = {};
   try {
-    const r = await db.restaurant.findUnique({ where: { id: restaurantId } });
+    const [r, brief] = await Promise.all([
+      db.restaurant.findUnique({ where: { id: restaurantId } }),
+      db.weeklyBrief.findUnique({ where: { restaurantId_weekOf: { restaurantId, weekOf: getMondayOfWeek() } } }).catch(() => null),
+    ]);
     if (r) {
       config = restaurantToConfig(r);
-      config._logoUrl  = r.logoUrl;
-      config._ownerUrl = r.ownerPortraitUrl;
+      config._logoUrl      = r.logoUrl;
+      config._ownerUrl     = r.ownerPortraitUrl;
+      config._weeklyBrief  = brief || {};
     }
   } catch { /* fall through */ }
   if (!config.restaurantName) {

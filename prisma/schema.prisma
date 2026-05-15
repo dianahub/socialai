@@ -42,6 +42,7 @@ model Restaurant {
   scriptTemplates ScriptTemplate[]
   scheduledPosts  ScheduledPost[]
   generationJobs  GenerationJob[]
+  weeklyBriefs    WeeklyBrief[]
 }
 
 model FoodPhoto {
@@ -90,6 +91,21 @@ model ScheduledPost {
   restaurant     Restaurant      @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
   scriptTemplate ScriptTemplate? @relation(fields: [scriptTemplateId], references: [id])
   generationJobs GenerationJob[]
+}
+
+model WeeklyBrief {
+  id           Int        @id @default(autoincrement())
+  restaurantId Int
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  weekOf       String     // YYYY-MM-DD (Monday of the week)
+  featuredDish String?
+  event        String?
+  promotion    String?
+  notes        String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@unique([restaurantId, weekOf])
 }
 
 // jobType:  owner_twin_video | cinematic_video | branded_image_feed | branded_image_story

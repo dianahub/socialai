@@ -29,16 +29,39 @@ function videoScript(cfg) {
   const name    = cfg.restaurantName || 'our restaurant';
   const cuisine = cfg.cuisineType    || 'fine dining';
   const tagline = cfg.tagline        || '';
-  return `Welcome to ${name}, where ${cuisine} becomes an unforgettable experience. `
-    + (tagline ? `${tagline}. ` : '')
-    + `Every dish is crafted with passion, precision, and the finest ingredients. `
-    + `We invite you to join us for an extraordinary evening.`;
+  const brief   = cfg._weeklyBrief   || {};
+
+  let script = `Welcome to ${name}, where ${cuisine} becomes an unforgettable experience. `;
+  if (tagline) script += `${tagline}. `;
+
+  if (brief.featuredDish) {
+    script += `This week, don't miss our ${brief.featuredDish}. `;
+  } else {
+    script += `Every dish is crafted with passion, precision, and the finest ingredients. `;
+  }
+  if (brief.event)     script += `Join us for ${brief.event}. `;
+  if (brief.promotion) script += `${brief.promotion}. `;
+
+  script += `We look forward to welcoming you.`;
+  return script;
 }
 
 function twinScript(cfg) {
   const owner   = cfg.ownerName      || 'our executive chef';
   const name    = cfg.restaurantName || 'our restaurant';
   const usecase = cfg.twinUsecase    || 'welcome message';
+  const brief   = cfg._weeklyBrief   || {};
+
+  // If there's a weekly brief with specifics, use those instead of generic scripts
+  if (brief.featuredDish || brief.event || brief.promotion) {
+    let script = `Hello, I'm ${owner} from ${name}. `;
+    if (brief.featuredDish) script += `This week I'm excited about our ${brief.featuredDish}. `;
+    if (brief.event)        script += `We have ${brief.event} coming up. `;
+    if (brief.promotion)    script += `${brief.promotion}. `;
+    if (brief.notes)        script += `${brief.notes}. `;
+    script += `I'd love to see you here.`;
+    return script;
+  }
 
   const scripts = {
     'welcome message':
