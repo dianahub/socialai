@@ -28,7 +28,7 @@ async function brandOverlay(filePath, config = {}, variant = 'feed') {
   }
 
   const primary  = config.primaryColor  || '#c8a84b';
-  const accent   = config.accentColor   || '#e5c97a';
+  const bg       = config.bgColor       || '#090910';
   const name     = config.restaurantName || '';
 
   let image = sharp(filePath);
@@ -84,17 +84,17 @@ async function brandOverlay(filePath, config = {}, variant = 'feed') {
 
   // ── Caption bar (bottom 10%, primary bg, accent text) ─────────────────────
   const barH = Math.round(height * 0.1);
-  const { r, g, b } = hexToRgb(primary);
+  const { r, g, b } = hexToRgb(bg);
   const fontSize = Math.max(16, Math.round(barH * 0.38));
 
   const captionSvg = `<svg width="${width}" height="${barH}" xmlns="http://www.w3.org/2000/svg">
-    <rect width="${width}" height="${barH}" fill="rgba(${r},${g},${b},0.88)"/>
+    <rect width="${width}" height="${barH}" fill="rgba(${r},${g},${b},0.92)"/>
     <text
       x="${Math.round(width * 0.04)}"
       y="${Math.round(barH * 0.5)}"
       font-family="Georgia, 'Times New Roman', serif"
       font-size="${fontSize}"
-      fill="${accent}"
+      fill="${primary}"
       dominant-baseline="middle"
       font-style="italic"
     >${name.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</text>
