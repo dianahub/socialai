@@ -961,9 +961,7 @@ function renderGallery(items) {
       ? `<a class="btn-sm btn-download" href="${downloadPath}" download="${downloadName}">⬇ Download</a>`
       : '';
 
-    const deleteBtn = !isGenerating
-      ? `<button class="btn-sm btn-delete" onclick="deleteJob('${item.id}', this)">✕ Delete</button>`
-      : '';
+    const deleteBtn = `<button class="btn-sm btn-delete" onclick="deleteJob('${item.id}', this)">✕ Delete</button>`;
 
     const igPosted = item.instagram_url
       ? `<a class="btn-sm btn-ig-posted" href="${item.instagram_url}" target="_blank">✓ On Instagram</a>`
