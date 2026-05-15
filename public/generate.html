@@ -887,6 +887,10 @@ async function pollOutput() {
       if (item.status === 'ready' && activejobs.has(item.id)) {
         setCardState(item.type, 'done');
         activejobs.delete(item.id);
+      } else if (item.status === 'error' && activejobs.has(item.id)) {
+        setCardState(item.type, 'idle');
+        activejobs.delete(item.id);
+        toast('Generation failed — try again', 'error');
       } else if (item.status === 'generating') {
         anyGenerating = true;
       }
