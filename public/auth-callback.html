@@ -17,7 +17,8 @@
   const token  = params.get('token');
   if (token) {
     localStorage.setItem('authToken', token);
-    window.location.replace('/index.html');
+    const dest = localStorage.getItem('onboardingComplete') ? '/index.html' : '/onboarding.html';
+    window.location.replace(dest);
   } else {
     window.location.replace('/login.html?error=oauth_failed');
   }

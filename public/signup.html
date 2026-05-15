@@ -166,7 +166,7 @@ async function doSignup(e) {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Sign up failed');
     localStorage.setItem('authToken', data.token);
-    window.location.href = '/index.html';
+    window.location.href = '/onboarding.html';
   } catch (err) {
     errEl.textContent = err.message;
     errEl.classList.add('show');
