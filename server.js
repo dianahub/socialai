@@ -636,7 +636,8 @@ async function kickOffGeneration(restaurantId, config) {
       path.join(OUTPUT_DIR, `${jobId}_meta.json`),
       JSON.stringify({ id: jobId, type, status: 'generating', created: new Date().toISOString(), auto: true }, null, 2)
     );
-    runGeneration(jobId, type, { ...config }, null, restaurantId);
+    const customScript = type === 'twin' ? (config.ownerScript || null) : null;
+    runGeneration(jobId, type, { ...config }, customScript, restaurantId);
   }
 }
 
