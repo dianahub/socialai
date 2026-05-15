@@ -284,6 +284,18 @@
   .brief-hint { font-size: 0.75rem; color: var(--text-muted); }
   .brief-saved { font-size: 0.75rem; color: var(--green); opacity: 0; transition: opacity 0.3s; margin-right: 0.75rem; }
   .brief-saved.show { opacity: 1; }
+  .brief-auto-row { display:flex; align-items:center; justify-content:space-between; margin-top:1rem; padding-top:0.9rem; border-top:1px solid var(--border); gap:1rem; flex-wrap:wrap; }
+  .auto-toggle-wrap { display:flex; align-items:center; gap:0.65rem; }
+  .auto-toggle-wrap label { font-size:0.8rem; color:var(--text-muted); cursor:pointer; }
+  .toggle-switch { position:relative; width:38px; height:20px; display:inline-block; }
+  .toggle-switch input { opacity:0; width:0; height:0; }
+  .toggle-slider { position:absolute; inset:0; background:var(--bg-surface); border:1px solid var(--border); border-radius:20px; cursor:pointer; transition:0.2s; }
+  .toggle-slider:before { content:''; position:absolute; height:14px; width:14px; left:2px; bottom:2px; background:var(--text-muted); border-radius:50%; transition:0.2s; }
+  .toggle-switch input:checked + .toggle-slider { background:var(--green); border-color:var(--green); }
+  .toggle-switch input:checked + .toggle-slider:before { background:#fff; transform:translateX(18px); }
+  .btn-gen-all { background:var(--green); color:#fff; border:none; padding:0.5rem 1.1rem; border-radius:8px; font-size:0.82rem; font-weight:600; cursor:pointer; letter-spacing:0.04em; transition:opacity 0.2s; }
+  .btn-gen-all:hover { opacity:0.85; }
+  .btn-gen-all:disabled { opacity:0.4; cursor:default; }
   @media (max-width: 580px) { .brief-grid { grid-template-columns: 1fr; } }
 
   /* ── Script Writer ── */
@@ -408,6 +420,16 @@
         <span class="brief-saved" id="briefSaved">✓ Saved</span>
         <button class="btn-ai" onclick="saveBrief()">Save Brief</button>
       </div>
+    </div>
+    <div class="brief-auto-row">
+      <div class="auto-toggle-wrap">
+        <label class="toggle-switch">
+          <input type="checkbox" id="autoGenToggle" onchange="saveAutoGenSetting()">
+          <span class="toggle-slider"></span>
+        </label>
+        <label for="autoGenToggle">Auto-generate every Monday morning</label>
+      </div>
+      <button class="btn-gen-all" id="btnGenAll" onclick="generateAll()">Generate All This Week</button>
     </div>
   </div>
 
@@ -667,6 +689,55 @@ async function saveBrief() {
     briefSavedTimer = setTimeout(() => el.classList.remove('show'), 2000);
   } catch (e) {
     toast('Could not save brief: ' + e.message, 'error');
+  }
+}
+
+// ── Auto-generate setting ────────────────────────────────────────────────────
+async function loadAutoGenSetting() {
+  try {
+    const rid  = getRestaurantId();
+    const r    = await fetch(`/api/db/restaurants/${rid}`).then(r => r.json());
+    document.getElementById('autoGenToggle').checked = !!r.autoGenerateEnabled;
+  } catch {}
+}
+
+async function saveAutoGenSetting() {
+  const rid     = getRestaurantId();
+  const enabled = document.getElementById('autoGenToggle').checked;
+  try {
+    await fetch(`/api/db/restaurants/${rid}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ autoGenerateEnabled: enabled }),
+    });
+    toast(enabled ? 'Auto-generate ON — videos will be created every Monday at 8am' : 'Auto-generate turned off', 'info');
+  } catch (e) {
+    toast('Could not save setting: ' + e.message, 'error');
+  }
+}
+
+async function generateAll() {
+  const btn = document.getElementById('btnGenAll');
+  btn.disabled = true;
+  btn.textContent = 'Queuing…';
+  try {
+    const rid = getRestaurantId();
+    const res = await fetch('/api/generate-all', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ restaurantId: rid }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    toast('Generation started — video, owner twin, and image posts are being created', 'success');
+    setCardState('video', 'generating');
+    setCardState('twin',  'generating');
+    setCardState('image', 'generating');
+    setTimeout(pollOutput, 3000);
+  } catch (e) {
+    toast('Could not start generation: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Generate All This Week';
   }
 }
 
@@ -1045,7 +1116,7 @@ function pickTemplate() {
 
 async function init() {
   await loadHeader();
-  await Promise.all([loadBrief(), loadScriptTemplates()]);
+  await Promise.all([loadBrief(), loadScriptTemplates(), loadAutoGenSetting()]);
 
   // Restore saved script — prefer server config, fall back to localStorage
   try {
