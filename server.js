@@ -684,6 +684,7 @@ async function runGeneration(jobId, type, config, customScript, restaurantId = 1
       result = await generateTwinClip(config, jobId, customScript);
     } else {
       result = await generateImagePost(config, jobId);
+      console.log('[overlay] logoUrl:', config._logoUrl || 'NONE', '| primary:', config.primaryColor || 'NONE');
       if (result.files) {
         for (const file of result.files) {
           await brandOverlay(path.join(OUTPUT_DIR, file.filename), config, file.variant)
