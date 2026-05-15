@@ -485,6 +485,11 @@ async function generateTwinClip(config, jobId, customScript) {
   };
 }
 
+function cloudinaryTransformUrl(url, w, h) {
+  if (!url || !url.includes('res.cloudinary.com')) return null;
+  return url.replace('/upload/', `/upload/c_fill,w_${w},h_${h},g_center/`);
+}
+
 async function generateImagePost(config, jobId) {
   console.log('[generateImagePost] Building branded image posts via Sharp');
 
@@ -494,26 +499,12 @@ async function generateImagePost(config, jobId) {
     thumbnail: { w: 1280, h: 720  },
   };
 
-  // Try to download a food photo to use as base
   const photoUrls = config._photoUrls || [];
-  let baseBuffer = null;
+  const baseUrl   = photoUrls.length
+    ? photoUrls[Math.floor(Math.random() * photoUrls.length)]
+    : null;
 
-  if (photoUrls.length) {
-    const url = photoUrls[Math.floor(Math.random() * photoUrls.length)];
-    try {
-      const isLocal = url.startsWith('/');
-      if (isLocal) {
-        const localPath = path.join(DATA_DIR, url);
-        if (fs.existsSync(localPath)) baseBuffer = fs.readFileSync(localPath);
-      } else {
-        const resp = await fetch(url);
-        if (resp.ok) baseBuffer = Buffer.from(await resp.arrayBuffer());
-      }
-      if (baseBuffer) console.log('[generateImagePost] Using food photo:', url.slice(-60));
-    } catch (e) {
-      console.warn('[generateImagePost] Photo fetch failed:', e.message);
-    }
-  }
+  if (baseUrl) console.log('[generateImagePost] Using food photo:', baseUrl.slice(-60));
 
   const files = [];
   for (const variant of ['feed', 'story', 'thumbnail']) {
@@ -522,16 +513,31 @@ async function generateImagePost(config, jobId) {
     const outputPath = path.join(OUTPUT_DIR, filename);
     const prompt     = `${config.restaurantName || 'Restaurant'} — ${config.cuisineType || 'Fine Dining'} — ${variant}`;
 
-    if (baseBuffer) {
+    if (baseUrl) {
       try {
-        await sharp(baseBuffer)
-          .resize(w, h, { fit: 'cover', position: 'centre' })
-          .jpeg({ quality: 90 })
-          .toFile(outputPath);
-        files.push({ filename, path: `/output/${filename}`, width: w, height: h, variant, prompt, model: 'Food Photo' });
-        continue;
+        const transformUrl = cloudinaryTransformUrl(baseUrl, w, h);
+        const fetchUrl     = transformUrl || baseUrl;
+        let imgBuffer      = null;
+
+        if (fetchUrl.startsWith('/')) {
+          const localPath = path.join(DATA_DIR, fetchUrl);
+          if (fs.existsSync(localPath)) imgBuffer = fs.readFileSync(localPath);
+        } else {
+          const resp = await fetch(fetchUrl);
+          if (resp.ok) imgBuffer = Buffer.from(await resp.arrayBuffer());
+        }
+
+        if (imgBuffer) {
+          if (transformUrl) {
+            fs.writeFileSync(outputPath, imgBuffer);
+          } else {
+            await sharp(imgBuffer).resize(w, h, { fit: 'cover', position: 'centre' }).jpeg({ quality: 90 }).toFile(outputPath);
+          }
+          files.push({ filename, path: `/output/${filename}`, width: w, height: h, variant, prompt, model: 'Food Photo' });
+          continue;
+        }
       } catch (e) {
-        console.warn('[generateImagePost] Resize failed for', variant, ':', e.message);
+        console.warn('[generateImagePost] Variant', variant, 'failed:', e.message);
       }
     }
 
