@@ -286,78 +286,45 @@ async function generateVideo(config, jobId) {
   console.log('[generateVideo] script:', script.slice(0, 80) + '…');
 
   if (API_KEY) {
-    // Resolve owner photo — required to generate video without using the account's personal avatar
-    let ownerLocalPath = null;
-    let ownerIsTmp     = false;
+    try {
+      const avatarId   = await getDefaultAvatarId();
+      const voiceId    = await getDefaultVoiceId(config.ownerVoiceId);
+      const voiceInput = { type: 'text', input_text: script, speed: 1.0 };
+      if (voiceId) voiceInput.voice_id = voiceId;
 
-    if (config._ownerUrl) {
-      try {
-        const resp = await fetch(config._ownerUrl);
-        if (resp.ok) {
-          const os_ = require('os');
-          const tmp = path.join(os_.tmpdir(), `owner_vid_${Date.now()}.jpg`);
-          fs.writeFileSync(tmp, Buffer.from(await resp.arrayBuffer()));
-          ownerLocalPath = tmp;
-          ownerIsTmp     = true;
-        }
-      } catch (e) {
-        console.warn('[generateVideo] Owner cloud download failed:', e.message);
-      }
-    }
-    if (!ownerLocalPath) {
-      const ownerDir   = path.join(ASSETS_DIR, 'owner');
-      const ownerFiles = fs.existsSync(ownerDir)
-        ? fs.readdirSync(ownerDir).filter(f => !f.startsWith('.') && /\.(jpg|jpeg|png|webp)$/i.test(f))
-        : [];
-      if (ownerFiles.length) ownerLocalPath = path.join(ownerDir, ownerFiles[0]);
-    }
+      console.log('[generateVideo] Using avatar:', avatarId);
 
-    if (!ownerLocalPath) {
-      console.log('[generateVideo] No owner photo — skipping HeyGen to avoid using personal avatar, falling back to mock');
-    } else {
-      try {
-        const voiceId    = await getDefaultVoiceId(config.ownerVoiceId);
-        const voiceInput = { type: 'text', input_text: script, speed: 1.0 };
-        if (voiceId) voiceInput.voice_id = voiceId;
+      const resp = await heygenPost('/v2/video/generate', {
+        video_inputs: [{
+          character:  { type: 'avatar', avatar_id: avatarId, avatar_style: 'normal' },
+          voice:      voiceInput,
+          background: { type: 'color', value: '#0a0a14' },
+        }],
+        aspect_ratio: '16:9',
+        test: false,
+      });
 
-        const talkingPhotoId = await uploadTalkingPhoto(ownerLocalPath);
-        if (ownerIsTmp) fs.unlink(ownerLocalPath, () => {});
+      const videoId = resp.data?.video_id;
+      if (!videoId) throw new Error('No video_id returned');
 
-        if (!talkingPhotoId) throw new Error('No talking_photo_id returned');
+      const { videoUrl, thumbnailUrl } = await waitForVideo(videoId);
+      const filename  = `${jobId}_video.mp4`;
+      const thumbFile = `${jobId}_video_thumb.jpg`;
 
-        const resp = await heygenPost('/v2/video/generate', {
-          video_inputs: [{
-            character:  { type: 'talking_photo', talking_photo_id: talkingPhotoId },
-            voice:      voiceInput,
-            background: { type: 'color', value: '#0a0a14' },
-          }],
-          aspect_ratio: '16:9',
-          test: false,
-        });
+      await downloadFile(videoUrl, path.join(OUTPUT_DIR, filename));
+      if (thumbnailUrl) await downloadFile(thumbnailUrl, path.join(OUTPUT_DIR, thumbFile)).catch(() => {});
 
-        const videoId = resp.data?.video_id;
-        if (!videoId) throw new Error('No video_id returned');
-
-        const { videoUrl, thumbnailUrl } = await waitForVideo(videoId);
-        const filename  = `${jobId}_video.mp4`;
-        const thumbFile = `${jobId}_video_thumb.jpg`;
-
-        await downloadFile(videoUrl, path.join(OUTPUT_DIR, filename));
-        if (thumbnailUrl) await downloadFile(thumbnailUrl, path.join(OUTPUT_DIR, thumbFile)).catch(() => {});
-
-        return {
-          filename,
-          path:          `/output/${filename}`,
-          thumbnailPath: thumbnailUrl ? `/output/${thumbFile}` : null,
-          type:          'video',
-          platform:      config.platforms || ['instagram', 'tiktok'],
-          model:         'HeyGen Talking Photo',
-          prompt:        script,
-        };
-      } catch (err) {
-        if (ownerIsTmp && ownerLocalPath) fs.unlink(ownerLocalPath, () => {});
-        console.error('[generateVideo] HeyGen error:', err.message, '— falling back to mock');
-      }
+      return {
+        filename,
+        path:          `/output/${filename}`,
+        thumbnailPath: thumbnailUrl ? `/output/${thumbFile}` : null,
+        type:          'video',
+        platform:      config.platforms || ['instagram', 'tiktok'],
+        model:         'HeyGen Avatar',
+        prompt:        script,
+      };
+    } catch (err) {
+      console.error('[generateVideo] HeyGen error:', err.message, '— falling back to mock');
     }
   } else {
     console.log('[generateVideo] No API key — mock mode');
