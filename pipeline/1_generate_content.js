@@ -282,63 +282,164 @@ async function mockImage(cfg, jobId, variant, overlayLabel, modelLabel) {
 // ── Public API ────────────────────────────────────────────────────────────────
 
 async function generateVideo(config, jobId) {
-  const script = videoScript(config);
-  console.log('[generateVideo] script:', script.slice(0, 80) + '…');
+  console.log('[generateVideo] Building food-photo slideshow');
 
-  if (API_KEY) {
-    try {
-      const avatarId   = await getDefaultAvatarId();
-      const voiceId    = await getDefaultVoiceId(config.ownerVoiceId);
-      const voiceInput = { type: 'text', input_text: script, speed: 1.0 };
-      if (voiceId) voiceInput.voice_id = voiceId;
+  const ffmpegInstaller = require('@ffmpeg-installer/ffmpeg');
+  const ffmpeg          = require('fluent-ffmpeg');
+  ffmpeg.setFfmpegPath(ffmpegInstaller.path);
 
-      console.log('[generateVideo] Using avatar:', avatarId);
+  const os = require('os');
 
-      const resp = await heygenPost('/v2/video/generate', {
-        video_inputs: [{
-          character:  { type: 'avatar', avatar_id: avatarId, avatar_style: 'normal' },
-          voice:      voiceInput,
-          background: { type: 'color', value: '#0a0a14' },
-        }],
-        aspect_ratio: '16:9',
-        test: false,
-      });
-
-      const videoId = resp.data?.video_id;
-      if (!videoId) throw new Error('No video_id returned');
-
-      const { videoUrl, thumbnailUrl } = await waitForVideo(videoId);
-      const filename  = `${jobId}_video.mp4`;
-      const thumbFile = `${jobId}_video_thumb.jpg`;
-
-      await downloadFile(videoUrl, path.join(OUTPUT_DIR, filename));
-      if (thumbnailUrl) await downloadFile(thumbnailUrl, path.join(OUTPUT_DIR, thumbFile)).catch(() => {});
-
-      return {
-        filename,
-        path:          `/output/${filename}`,
-        thumbnailPath: thumbnailUrl ? `/output/${thumbFile}` : null,
-        type:          'video',
-        platform:      config.platforms || ['instagram', 'tiktok'],
-        model:         'HeyGen Avatar',
-        prompt:        script,
-      };
-    } catch (err) {
-      console.error('[generateVideo] HeyGen error:', err.message, '— falling back to mock');
-    }
-  } else {
-    console.log('[generateVideo] No API key — mock mode');
+  // ── Gather food photos ───────────────────────────────────────────────────
+  const photoUrls = (config._photoUrls || []).slice(0, 6);   // up to 6 slides
+  if (!photoUrls.length) {
+    console.log('[generateVideo] No food photos — falling back to mock');
+    const file = await mockImage(config, jobId, 'video', '▶', 'Slideshow');
+    return { ...file, thumbnailPath: file.path, type: 'video',
+             platform: config.platforms || ['instagram', 'tiktok'],
+             model: 'Slideshow (no photos)', prompt: '' };
   }
 
-  const file = await mockImage(config, jobId, 'video', '▶', 'HeyGen Avatar');
+  // ── Download + prepare frames at 1920×1080 with logo badge ──────────────
+  const tmpDir    = path.join(os.tmpdir(), `slide_${jobId}`);
+  fs.mkdirSync(tmpDir, { recursive: true });
+
+  // Cache logo once
+  let logoBuf = null;
+  if (config._logoCached !== undefined) {
+    logoBuf = config._logoCached;
+  } else if (config._logoUrl) {
+    try {
+      const r = await fetch(config._logoUrl);
+      if (r.ok) logoBuf = Buffer.from(await r.arrayBuffer());
+    } catch {}
+  }
+
+  const framePaths = [];
+  for (let i = 0; i < photoUrls.length; i++) {
+    try {
+      const url    = cloudinaryTransformUrl(photoUrls[i], 1920, 1080) || photoUrls[i];
+      const resp   = await fetch(url);
+      if (!resp.ok) continue;
+      let buf = Buffer.from(await resp.arrayBuffer());
+
+      // Ensure exact 1920×1080
+      buf = await sharp(buf).resize(1920, 1080, { fit: 'cover', position: 'centre' }).jpeg({ quality: 90 }).toBuffer();
+
+      // Stamp logo badge bottom-right
+      if (logoBuf) {
+        try {
+          const logoH   = Math.round(1080 * 0.14);
+          const padding = Math.round(logoH * 0.35);
+          const margin  = Math.round(1920 * 0.03);
+          const logo    = await sharp(logoBuf).resize(null, logoH, { fit: 'inside' }).toBuffer();
+          const lMeta   = await sharp(logo).metadata();
+          const boxW    = lMeta.width + padding * 2;
+          const boxH    = lMeta.height + padding * 2;
+          const { r: br, g: bg, b: bb } = hexToRgb(config.bgColor || '#090910');
+          const box     = await sharp({ create: { width: boxW, height: boxH, channels: 4,
+                            background: { r: br, g: bg, b: bb, alpha: 0.88 } } }).png().toBuffer();
+          buf = await sharp(buf).composite([
+            { input: box,  left: 1920 - boxW - margin,           top: 1080 - boxH - margin },
+            { input: logo, left: 1920 - boxW - margin + padding, top: 1080 - boxH - margin + padding },
+          ]).jpeg({ quality: 90 }).toBuffer();
+        } catch {}
+      }
+
+      const framePath = path.join(tmpDir, `frame_${String(i).padStart(2,'0')}.jpg`);
+      fs.writeFileSync(framePath, buf);
+      framePaths.push(framePath);
+    } catch (e) {
+      console.warn(`[generateVideo] Frame ${i} failed:`, e.message);
+    }
+  }
+
+  if (!framePaths.length) {
+    console.warn('[generateVideo] All frames failed — falling back to mock');
+    const file = await mockImage(config, jobId, 'video', '▶', 'Slideshow');
+    return { ...file, thumbnailPath: file.path, type: 'video',
+             platform: config.platforms || ['instagram', 'tiktok'],
+             model: 'Slideshow (frames failed)', prompt: '' };
+  }
+
+  // ── Build slideshow with ffmpeg ──────────────────────────────────────────
+  const filename   = `${jobId}_video.mp4`;
+  const outputPath = path.join(OUTPUT_DIR, filename);
+  const thumbFile  = `${jobId}_video_thumb.jpg`;
+  const thumbPath  = path.join(OUTPUT_DIR, thumbFile);
+
+  const slideSec   = 4;   // seconds per slide
+  const fadeSec    = 0.8; // crossfade duration
+
+  await new Promise((resolve, reject) => {
+    let cmd = ffmpeg();
+
+    // Each frame input, looped for slideSec seconds
+    for (const fp of framePaths) {
+      cmd = cmd.input(fp).inputOptions([`-loop 1`, `-t ${slideSec}`]);
+    }
+
+    const n = framePaths.length;
+
+    // Build filter: slow zoom on each slide + xfade chain
+    const filters = [];
+
+    // Ken Burns zoom on each frame: scale up 10%, pan from centre outward
+    for (let i = 0; i < n; i++) {
+      const fps   = 25;
+      const nf    = slideSec * fps;
+      // Zoom from 1.0→1.08 while panning slightly
+      filters.push({
+        filter: 'zoompan',
+        options: { z: `min(zoom+0.002,1.08)`, x: 'iw/2-(iw/zoom/2)', y: 'ih/2-(ih/zoom/2)',
+                   d: nf, s: '1920x1080', fps },
+        inputs:  `[${i}:v]`,
+        outputs: `[z${i}]`,
+      });
+    }
+
+    // xfade chain: z0 + z1 → xf0, xf0 + z2 → xf1, …
+    for (let i = 0; i < n - 1; i++) {
+      const inA   = i === 0 ? `[z0]` : `[xf${i-1}]`;
+      const inB   = `[z${i+1}]`;
+      const out   = i === n - 2 ? '[vout]' : `[xf${i}]`;
+      const offset = (i + 1) * slideSec - fadeSec;
+      filters.push({ filter: 'xfade', options: { transition: 'fade', duration: fadeSec, offset },
+                     inputs: `${inA}${inB}`, outputs: out });
+    }
+
+    // If only one frame, just rename
+    if (n === 1) {
+      filters.push({ filter: 'copy', inputs: '[z0]', outputs: '[vout]' });
+    }
+
+    cmd
+      .complexFilter(filters)
+      .outputOptions(['-map [vout]', '-c:v libx264', '-pix_fmt yuv420p',
+                      '-crf 23', '-preset fast', '-movflags +faststart'])
+      .output(outputPath)
+      .on('start', cmd => console.log('[generateVideo] ffmpeg start:', cmd.slice(0, 120)))
+      .on('end',   ()  => resolve())
+      .on('error', err => reject(err))
+      .run();
+  });
+
+  // Thumbnail = first frame
+  fs.copyFileSync(framePaths[0], thumbPath);
+
+  // Cleanup temp frames
+  try { fs.rmSync(tmpDir, { recursive: true }); } catch {}
+
+  console.log('[generateVideo] Slideshow complete:', filename);
+
   return {
-    ...file,
-    thumbnailPath: file.path,
-    type:     'video',
-    platform: config.platforms || ['instagram', 'tiktok'],
-    model:    'HeyGen Avatar (mock)',
-    prompt:   script,
-    note:     'Placeholder. Set HEYGEN_API_KEY for real avatar video.',
+    filename,
+    path:          `/output/${filename}`,
+    thumbnailPath: `/output/${thumbFile}`,
+    type:          'video',
+    platform:      config.platforms || ['instagram', 'tiktok'],
+    model:         'Food Photo Slideshow',
+    prompt:        `${framePaths.length} photos · ${slideSec}s/slide · Ken Burns`,
   };
 }
 

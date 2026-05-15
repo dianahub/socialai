@@ -709,8 +709,8 @@ async function runGeneration(jobId, type, config, customScript, restaurantId = 1
       if (!config._ownerUrl) config._ownerUrl = ownerNew || ownerOld || null;
     }
 
-    // For image posts: fetch food photo URLs so the pipeline can use real photos
-    if (type === 'image') {
+    // For image posts and cinematic video: fetch food photo URLs
+    if (type === 'image' || type === 'video') {
       let photoUrls = [];
       if (cld.isConfigured()) {
         try {
