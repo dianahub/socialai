@@ -59,7 +59,7 @@ async function brandOverlay(filePath, config = {}, variant = 'feed') {
   }
 
   // ── Small logo badge in bottom-right corner ───────────────────────────────
-  const logoMaxH  = Math.round(height * 0.08);   // 8% of image height
+  const logoMaxH  = Math.round(height * 0.14);   // 14% of image height
   const padding   = Math.round(logoMaxH * 0.35);
   const margin    = Math.round(width * 0.03);
 
