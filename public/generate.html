@@ -296,6 +296,8 @@
   .btn-gen-all { background:var(--green); color:#fff; border:none; padding:0.5rem 1.1rem; border-radius:8px; font-size:0.82rem; font-weight:600; cursor:pointer; letter-spacing:0.04em; transition:opacity 0.2s; }
   .btn-gen-all:hover { opacity:0.85; }
   .btn-gen-all:disabled { opacity:0.4; cursor:default; }
+  .btn-gen-twin { background:var(--gold-dim); color:var(--gold-light); border:1px solid var(--gold-border); padding:0.55rem 1rem; border-radius:8px; font-size:0.82rem; font-weight:600; cursor:pointer; letter-spacing:0.04em; transition:all 0.2s; font-family:inherit; }
+  .btn-gen-twin:hover { background:rgba(200,168,75,0.2); }
   @media (max-width: 580px) { .brief-grid { grid-template-columns: 1fr; } }
 
   /* ── Script Writer ── */
@@ -433,91 +435,63 @@
     </div>
   </div>
 
-  <!-- AI Script Writer -->
-  <div class="script-section" style="border-bottom-left-radius:0;border-bottom-right-radius:0;border-bottom-color:transparent;margin-bottom:0">
-    <div class="sw-heading">
-      <h3>Owner Twin Script</h3>
-      <span class="sw-tag">👤 Controls Animate Owner Twin only</span>
-    </div>
-    <p class="sw-desc">Write the words the owner will speak in the animated twin video. Has no effect on Cinematic Video or Image Posts.</p>
-
-    <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:1rem;align-items:start">
-
-      <!-- Option A: Saved template -->
-      <div id="tmplPickerWrap" style="display:none;flex-direction:column;gap:0.4rem">
-        <div style="font-size:0.68rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:0.15rem">Option A — Load a saved script</div>
-        <select id="tmplPicker" onchange="pickTemplate()" style="background:var(--bg-surface);border:1px solid var(--border);color:var(--text);padding:0.55rem 0.8rem;border-radius:8px;font-size:0.88rem;font-family:inherit;outline:none;width:100%">
-          <option value="">— Pick a template —</option>
-        </select>
-        <a href="scripts.html" style="font-size:0.72rem;color:var(--gold);text-decoration:none">Manage saved scripts →</a>
-      </div>
-      <div id="tmplPickerHidden" style="display:flex;flex-direction:column;gap:0.4rem">
-        <div style="font-size:0.68rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:0.15rem">Option A — Load a saved script</div>
-        <div style="font-size:0.82rem;color:var(--text-muted);font-style:italic">No saved scripts yet — <a href="scripts.html" style="color:var(--gold);text-decoration:none">create one →</a></div>
-      </div>
-
-      <!-- Divider -->
-      <div style="display:flex;flex-direction:column;align-items:center;gap:0.5rem;padding-top:1.6rem">
-        <div style="width:1px;height:32px;background:var(--border)"></div>
-        <span style="font-size:0.72rem;color:var(--text-muted);font-weight:600;letter-spacing:0.06em">OR</span>
-        <div style="width:1px;height:32px;background:var(--border)"></div>
-      </div>
-
-      <!-- Option B: Write with AI -->
-      <div style="display:flex;flex-direction:column;gap:0.6rem">
-        <div style="font-size:0.68rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:0.15rem">Option B — Write with AI</div>
-        <select id="scriptTopic" style="background:var(--bg-surface);border:1px solid var(--border);color:var(--text);padding:0.55rem 0.8rem;border-radius:8px;font-size:0.88rem;font-family:inherit;outline:none">
-          <option value="welcome">Welcome message</option>
-          <option value="menu">Menu highlight</option>
-          <option value="event">Event announcement</option>
-          <option value="view">Ambiance &amp; view</option>
-          <option value="special">Special offer</option>
-          <option value="behind">Behind the scenes</option>
-        </select>
-        <input type="text" id="scriptDetails" placeholder='Add details, e.g. "Truffle tasting menu, $195pp, Friday 7pm"' style="background:var(--bg-surface);border:1px solid var(--border);color:var(--text);padding:0.55rem 0.8rem;border-radius:8px;font-size:0.88rem;font-family:inherit;outline:none">
-        <button class="btn-ai" id="writeScriptBtn" onclick="writeScript()" style="align-self:flex-start">✦ Write Script with AI</button>
-      </div>
-
-    </div>
-    <div class="sw-preview" id="scriptPreview" style="display:none">
-      <div class="sw-preview-top">
-        <div style="display:flex;align-items:center">
-          <span class="sw-preview-label">Script — editable</span>
-          <span class="sw-saved" id="scriptSaved">✓ Saved</span>
-        </div>
-        <button class="btn-clear" onclick="clearScript()">✕ Clear</button>
-      </div>
-      <textarea class="sw-textarea" id="scriptText" rows="3"></textarea>
-      <p class="sw-hint">This script will be used when you click <strong>Animate Owner Twin</strong> below.</p>
-    </div>
-  </div>
-
-  <!-- Connector from script writer to twin card -->
-  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:2rem">
-    <div style="background:var(--bg-surface);border:1px solid var(--gold-border);border-top:none;border-radius:0 0 4px 4px;padding:0.4rem 1rem;display:flex;align-items:center;gap:0.4rem;grid-column:2;justify-content:center">
-      <span style="color:var(--gold);font-size:0.7rem">▼</span>
-      <span style="font-size:0.7rem;color:var(--gold);font-weight:600;letter-spacing:0.06em;text-transform:uppercase">Script feeds into this card</span>
-    </div>
-  </div>
-
   <!-- Generation buttons -->
-  <div class="gen-section" style="margin-top:-1.5rem">
+  <div class="gen-section">
     <h3>Generate Content</h3>
     <div class="gen-cards">
 
       <div class="gen-card" id="card-video" onclick="generate('video')">
         <div class="gen-icon">🎬</div>
         <div class="gen-title">Cinematic Video</div>
-        <div class="gen-desc">AI-generated cinematic promo video for Instagram Reels, TikTok, and Stories. Built from your cuisine and tagline.</div>
-        <div class="gen-model">HeyGen Talking Photo</div>
+        <div class="gen-desc">Food photo slideshow with Ken Burns zoom and crossfade transitions. Uses your uploaded restaurant photos.</div>
+        <div class="gen-model">Food Photo Slideshow</div>
         <div class="gen-status" id="status-video" style="display:none"></div>
       </div>
 
-      <div class="gen-card" id="card-twin" onclick="generate('twin')" style="border-color:rgba(200,168,75,0.35)">
+      <!-- Owner Twin card — review & approve script before generating -->
+      <div class="gen-card" id="card-twin" style="border-color:rgba(200,168,75,0.35);cursor:default">
         <div class="gen-icon">👤</div>
         <div class="gen-title">Animate Owner Twin</div>
-        <div class="gen-desc">Animates the owner portrait with the script above — a personal welcome or announcement in their own words.</div>
-        <div class="gen-model" style="display:flex;align-items:center;gap:0.4rem">HeyGen Talking Photo <span style="color:var(--gold-light)">← uses script</span></div>
+        <div class="gen-desc">The owner speaks directly to your audience. Review what they'll say before generating.</div>
+        <div class="gen-model">HeyGen Talking Photo</div>
+
+        <div style="border-top:1px solid var(--border);margin-top:0.9rem;padding-top:0.9rem" onclick="event.stopPropagation()">
+
+          <!-- Script textarea — always visible -->
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.4rem">
+            <span style="font-size:0.65rem;font-weight:700;letter-spacing:0.09em;text-transform:uppercase;color:var(--text-muted)">What the owner will say</span>
+            <div style="display:flex;align-items:center;gap:0.5rem">
+              <span class="sw-saved" id="scriptSaved" style="font-size:0.7rem">✓ Saved</span>
+              <button class="btn-ai" id="writeScriptBtn" onclick="writeScript()" style="font-size:0.72rem;padding:0.3rem 0.65rem" title="Generate from this week's brief">↻ Generate from brief</button>
+            </div>
+          </div>
+
+          <textarea class="sw-textarea" id="scriptText" rows="4"
+            style="width:100%;box-sizing:border-box"
+            placeholder="Click ↻ Generate from brief to write this week's script — or type your own."
+            oninput="onScriptInput()"></textarea>
+
+          <!-- Saved templates as a subtle secondary option -->
+          <div style="margin-top:0.5rem;display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap">
+            <span style="font-size:0.7rem;color:var(--text-muted)">Or load saved:</span>
+            <div id="tmplPickerWrap" style="display:none;flex:1">
+              <select id="tmplPicker" onchange="pickTemplate()" style="background:var(--bg-surface);border:1px solid var(--border);color:var(--text);padding:0.3rem 0.6rem;border-radius:6px;font-size:0.78rem;font-family:inherit;outline:none;width:100%">
+                <option value="">— pick a saved script —</option>
+              </select>
+            </div>
+            <div id="tmplPickerHidden" style="display:flex">
+              <a href="scripts.html" style="font-size:0.72rem;color:var(--gold);text-decoration:none">save a script →</a>
+            </div>
+          </div>
+
+          <p style="font-size:0.7rem;color:var(--text-muted);margin-top:0.55rem;line-height:1.45">
+            <strong style="color:var(--text)">First time:</strong> click ↻ and we'll write it from your restaurant info.
+            Every week after, update the brief above and click ↻ again to refresh.
+            Edit freely before generating.
+          </p>
+        </div>
+
+        <button class="btn-gen-twin" onclick="event.stopPropagation();generate('twin')" style="margin-top:0.9rem;width:100%">Generate Owner Twin</button>
         <div class="gen-status" id="status-twin" style="display:none"></div>
       </div>
 
@@ -589,24 +563,19 @@ const cardStates  = {};   // type → 'idle' | 'generating' | 'done'
 let customScript  = null;
 let scriptListenerAttached = false;
 
-// Single place to load a script into the textarea and persist it
 function setScript(text) {
   customScript = text;
   const ta = document.getElementById('scriptText');
-  ta.value = text;
+  if (ta) ta.value = text;
   localStorage.setItem('ownerScript', text);
   saveScriptToConfig(text);
-  document.getElementById('scriptPreview').style.display = 'block';
+}
 
-  // Attach the input listener exactly once
-  if (!scriptListenerAttached) {
-    ta.addEventListener('input', () => {
-      customScript = ta.value;
-      localStorage.setItem('ownerScript', ta.value);
-      saveScriptToConfig(ta.value);
-    });
-    scriptListenerAttached = true;
-  }
+function onScriptInput() {
+  const ta = document.getElementById('scriptText');
+  customScript = ta.value;
+  localStorage.setItem('ownerScript', ta.value);
+  saveScriptToConfig(ta.value);
 }
 
 // ── Toast ──────────────────────────────────────────────────────────────────
@@ -743,24 +712,26 @@ async function generateAll() {
 
 // ── Script Writer ──────────────────────────────────────────────────────────
 async function writeScript() {
-  const topic   = document.getElementById('scriptTopic').value;
-  const details = document.getElementById('scriptDetails').value.trim();
-  const btn     = document.getElementById('writeScriptBtn');
-
-  if (customScript && !confirm('Replace the current script with a new AI-generated one?')) return;
-
+  const btn = document.getElementById('writeScriptBtn');
   btn.disabled    = true;
   btn.textContent = 'Writing…';
 
   try {
-    let config = {};
-    try { config = await fetch(`/api/config?restaurantId=${getRestaurantId()}`).then(r => r.json()); } catch {}
+    const rid = getRestaurantId();
+    const [config, brief] = await Promise.all([
+      fetch(`/api/config?restaurantId=${rid}`).then(r => r.json()).catch(() => ({})),
+      fetch(`/api/weekly-brief?restaurantId=${rid}`).then(r => r.json()).catch(() => ({})),
+    ]);
 
-    const res  = await fetch('/api/generate/script', {
+    const details = [brief.featuredDish, brief.event, brief.promotion, brief.notes]
+      .filter(Boolean).join('. ');
+
+    const res = await fetch('/api/generate/script', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        topic, details,
+        topic:          'welcome',
+        details,
         ownerName:      config.ownerName,
         restaurantName: config.restaurantName,
         cuisineType:    config.cuisineType,
@@ -770,13 +741,12 @@ async function writeScript() {
     if (!res.ok) throw new Error(data.error || res.status);
 
     setScript(data.script);
-    if (data.note) toast(data.note);
-    else toast('Script ready — click Animate Owner Twin to use it', 'success');
+    toast('Script generated — read it over, edit if needed, then click Generate Owner Twin', 'success');
   } catch (e) {
     toast('Script error: ' + e.message, 'error');
   } finally {
     btn.disabled    = false;
-    btn.textContent = '✦ Write Script';
+    btn.textContent = '↻ Generate from brief';
   }
 }
 
@@ -864,7 +834,6 @@ function clearScript() {
   customScript = null;
   localStorage.removeItem('ownerScript');
   saveScriptToConfig('');
-  document.getElementById('scriptPreview').style.display = 'none';
   document.getElementById('scriptText').value = '';
 }
 
@@ -1129,7 +1098,10 @@ async function init() {
     renderGallery(items);
     // Check if any are still generating
     if (items.some(i => i.status === 'generating')) {
-      items.filter(i => i.status === 'generating').forEach(i => setCardState(i.type, 'generating'));
+      items.filter(i => i.status === 'generating').forEach(i => {
+        setCardState(i.type, 'generating');
+        activejobs.add(i.id);
+      });
       startPolling();
     }
   }
