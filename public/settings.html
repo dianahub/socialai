@@ -305,8 +305,12 @@
           <input type="text" id="restLocation" placeholder="e.g. New York, NY">
         </div>
         <div class="field">
-          <label>Owner / Chef Name</label>
-          <input type="text" id="restOwnerName" placeholder="e.g. Chef Jean-Pierre">
+          <label>Owner Name <span style="font-weight:400;text-transform:none;letter-spacing:0;opacity:0.6">(speaks in twin video)</span></label>
+          <input type="text" id="restOwnerName" placeholder="e.g. Jean-Pierre Martin">
+        </div>
+        <div class="field">
+          <label>Executive Chef <span style="font-weight:400;text-transform:none;letter-spacing:0;opacity:0.6">(optional)</span></label>
+          <input type="text" id="restChefName" placeholder="e.g. Chef Marie Dubois">
         </div>
         <div class="field" style="grid-column:1/-1">
           <label>Tagline</label>
@@ -478,7 +482,8 @@ async function loadAll() {
     if (r.name)      document.getElementById('restName').value      = r.name;
     if (r.cuisineType) document.getElementById('restCuisine').value = r.cuisineType;
     if (r.location)  document.getElementById('restLocation').value  = r.location;
-    if (r.ownerName) document.getElementById('restOwnerName').value  = r.ownerName;
+    if (r.ownerName) document.getElementById('restOwnerName').value = r.ownerName;
+    if (r.chefName)  document.getElementById('restChefName').value  = r.chefName;
     if (r.tagline)   document.getElementById('restTagline').value   = r.tagline;
     if (r.loginEmail) document.getElementById('loginEmail').value   = r.loginEmail;
     if (r.instagramUserId) document.getElementById('igAccountIdSettings').value = r.instagramUserId;
@@ -577,6 +582,7 @@ async function saveProfile() {
       cuisineType:document.getElementById('restCuisine').value.trim(),
       location:   document.getElementById('restLocation').value.trim(),
       ownerName:  document.getElementById('restOwnerName').value.trim(),
+      chefName:   document.getElementById('restChefName').value.trim(),
       tagline:    document.getElementById('restTagline').value.trim(),
     });
     toast('Profile saved', 'ok');

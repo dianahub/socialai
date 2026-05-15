@@ -50,7 +50,7 @@ router.patch('/:id', async (req, res) => {
   const id = Number(req.params.id);
   if (req.restaurantId !== undefined && req.restaurantId !== id)
     return res.status(404).json({ error: 'Not found' });
-  const allowed = ['name','cuisineType','location','ownerName','tagline','brandColorPrimary',
+  const allowed = ['name','cuisineType','location','ownerName','chefName','tagline','brandColorPrimary',
                    'brandColorAccent','brandColorBg','platforms','twinStyle','twinUsecase',
                    'ownerScript','logoUrl','ownerPortraitUrl','instagramAccessToken',
                    'instagramUserId','tokenExpiresAt','autoPublishEnabled',

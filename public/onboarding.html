@@ -414,7 +414,7 @@
     </div>
     <div class="field-row">
       <div class="field-group">
-        <label>Owner / Chef Name</label>
+        <label>Owner Name <span style="font-weight:400;text-transform:none;letter-spacing:0;opacity:0.7">(speaks in twin video)</span></label>
         <input type="text" id="ownerName" placeholder="e.g. Marco Rossi" />
       </div>
       <div class="field-group">
@@ -428,9 +428,15 @@
         </select>
       </div>
     </div>
-    <div class="field-group">
-      <label>Tagline <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></label>
-      <input type="text" id="tagline" placeholder="e.g. Where every meal is a memory" />
+    <div class="field-row">
+      <div class="field-group">
+        <label>Executive Chef <span style="font-weight:400;text-transform:none;letter-spacing:0;opacity:0.7">(optional)</span></label>
+        <input type="text" id="chefName" placeholder="e.g. Chef Marie Dubois" />
+      </div>
+      <div class="field-group">
+        <label>Tagline <span style="font-weight:400;text-transform:none;letter-spacing:0;opacity:0.7">(optional)</span></label>
+        <input type="text" id="tagline" placeholder="e.g. Where every meal is a memory" />
+      </div>
     </div>
 
     <div class="btn-row">
@@ -670,6 +676,7 @@ async function saveStep1() {
   state.cuisineType    = document.getElementById('cuisineType').value;
   state.location       = document.getElementById('location').value.trim();
   state.ownerName      = document.getElementById('ownerName').value.trim();
+  state.chefName       = document.getElementById('chefName').value.trim();
   state.voiceTone      = document.getElementById('voiceTone').value;
   state.tagline        = document.getElementById('tagline').value.trim();
 
@@ -681,6 +688,7 @@ async function saveStep1() {
         restaurantName: state.restaurantName,
         cuisineType:    state.cuisineType,
         ownerName:      state.ownerName,
+        chefName:       state.chefName,
         tagline:        state.tagline,
         voiceTone:      state.voiceTone,
       }),

@@ -445,6 +445,7 @@ function restaurantToConfig(r) {
     restaurantName: r.name,
     cuisineType:    r.cuisineType    || '',
     ownerName:      r.ownerName      || '',
+    chefName:       r.chefName       || '',
     tagline:        r.tagline        || '',
     primaryColor:   r.brandColorPrimary || '#c8a84b',
     accentColor:    r.brandColorAccent  || '#e5c97a',

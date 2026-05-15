@@ -446,8 +446,12 @@
         </select>
       </div>
       <div>
-        <label for="ownerName">Owner / Chef Name</label>
-        <input type="text" id="ownerName" placeholder="e.g. Chef Jean-Pierre Martin" autocomplete="off">
+        <label for="ownerName">Owner Name <span style="font-weight:400;opacity:0.6;text-transform:none;letter-spacing:0">(speaks in twin video)</span></label>
+        <input type="text" id="ownerName" placeholder="e.g. Jean-Pierre Martin" autocomplete="off">
+      </div>
+      <div>
+        <label for="chefName">Executive Chef <span style="font-weight:400;opacity:0.6;text-transform:none;letter-spacing:0">(optional)</span></label>
+        <input type="text" id="chefName" placeholder="e.g. Chef Marie Dubois" autocomplete="off">
       </div>
       <div class="span2">
         <label for="tagline">Restaurant Tagline</label>
@@ -832,6 +836,7 @@ async function saveAndGenerate() {
     restaurantName: name,
     cuisineType:    document.getElementById('cuisineType').value,
     ownerName:      document.getElementById('ownerName').value.trim(),
+    chefName:       document.getElementById('chefName').value.trim(),
     tagline:        document.getElementById('tagline').value.trim(),
     primaryColor:   document.getElementById('colorPrimary').value,
     accentColor:    document.getElementById('colorAccent').value,
@@ -875,7 +880,8 @@ async function loadSavedState() {
     // Restore config fields
     if (config.restaurantName) document.getElementById('restaurantName').value = config.restaurantName;
     if (config.cuisineType)    document.getElementById('cuisineType').value    = config.cuisineType;
-    if (config.ownerName)      document.getElementById('ownerName').value      = config.ownerName;
+    if (config.ownerName) document.getElementById('ownerName').value = config.ownerName;
+    if (config.chefName)  document.getElementById('chefName').value  = config.chefName;
     if (config.tagline)        document.getElementById('tagline').value        = config.tagline;
 
     if (config.primaryColor) {

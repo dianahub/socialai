@@ -350,12 +350,12 @@
   </div>
 
   <!-- AI Script Writer -->
-  <div class="script-section">
+  <div class="script-section" style="border-bottom-left-radius:0;border-bottom-right-radius:0;border-bottom-color:transparent;margin-bottom:0">
     <div class="sw-heading">
-      <h3>Script Writer</h3>
-      <span class="sw-tag">Owner Twin</span>
+      <h3>Owner Twin Script</h3>
+      <span class="sw-tag">👤 Controls Animate Owner Twin only</span>
     </div>
-    <p class="sw-desc">Pick from your script library or write a new one with AI.</p>
+    <p class="sw-desc">Write the words the owner will speak in the animated twin video. Has no effect on Cinematic Video or Image Posts.</p>
 
     <!-- Template picker -->
     <div id="tmplPickerWrap" style="margin-bottom:0.75rem;display:none">
@@ -400,24 +400,32 @@
     </div>
   </div>
 
+  <!-- Connector from script writer to twin card -->
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:2rem">
+    <div style="background:var(--bg-surface);border:1px solid var(--gold-border);border-top:none;border-radius:0 0 4px 4px;padding:0.4rem 1rem;display:flex;align-items:center;gap:0.4rem;grid-column:2;justify-content:center">
+      <span style="color:var(--gold);font-size:0.7rem">▼</span>
+      <span style="font-size:0.7rem;color:var(--gold);font-weight:600;letter-spacing:0.06em;text-transform:uppercase">Script feeds into this card</span>
+    </div>
+  </div>
+
   <!-- Generation buttons -->
-  <div class="gen-section">
+  <div class="gen-section" style="margin-top:-1.5rem">
     <h3>Generate Content</h3>
     <div class="gen-cards">
 
       <div class="gen-card" id="card-video" onclick="generate('video')">
         <div class="gen-icon">🎬</div>
         <div class="gen-title">Cinematic Video</div>
-        <div class="gen-desc">AI-generated cinematic dish video for Instagram Reels, TikTok, and Stories. Built from your cuisine and tagline.</div>
-        <div class="gen-model">HeyGen Avatar</div>
+        <div class="gen-desc">AI-generated cinematic promo video for Instagram Reels, TikTok, and Stories. Built from your cuisine and tagline.</div>
+        <div class="gen-model">HeyGen Talking Photo</div>
         <div class="gen-status" id="status-video" style="display:none"></div>
       </div>
 
-      <div class="gen-card" id="card-twin" onclick="generate('twin')">
+      <div class="gen-card" id="card-twin" onclick="generate('twin')" style="border-color:rgba(200,168,75,0.35)">
         <div class="gen-icon">👤</div>
         <div class="gen-title">Animate Owner Twin</div>
-        <div class="gen-desc">Creates a digital twin animation from the owner photo — a warm welcome message or chef's introduction.</div>
-        <div class="gen-model">HeyGen Talking Photo</div>
+        <div class="gen-desc">Animates the owner portrait with the script above — a personal welcome or announcement in their own words.</div>
+        <div class="gen-model" style="display:flex;align-items:center;gap:0.4rem">HeyGen Talking Photo <span style="color:var(--gold-light)">← uses script</span></div>
         <div class="gen-status" id="status-twin" style="display:none"></div>
       </div>
 
@@ -425,7 +433,7 @@
         <div class="gen-icon">🖼</div>
         <div class="gen-title">Image Posts</div>
         <div class="gen-desc">Three branded image variants: square feed, vertical story, and thumbnail — with logo watermark.</div>
-        <div class="gen-model">Branded Mock</div>
+        <div class="gen-model">Branded</div>
         <div class="gen-status" id="status-image" style="display:none"></div>
       </div>
 
@@ -508,7 +516,7 @@ async function loadHeader() {
     if (config.restaurantName) {
       document.getElementById('headerName').textContent = config.restaurantName;
       document.getElementById('headerMeta').textContent =
-        [config.cuisineType, config.ownerName ? `Chef ${config.ownerName}` : null].filter(Boolean).join(' · ');
+        [config.cuisineType, config.ownerName ? `Owner: ${config.ownerName}` : null, config.chefName ? `Chef: ${config.chefName}` : null].filter(Boolean).join(' · ');
     }
     if (assets.logo) {
       const img = document.getElementById('headerLogo');

@@ -13,6 +13,7 @@ model Restaurant {
   cuisineType          String?
   location             String?
   ownerName            String?
+  chefName             String?
   tagline              String?
   brandColorPrimary    String?
   brandColorAccent     String?
