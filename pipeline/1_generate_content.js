@@ -368,55 +368,35 @@ async function generateVideo(config, jobId) {
   const thumbFile  = `${jobId}_video_thumb.jpg`;
   const thumbPath  = path.join(OUTPUT_DIR, thumbFile);
 
-  const slideSec   = 4;   // seconds per slide
-  const fadeSec    = 0.8; // crossfade duration
+  const slideSec = 4;
+  const n        = framePaths.length;
 
+  // Build xfade filter chain: each input scaled + padded, then chained fades
   await new Promise((resolve, reject) => {
     let cmd = ffmpeg();
-
-    // Each frame input, looped for slideSec seconds
     for (const fp of framePaths) {
-      cmd = cmd.input(fp).inputOptions([`-loop 1`, `-t ${slideSec}`]);
+      cmd = cmd.input(fp).inputOptions(['-loop 1', `-t ${slideSec}`]);
     }
 
-    const n = framePaths.length;
-
-    // Build filter: slow zoom on each slide + xfade chain
-    const filters = [];
-
-    // Ken Burns zoom on each frame: scale up 10%, pan from centre outward
+    // Scale every input to exactly 1920x1080 then build xfade chain
+    const filterParts = [];
     for (let i = 0; i < n; i++) {
-      const fps   = 25;
-      const nf    = slideSec * fps;
-      // Zoom from 1.0→1.08 while panning slightly
-      filters.push({
-        filter: 'zoompan',
-        options: { z: `min(zoom+0.002,1.08)`, x: 'iw/2-(iw/zoom/2)', y: 'ih/2-(ih/zoom/2)',
-                   d: nf, s: '1920x1080', fps },
-        inputs:  `[${i}:v]`,
-        outputs: `[z${i}]`,
-      });
+      filterParts.push(`[${i}:v]scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2,setsar=1[v${i}]`);
     }
 
-    // xfade chain: z0 + z1 → xf0, xf0 + z2 → xf1, …
-    for (let i = 0; i < n - 1; i++) {
-      const inA   = i === 0 ? `[z0]` : `[xf${i-1}]`;
-      const inB   = `[z${i+1}]`;
-      const out   = i === n - 2 ? '[vout]' : `[xf${i}]`;
-      const offset = (i + 1) * slideSec - fadeSec;
-      filters.push({ filter: 'xfade', options: { transition: 'fade', duration: fadeSec, offset },
-                     inputs: `${inA}${inB}`, outputs: out });
+    let prev = '[v0]';
+    for (let i = 1; i < n; i++) {
+      const offset = i * slideSec - 0.5 * i;
+      const out    = i === n - 1 ? '[vout]' : `[x${i}]`;
+      filterParts.push(`${prev}[v${i}]xfade=transition=fade:duration=0.5:offset=${offset}${out}`);
+      prev = `[x${i}]`;
     }
-
-    // If only one frame, just rename
-    if (n === 1) {
-      filters.push({ filter: 'copy', inputs: '[z0]', outputs: '[vout]' });
-    }
+    if (n === 1) filterParts.push('[v0]copy[vout]');
 
     cmd
-      .complexFilter(filters)
+      .complexFilter(filterParts.join(';'))
       .outputOptions(['-map [vout]', '-c:v libx264', '-pix_fmt yuv420p',
-                      '-crf 23', '-preset fast', '-movflags +faststart'])
+                      '-crf 23', '-preset fast', '-movflags +faststart', '-r 25'])
       .output(outputPath)
       .on('start', cmd => console.log('[generateVideo] ffmpeg start:', cmd.slice(0, 120)))
       .on('end',   ()  => resolve())
