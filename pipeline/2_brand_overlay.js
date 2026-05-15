@@ -54,8 +54,7 @@ async function brandOverlay(filePath, config = {}, variant = 'feed') {
       console.warn('[brandOverlay] Logo URL download failed:', e.message);
     }
   } else {
-    console.log('[brandOverlay] no logoUrl in config');
-  } else {
+    console.log('[brandOverlay] no logoUrl in config, trying local');
     const logoDir   = path.join(DATA_DIR, 'assets', 'logo');
     const logoFiles = fs.existsSync(logoDir)
       ? fs.readdirSync(logoDir).filter(f => !f.startsWith('.'))
