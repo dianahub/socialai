@@ -495,6 +495,27 @@ let pollInterval  = null;
 let activejobs    = new Set();
 const cardStates  = {};   // type → 'idle' | 'generating' | 'done'
 let customScript  = null;
+let scriptListenerAttached = false;
+
+// Single place to load a script into the textarea and persist it
+function setScript(text) {
+  customScript = text;
+  const ta = document.getElementById('scriptText');
+  ta.value = text;
+  localStorage.setItem('ownerScript', text);
+  saveScriptToConfig(text);
+  document.getElementById('scriptPreview').style.display = 'block';
+
+  // Attach the input listener exactly once
+  if (!scriptListenerAttached) {
+    ta.addEventListener('input', () => {
+      customScript = ta.value;
+      localStorage.setItem('ownerScript', ta.value);
+      saveScriptToConfig(ta.value);
+    });
+    scriptListenerAttached = true;
+  }
+}
 
 // ── Toast ──────────────────────────────────────────────────────────────────
 let toastTimer;
@@ -541,6 +562,8 @@ async function writeScript() {
   const details = document.getElementById('scriptDetails').value.trim();
   const btn     = document.getElementById('writeScriptBtn');
 
+  if (customScript && !confirm('Replace the current script with a new AI-generated one?')) return;
+
   btn.disabled    = true;
   btn.textContent = 'Writing…';
 
@@ -561,17 +584,7 @@ async function writeScript() {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || res.status);
 
-    customScript = data.script;
-    const ta = document.getElementById('scriptText');
-    ta.value = customScript;
-    localStorage.setItem('ownerScript', customScript);
-    await saveScriptToConfig(customScript);
-    ta.addEventListener('input', () => {
-      customScript = ta.value;
-      localStorage.setItem('ownerScript', customScript);
-      saveScriptToConfig(customScript);
-    }, { once: false });
-    document.getElementById('scriptPreview').style.display = 'block';
+    setScript(data.script);
     if (data.note) toast(data.note);
     else toast('Script ready — click Animate Owner Twin to use it', 'success');
   } catch (e) {
@@ -894,15 +907,7 @@ async function loadScriptTemplates() {
 function pickTemplate() {
   const val = document.getElementById('tmplPicker').value;
   if (!val) return;
-  customScript = val;
-  const ta = document.getElementById('scriptText');
-  ta.value = val;
-  ta.addEventListener('input', () => {
-    customScript = ta.value;
-    localStorage.setItem('ownerScript', customScript);
-    saveScriptToConfig(customScript);
-  });
-  document.getElementById('scriptPreview').style.display = 'block';
+  setScript(val);
   document.getElementById('tmplPicker').value = '';
 }
 
@@ -914,17 +919,7 @@ async function init() {
   try {
     const cfg = await fetch(`/api/config?restaurantId=${getRestaurantId()}`).then(r => r.json()).catch(() => ({}));
     const saved = cfg.ownerScript || localStorage.getItem('ownerScript');
-    if (saved) {
-      customScript = saved;
-      const ta = document.getElementById('scriptText');
-      ta.value = saved;
-      ta.addEventListener('input', () => {
-        customScript = ta.value;
-        localStorage.setItem('ownerScript', customScript);
-        saveScriptToConfig(customScript);
-      });
-      document.getElementById('scriptPreview').style.display = 'block';
-    }
+    if (saved) setScript(saved);
   } catch {}
   const items = await fetch('/api/output').then(r => r.json()).catch(() => []);
   if (items.length) {
