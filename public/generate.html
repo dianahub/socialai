@@ -362,38 +362,43 @@
     </div>
     <p class="sw-desc">Write the words the owner will speak in the animated twin video. Has no effect on Cinematic Video or Image Posts.</p>
 
-    <!-- Template picker -->
-    <div id="tmplPickerWrap" style="margin-bottom:0.75rem;display:none">
-      <div class="sw-row" style="align-items:center;gap:0.75rem;flex-wrap:wrap">
-        <div class="sw-group" style="flex:1;min-width:180px">
-          <label>Use saved template</label>
-          <select id="tmplPicker" onchange="pickTemplate()">
-            <option value="">— Pick a template —</option>
-          </select>
-        </div>
-        <a href="scripts.html" style="font-size:0.75rem;color:var(--gold);text-decoration:none;white-space:nowrap;margin-top:1.1rem">Manage templates →</a>
-      </div>
-    </div>
+    <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:1rem;align-items:start">
 
-    <div class="sw-form">
-      <div class="sw-row">
-        <div class="sw-group topic">
-          <label>Topic</label>
-          <select id="scriptTopic">
-            <option value="welcome">Welcome message</option>
-            <option value="menu">Menu highlight</option>
-            <option value="event">Event announcement</option>
-            <option value="view">Ambiance &amp; view</option>
-            <option value="special">Special offer</option>
-            <option value="behind">Behind the scenes</option>
-          </select>
-        </div>
-        <div class="sw-group details">
-          <label>Details <span style="font-weight:400;opacity:0.6">(optional but better)</span></label>
-          <input type="text" id="scriptDetails" placeholder='e.g. "Truffle tasting menu, $195pp, Friday 7pm"'>
-        </div>
-        <button class="btn-ai" id="writeScriptBtn" onclick="writeScript()">✦ Write Script</button>
+      <!-- Option A: Saved template -->
+      <div id="tmplPickerWrap" style="display:none;flex-direction:column;gap:0.4rem">
+        <div style="font-size:0.68rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:0.15rem">Option A — Load a saved script</div>
+        <select id="tmplPicker" onchange="pickTemplate()" style="background:var(--bg-surface);border:1px solid var(--border);color:var(--text);padding:0.55rem 0.8rem;border-radius:8px;font-size:0.88rem;font-family:inherit;outline:none;width:100%">
+          <option value="">— Pick a template —</option>
+        </select>
+        <a href="scripts.html" style="font-size:0.72rem;color:var(--gold);text-decoration:none">Manage saved scripts →</a>
       </div>
+      <div id="tmplPickerHidden" style="display:flex;flex-direction:column;gap:0.4rem">
+        <div style="font-size:0.68rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:0.15rem">Option A — Load a saved script</div>
+        <div style="font-size:0.82rem;color:var(--text-muted);font-style:italic">No saved scripts yet — <a href="scripts.html" style="color:var(--gold);text-decoration:none">create one →</a></div>
+      </div>
+
+      <!-- Divider -->
+      <div style="display:flex;flex-direction:column;align-items:center;gap:0.5rem;padding-top:1.6rem">
+        <div style="width:1px;height:32px;background:var(--border)"></div>
+        <span style="font-size:0.72rem;color:var(--text-muted);font-weight:600;letter-spacing:0.06em">OR</span>
+        <div style="width:1px;height:32px;background:var(--border)"></div>
+      </div>
+
+      <!-- Option B: Write with AI -->
+      <div style="display:flex;flex-direction:column;gap:0.6rem">
+        <div style="font-size:0.68rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:0.15rem">Option B — Write with AI</div>
+        <select id="scriptTopic" style="background:var(--bg-surface);border:1px solid var(--border);color:var(--text);padding:0.55rem 0.8rem;border-radius:8px;font-size:0.88rem;font-family:inherit;outline:none">
+          <option value="welcome">Welcome message</option>
+          <option value="menu">Menu highlight</option>
+          <option value="event">Event announcement</option>
+          <option value="view">Ambiance &amp; view</option>
+          <option value="special">Special offer</option>
+          <option value="behind">Behind the scenes</option>
+        </select>
+        <input type="text" id="scriptDetails" placeholder='Add details, e.g. "Truffle tasting menu, $195pp, Friday 7pm"' style="background:var(--bg-surface);border:1px solid var(--border);color:var(--text);padding:0.55rem 0.8rem;border-radius:8px;font-size:0.88rem;font-family:inherit;outline:none">
+        <button class="btn-ai" id="writeScriptBtn" onclick="writeScript()" style="align-self:flex-start">✦ Write Script with AI</button>
+      </div>
+
     </div>
     <div class="sw-preview" id="scriptPreview" style="display:none">
       <div class="sw-preview-top">
@@ -892,7 +897,6 @@ async function loadScriptTemplates() {
   try {
     const rows = await fetch(`/api/db/script-templates?restaurantId=${getRestaurantId()}&isActive=true`)
       .then(r => r.json()).catch(() => []);
-    if (!rows.length) return;
     const picker = document.getElementById('tmplPicker');
     rows.forEach(t => {
       const opt = document.createElement('option');
@@ -900,7 +904,10 @@ async function loadScriptTemplates() {
       opt.textContent = t.templateName + (t.topic ? ` (${t.topic.replace(/_/g,' ')})` : '');
       picker.appendChild(opt);
     });
-    document.getElementById('tmplPickerWrap').style.display = 'block';
+    if (rows.length) {
+      document.getElementById('tmplPickerWrap').style.display = 'flex';
+      document.getElementById('tmplPickerHidden').style.display = 'none';
+    }
   } catch {}
 }
 
