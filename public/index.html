@@ -159,7 +159,6 @@
     border: 1px solid var(--border);
     border-radius: 6px;
     padding: 0.5rem 0.75rem;
-    cursor: pointer;
     transition: border-color 0.2s;
   }
   .color-picker-wrap:focus-within { border-color: rgba(200, 168, 75, 0.45); }
@@ -462,29 +461,29 @@
       <div class="colors-row">
         <div>
           <div style="font-size:0.7rem;color:var(--text-muted);margin-bottom:0.4rem;text-transform:uppercase;letter-spacing:0.06em;">Primary</div>
-          <div class="color-picker-wrap" onclick="this.querySelector('input[type=color]').click()">
+          <div class="color-picker-wrap">
             <div class="color-swatch" id="swatchPrimary">
               <input type="color" id="colorPrimary" value="#c8a84b">
             </div>
-            <input class="color-hex" id="hexPrimary" value="#c8a84b" maxlength="7" spellcheck="false" onclick="event.stopPropagation()">
+            <input class="color-hex" id="hexPrimary" value="#c8a84b" maxlength="7" spellcheck="false" placeholder="#c8a84b">
           </div>
         </div>
         <div>
           <div style="font-size:0.7rem;color:var(--text-muted);margin-bottom:0.4rem;text-transform:uppercase;letter-spacing:0.06em;">Accent</div>
-          <div class="color-picker-wrap" onclick="this.querySelector('input[type=color]').click()">
+          <div class="color-picker-wrap">
             <div class="color-swatch" id="swatchAccent">
               <input type="color" id="colorAccent" value="#e5c97a">
             </div>
-            <input class="color-hex" id="hexAccent" value="#e5c97a" maxlength="7" spellcheck="false" onclick="event.stopPropagation()">
+            <input class="color-hex" id="hexAccent" value="#e5c97a" maxlength="7" spellcheck="false" placeholder="#e5c97a">
           </div>
         </div>
         <div>
           <div style="font-size:0.7rem;color:var(--text-muted);margin-bottom:0.4rem;text-transform:uppercase;letter-spacing:0.06em;">Background</div>
-          <div class="color-picker-wrap" onclick="this.querySelector('input[type=color]').click()">
+          <div class="color-picker-wrap">
             <div class="color-swatch" id="swatchBg">
               <input type="color" id="colorBg" value="#0a0a14">
             </div>
-            <input class="color-hex" id="hexBg" value="#0a0a14" maxlength="7" spellcheck="false" onclick="event.stopPropagation()">
+            <input class="color-hex" id="hexBg" value="#0a0a14" maxlength="7" spellcheck="false" placeholder="#0a0a14">
           </div>
         </div>
       </div>
