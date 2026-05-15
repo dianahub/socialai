@@ -486,13 +486,57 @@ async function generateTwinClip(config, jobId, customScript) {
 }
 
 async function generateImagePost(config, jobId) {
-  // HeyGen is video-only. Image posts are generated as branded assets locally.
   console.log('[generateImagePost] Building branded image posts via Sharp');
+
+  const dims = {
+    feed:      { w: 1080, h: 1080 },
+    story:     { w: 1080, h: 1920 },
+    thumbnail: { w: 1280, h: 720  },
+  };
+
+  // Try to download a food photo to use as base
+  const photoUrls = config._photoUrls || [];
+  let baseBuffer = null;
+
+  if (photoUrls.length) {
+    const url = photoUrls[Math.floor(Math.random() * photoUrls.length)];
+    try {
+      const isLocal = url.startsWith('/');
+      if (isLocal) {
+        const localPath = path.join(DATA_DIR, url);
+        if (fs.existsSync(localPath)) baseBuffer = fs.readFileSync(localPath);
+      } else {
+        const resp = await fetch(url);
+        if (resp.ok) baseBuffer = Buffer.from(await resp.arrayBuffer());
+      }
+      if (baseBuffer) console.log('[generateImagePost] Using food photo:', url.slice(-60));
+    } catch (e) {
+      console.warn('[generateImagePost] Photo fetch failed:', e.message);
+    }
+  }
 
   const files = [];
   for (const variant of ['feed', 'story', 'thumbnail']) {
-    const prompt = `${config.restaurantName || 'Restaurant'} — ${config.cuisineType || 'Fine Dining'} — ${variant}`;
-    const file   = await mockImage(config, jobId, variant, '✦', 'Branded');
+    const { w, h } = dims[variant];
+    const filename   = `${jobId}_${variant}.jpg`;
+    const outputPath = path.join(OUTPUT_DIR, filename);
+    const prompt     = `${config.restaurantName || 'Restaurant'} — ${config.cuisineType || 'Fine Dining'} — ${variant}`;
+
+    if (baseBuffer) {
+      try {
+        await sharp(baseBuffer)
+          .resize(w, h, { fit: 'cover', position: 'centre' })
+          .jpeg({ quality: 90 })
+          .toFile(outputPath);
+        files.push({ filename, path: `/output/${filename}`, width: w, height: h, variant, prompt, model: 'Food Photo' });
+        continue;
+      } catch (e) {
+        console.warn('[generateImagePost] Resize failed for', variant, ':', e.message);
+      }
+    }
+
+    // Fall back to SVG mock
+    const file = await mockImage(config, jobId, variant, '✦', 'Branded');
     files.push({ ...file, variant, prompt, model: 'Branded Mock' });
   }
 
@@ -500,7 +544,7 @@ async function generateImagePost(config, jobId) {
     type:     'image',
     platform: config.platforms || ['instagram'],
     files,
-    note:     'Branded image posts (local). Add Flux or DALL-E integration for AI food photography.',
+    note: photoUrls.length ? null : 'Upload food photos on the Assets page for real images.',
   };
 }
 

@@ -647,6 +647,30 @@ async function runGeneration(jobId, type, config, customScript, restaurantId = 1
       if (!config._ownerUrl) config._ownerUrl = ownerNew || ownerOld || null;
     }
 
+    // For image posts: fetch food photo URLs so the pipeline can use real photos
+    if (type === 'image') {
+      let photoUrls = [];
+      if (cld.isConfigured()) {
+        try {
+          const [newPhotos, oldPhotos] = await Promise.all([
+            cld.listFolder(`restaurant-social-ai/${restaurantId}/photos/`),
+            restaurantId === 1 ? cld.listFolder('restaurant-social-ai/photos/') : Promise.resolve([]),
+          ]);
+          photoUrls = [...newPhotos, ...oldPhotos].map(p => p.url).filter(Boolean);
+        } catch {}
+      }
+      if (!photoUrls.length) {
+        // Fall back to local filesystem photos
+        const photosDir = path.join(ASSETS_DIR, 'photos');
+        if (fs.existsSync(photosDir)) {
+          photoUrls = fs.readdirSync(photosDir)
+            .filter(f => /\.(jpg|jpeg|png|webp)$/i.test(f))
+            .map(f => `/assets/photos/${f}`);
+        }
+      }
+      config._photoUrls = photoUrls;
+    }
+
     let result;
     if (type === 'video') {
       result = await generateVideo(config, jobId);
