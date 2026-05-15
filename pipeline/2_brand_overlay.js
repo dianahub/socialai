@@ -43,10 +43,18 @@ async function brandOverlay(filePath, config = {}, variant = 'feed') {
   if (config._logoUrl) {
     try {
       const resp = await fetch(config._logoUrl);
-      if (resp.ok) rawLogoBuffer = Buffer.from(await resp.arrayBuffer());
+      console.log('[brandOverlay] logo fetch status:', resp.status, config._logoUrl.slice(-50));
+      if (resp.ok) {
+        rawLogoBuffer = Buffer.from(await resp.arrayBuffer());
+        console.log('[brandOverlay] logo buffer size:', rawLogoBuffer.length);
+      } else {
+        console.warn('[brandOverlay] logo fetch non-ok:', resp.status);
+      }
     } catch (e) {
       console.warn('[brandOverlay] Logo URL download failed:', e.message);
     }
+  } else {
+    console.log('[brandOverlay] no logoUrl in config');
   } else {
     const logoDir   = path.join(DATA_DIR, 'assets', 'logo');
     const logoFiles = fs.existsSync(logoDir)
