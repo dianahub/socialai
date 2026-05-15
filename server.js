@@ -879,6 +879,31 @@ app.get('/api/schedule', (req, res) => {
   res.json(buildSchedule(config));
 });
 
+// ── HeyGen voices ─────────────────────────────────────────────────────────────
+
+app.get('/api/heygen/voices', async (req, res) => {
+  if (!process.env.HEYGEN_API_KEY)
+    return res.status(503).json({ error: 'HEYGEN_API_KEY not set' });
+  try {
+    const r = await fetch('https://api.heygen.com/v2/voices', {
+      headers: { 'X-Api-Key': process.env.HEYGEN_API_KEY },
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!r.ok) throw new Error(`HeyGen ${r.status}`);
+    const data = await r.json();
+    const voices = (data.data?.voices || []).map(v => ({
+      voice_id:  v.voice_id,
+      name:      v.name,
+      language:  v.language,
+      gender:    v.gender,
+      preview_audio: v.preview_audio || null,
+    }));
+    res.json(voices);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ── DB-backed routes ──────────────────────────────────────────────────────────
 
 app.use('/api/db/restaurants',      require('./routes/restaurants'));

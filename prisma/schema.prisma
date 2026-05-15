@@ -33,6 +33,7 @@ model Restaurant {
   voiceTone            String?
   defaultHashtags      String?
   includeLocation      Boolean  @default(true)
+  ownerVoiceId         String?
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 

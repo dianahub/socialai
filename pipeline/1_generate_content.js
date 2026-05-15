@@ -122,10 +122,14 @@ async function getDefaultAvatarId() {
   return avatars[0].avatar_id;
 }
 
-async function getDefaultVoiceId() {
+async function getDefaultVoiceId(preferredVoiceId) {
   try {
     const resp   = await heygenGet('/v2/voices');
     const voices = resp.data?.voices || [];
+    if (preferredVoiceId) {
+      const match = voices.find(v => v.voice_id === preferredVoiceId);
+      if (match) return match.voice_id;
+    }
     // Prefer English
     const en = voices.find(v => v.language?.startsWith('en') && v.gender === 'male')
             || voices.find(v => v.language?.startsWith('en'))
@@ -289,7 +293,7 @@ async function generateVideo(config, jobId) {
       console.log('[generateVideo] No owner photo — skipping HeyGen to avoid using personal avatar, falling back to mock');
     } else {
       try {
-        const voiceId    = await getDefaultVoiceId();
+        const voiceId    = await getDefaultVoiceId(config.ownerVoiceId);
         const voiceInput = { type: 'text', input_text: script, speed: 1.0 };
         if (voiceId) voiceInput.voice_id = voiceId;
 
@@ -354,7 +358,7 @@ async function generateTwinClip(config, jobId, customScript) {
 
   if (API_KEY) {
     try {
-      const voiceId = await getDefaultVoiceId();
+      const voiceId = await getDefaultVoiceId(config.ownerVoiceId);
       const voiceInput = { type: 'text', input_text: script, speed: 1.0 };
       if (voiceId) voiceInput.voice_id = voiceId;
 

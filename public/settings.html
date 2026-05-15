@@ -166,6 +166,21 @@
     </div>
 
     <div class="card">
+      <div class="card-title">Owner Video Voice</div>
+      <p style="font-size:0.78rem;color:var(--text-muted);margin-bottom:0.9rem">
+        The voice used when generating owner twin and cinematic videos. Filter by language or accent to find the right fit.
+      </p>
+      <div style="display:flex;gap:0.5rem;margin-bottom:0.75rem">
+        <input type="text" id="voiceSearch" placeholder="Filter by name, language, or accent…"
+          style="flex:1;background:var(--bg-surface);border:1px solid var(--border);border-radius:8px;padding:0.5rem 0.8rem;color:var(--text);font-family:'Inter',sans-serif;font-size:0.82rem;outline:none"
+          oninput="filterVoices()" />
+        <button class="btn btn-ghost btn-sm" onclick="loadVoices()" id="voiceLoadBtn">Load Voices</button>
+      </div>
+      <div id="voiceList" style="display:none;max-height:260px;overflow-y:auto;display:flex;flex-direction:column;gap:0.3rem;margin-bottom:0.5rem"></div>
+      <div id="voiceSelected" style="font-size:0.78rem;color:var(--text-muted);margin-top:0.4rem"></div>
+    </div>
+
+    <div class="card">
       <div class="card-title">Default Hashtags</div>
       <p style="font-size:0.78rem;color:var(--text-muted);margin-bottom:0.75rem">
         These are automatically included when you click "Suggest Hashtags". Add your branded and location tags here.
@@ -331,6 +346,8 @@ const restaurantId = window.getRestaurantId ? getRestaurantId() : 1;
 
 let defaultHashtags = [];
 let presets = [];
+let allVoices = [];
+let selectedVoiceId = null;
 
 // ── Toast ─────────────────────────────────────────────────────────────────
 let toastTimer;
@@ -452,6 +469,10 @@ async function loadAll() {
     document.getElementById('includeLocation').value = String(r.includeLocation !== false);
     try { defaultHashtags = r.defaultHashtags ? JSON.parse(r.defaultHashtags) : []; } catch { defaultHashtags = []; }
     renderDefaultHashtags();
+    if (r.ownerVoiceId) {
+      selectedVoiceId = r.ownerVoiceId;
+      document.getElementById('voiceSelected').textContent = `Selected voice ID: ${r.ownerVoiceId} — click Load Voices to change`;
+    }
 
     // Account tab
     if (r.name)      document.getElementById('restName').value      = r.name;
@@ -539,6 +560,7 @@ async function saveCaptionPrefs() {
       voiceTone:       document.getElementById('voiceTone').value,
       includeLocation: document.getElementById('includeLocation').value === 'true',
       defaultHashtags: JSON.stringify(defaultHashtags),
+      ownerVoiceId:    selectedVoiceId || null,
     });
     toast('Caption settings saved', 'ok');
   } catch (e) { toast('Save failed: ' + e.message, 'err'); }
@@ -586,6 +608,64 @@ async function saveLoginCreds() {
 })();
 
 document.addEventListener('DOMContentLoaded', loadAll);
+
+// ── HeyGen voice picker ───────────────────────────────────────────────────
+async function loadVoices() {
+  const btn  = document.getElementById('voiceLoadBtn');
+  const list = document.getElementById('voiceList');
+  btn.textContent = 'Loading…';
+  btn.disabled = true;
+  try {
+    const token = localStorage.getItem('authToken');
+    const r = await fetch('/api/heygen/voices', { headers: { Authorization: `Bearer ${token}` } });
+    if (!r.ok) throw new Error((await r.json()).error || 'Failed to load voices');
+    allVoices = await r.json();
+    list.style.display = 'flex';
+    renderVoices(allVoices);
+    btn.textContent = 'Reload';
+  } catch (e) {
+    toast('Could not load voices: ' + e.message, 'err');
+    btn.textContent = 'Load Voices';
+  }
+  btn.disabled = false;
+}
+
+function filterVoices() {
+  const q = document.getElementById('voiceSearch').value.toLowerCase();
+  const filtered = allVoices.filter(v =>
+    !q || v.name?.toLowerCase().includes(q) || v.language?.toLowerCase().includes(q)
+  );
+  renderVoices(filtered);
+}
+
+function renderVoices(voices) {
+  const list = document.getElementById('voiceList');
+  list.style.display = 'flex';
+  if (!voices.length) { list.innerHTML = '<div style="font-size:0.78rem;color:var(--text-muted);padding:0.5rem">No voices match your filter.</div>'; return; }
+  list.innerHTML = voices.map(v => `
+    <div onclick="selectVoice('${v.voice_id}', '${(v.name||'').replace(/'/g,"\\'")}', '${v.language||''}')"
+      style="display:flex;align-items:center;gap:0.75rem;padding:0.5rem 0.75rem;border-radius:7px;cursor:pointer;
+             background:${selectedVoiceId === v.voice_id ? 'rgba(200,168,75,0.12)' : 'var(--bg-surface)'};
+             border:1px solid ${selectedVoiceId === v.voice_id ? 'rgba(200,168,75,0.3)' : 'var(--border)'};
+             transition:background 0.15s">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:0.82rem;font-weight:500;color:${selectedVoiceId === v.voice_id ? 'var(--gold-light)' : 'var(--text)'}">${v.name || v.voice_id}</div>
+        <div style="font-size:0.7rem;color:var(--text-muted)">${v.language || ''} · ${v.gender || ''}</div>
+      </div>
+      ${v.preview_audio ? `<audio controls preload="none" style="height:24px;width:120px" src="${v.preview_audio}"></audio>` : ''}
+      ${selectedVoiceId === v.voice_id ? '<span style="color:var(--gold);font-size:0.8rem">✓</span>' : ''}
+    </div>
+  `).join('');
+}
+
+function selectVoice(id, name, lang) {
+  selectedVoiceId = id;
+  document.getElementById('voiceSelected').textContent = `Selected: ${name} (${lang})`;
+  renderVoices(allVoices.filter(v => {
+    const q = document.getElementById('voiceSearch').value.toLowerCase();
+    return !q || v.name?.toLowerCase().includes(q) || v.language?.toLowerCase().includes(q);
+  }));
+}
 </script>
 </body>
 </html>

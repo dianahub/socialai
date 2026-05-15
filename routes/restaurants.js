@@ -54,7 +54,7 @@ router.patch('/:id', async (req, res) => {
                    'brandColorAccent','brandColorBg','platforms','twinStyle','twinUsecase',
                    'ownerScript','logoUrl','ownerPortraitUrl','instagramAccessToken',
                    'instagramUserId','tokenExpiresAt','autoPublishEnabled',
-                   'voiceTone','defaultHashtags','includeLocation'];
+                   'voiceTone','defaultHashtags','includeLocation','ownerVoiceId'];
   const data = Object.fromEntries(Object.entries(req.body).filter(([k]) => allowed.includes(k)));
   try {
     const row = await db.restaurant.update({ where: { id }, data });
