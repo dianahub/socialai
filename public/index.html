@@ -190,8 +190,8 @@
     border: none;
     background: transparent;
     outline: none;
-    width: 0;
-    min-width: 0;
+    min-width: 70px;
+    cursor: text;
   }
 
   /* ── Platform toggles ── */
@@ -466,7 +466,7 @@
             <div class="color-swatch" id="swatchPrimary">
               <input type="color" id="colorPrimary" value="#c8a84b">
             </div>
-            <input class="color-hex" id="hexPrimary" value="#c8a84b" maxlength="7" spellcheck="false">
+            <input class="color-hex" id="hexPrimary" value="#c8a84b" maxlength="7" spellcheck="false" onclick="event.stopPropagation()">
           </div>
         </div>
         <div>
@@ -475,7 +475,7 @@
             <div class="color-swatch" id="swatchAccent">
               <input type="color" id="colorAccent" value="#e5c97a">
             </div>
-            <input class="color-hex" id="hexAccent" value="#e5c97a" maxlength="7" spellcheck="false">
+            <input class="color-hex" id="hexAccent" value="#e5c97a" maxlength="7" spellcheck="false" onclick="event.stopPropagation()">
           </div>
         </div>
         <div>
@@ -484,7 +484,7 @@
             <div class="color-swatch" id="swatchBg">
               <input type="color" id="colorBg" value="#0a0a14">
             </div>
-            <input class="color-hex" id="hexBg" value="#0a0a14" maxlength="7" spellcheck="false">
+            <input class="color-hex" id="hexBg" value="#0a0a14" maxlength="7" spellcheck="false" onclick="event.stopPropagation()">
           </div>
         </div>
       </div>
