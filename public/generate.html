@@ -551,6 +551,14 @@
   </div>
 </div>
 
+<!-- Video preview modal -->
+<div id="videoModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:1000;align-items:center;justify-content:center" onclick="closeVideoModal()">
+  <div style="position:relative;max-width:90vw;max-height:90vh" onclick="event.stopPropagation()">
+    <video id="videoPlayer" controls autoplay playsinline style="max-width:90vw;max-height:85vh;border-radius:8px;display:block"></video>
+    <button onclick="closeVideoModal()" style="position:absolute;top:-14px;right:-14px;width:32px;height:32px;border-radius:50%;background:#1a1a28;border:1px solid rgba(200,168,75,0.3);color:#e5c97a;font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center">✕</button>
+  </div>
+</div>
+
 <script>
 // ── State ──────────────────────────────────────────────────────────────────
 let pollInterval  = null;
@@ -978,7 +986,7 @@ function renderGallery(items) {
     return `<div class="output-card" data-job-id="${item.id}">
       <div class="card-thumb">
         ${thumbHtml}
-        ${item.type === 'video' && !isGenerating && !isError && thumbSrc ? '<div class="play-overlay"><span>▶</span></div>' : ''}
+        ${(item.type === 'video' || item.type === 'twin') && !isGenerating && !isError && item.path ? `<div class="play-overlay" onclick="openVideoModal('${item.path}')" style="cursor:pointer"><span>▶</span></div>` : ''}
       </div>
       <div class="card-body">
         <div class="card-badges">
@@ -993,6 +1001,20 @@ function renderGallery(items) {
       </div>
     </div>`;
   }).join('');
+}
+
+// ── Video modal ────────────────────────────────────────────────────────────
+function openVideoModal(src) {
+  const player = document.getElementById('videoPlayer');
+  player.src = src;
+  document.getElementById('videoModal').style.display = 'flex';
+}
+
+function closeVideoModal() {
+  const player = document.getElementById('videoPlayer');
+  player.pause();
+  player.src = '';
+  document.getElementById('videoModal').style.display = 'none';
 }
 
 // ── Init ───────────────────────────────────────────────────────────────────
