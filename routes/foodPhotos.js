@@ -29,6 +29,11 @@ router.post('/', async (req, res) => {
 // DELETE /api/db/food-photos/:id
 router.delete('/:id', async (req, res) => {
   try {
+    if (req.restaurantId !== undefined) {
+      const existing = await db.foodPhoto.findUnique({ where: { id: Number(req.params.id) } });
+      if (!existing || existing.restaurantId !== req.restaurantId)
+        return res.status(404).json({ error: 'Not found' });
+    }
     await db.foodPhoto.delete({ where: { id: Number(req.params.id) } });
     res.json({ success: true });
   } catch (e) {

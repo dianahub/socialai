@@ -22,6 +22,8 @@ router.get('/:id', async (req, res) => {
   try {
     const row = await db.generationJob.findUnique({ where: { id: Number(req.params.id) } });
     if (!row) return res.status(404).json({ error: 'Not found' });
+    if (req.restaurantId !== undefined && row.restaurantId !== req.restaurantId)
+      return res.status(404).json({ error: 'Not found' });
     res.json(row);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -55,6 +57,11 @@ router.patch('/:id', async (req, res) => {
   if (externalJobId !== undefined) data.externalJobId = externalJobId;
   if (errorMessage  !== undefined) data.errorMessage  = errorMessage;
   try {
+    if (req.restaurantId !== undefined) {
+      const existing = await db.generationJob.findUnique({ where: { id: Number(req.params.id) } });
+      if (!existing || existing.restaurantId !== req.restaurantId)
+        return res.status(404).json({ error: 'Not found' });
+    }
     const row = await db.generationJob.update({ where: { id: Number(req.params.id) }, data });
     res.json(row);
   } catch (e) {

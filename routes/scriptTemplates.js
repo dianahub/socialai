@@ -75,6 +75,8 @@ router.get('/:id', async (req, res) => {
   try {
     const row = await db.scriptTemplate.findUnique({ where: { id: Number(req.params.id) } });
     if (!row) return res.status(404).json({ error: 'Not found' });
+    if (req.restaurantId !== undefined && row.restaurantId !== req.restaurantId)
+      return res.status(404).json({ error: 'Not found' });
     res.json(row);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -109,6 +111,11 @@ router.patch('/:id', async (req, res) => {
   if (isActive     !== undefined) data.isActive     = Boolean(isActive);
   if (lastUsedAt   !== undefined) data.lastUsedAt   = lastUsedAt ? new Date(lastUsedAt) : null;
   try {
+    if (req.restaurantId !== undefined) {
+      const existing = await db.scriptTemplate.findUnique({ where: { id: Number(req.params.id) } });
+      if (!existing || existing.restaurantId !== req.restaurantId)
+        return res.status(404).json({ error: 'Not found' });
+    }
     const row = await db.scriptTemplate.update({ where: { id: Number(req.params.id) }, data });
     res.json(row);
   } catch (e) {
@@ -120,6 +127,11 @@ router.patch('/:id', async (req, res) => {
 // DELETE /api/db/script-templates/:id
 router.delete('/:id', async (req, res) => {
   try {
+    if (req.restaurantId !== undefined) {
+      const existing = await db.scriptTemplate.findUnique({ where: { id: Number(req.params.id) } });
+      if (!existing || existing.restaurantId !== req.restaurantId)
+        return res.status(404).json({ error: 'Not found' });
+    }
     await db.scriptTemplate.delete({ where: { id: Number(req.params.id) } });
     res.json({ success: true });
   } catch (e) {

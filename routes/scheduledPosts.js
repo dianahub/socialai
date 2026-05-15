@@ -35,6 +35,8 @@ router.get('/:id', async (req, res) => {
       include: { scriptTemplate: true },
     });
     if (!row) return res.status(404).json({ error: 'Not found' });
+    if (req.restaurantId !== undefined && row.restaurantId !== req.restaurantId)
+      return res.status(404).json({ error: 'Not found' });
     res.json(row);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -86,6 +88,11 @@ router.patch('/:id', async (req, res) => {
   if (scriptTemplateId !== undefined) data.scriptTemplateId = scriptTemplateId ? Number(scriptTemplateId) : null;
 
   try {
+    if (req.restaurantId !== undefined) {
+      const existing = await db.scheduledPost.findUnique({ where: { id: Number(req.params.id) } });
+      if (!existing || existing.restaurantId !== req.restaurantId)
+        return res.status(404).json({ error: 'Not found' });
+    }
     const row = await db.scheduledPost.update({ where: { id: Number(req.params.id) }, data });
     res.json(row);
   } catch (e) {
@@ -97,6 +104,11 @@ router.patch('/:id', async (req, res) => {
 // DELETE /api/db/scheduled-posts/:id
 router.delete('/:id', async (req, res) => {
   try {
+    if (req.restaurantId !== undefined) {
+      const existing = await db.scheduledPost.findUnique({ where: { id: Number(req.params.id) } });
+      if (!existing || existing.restaurantId !== req.restaurantId)
+        return res.status(404).json({ error: 'Not found' });
+    }
     await db.scheduledPost.delete({ where: { id: Number(req.params.id) } });
     res.json({ success: true });
   } catch (e) {
@@ -110,7 +122,9 @@ router.post('/:id/post-now', async (req, res) => {
   const postId = Number(req.params.id);
   try {
     const post = await db.scheduledPost.findUnique({ where: { id: postId } });
-    if (!post)           return res.status(404).json({ error: 'Not found' });
+    if (!post) return res.status(404).json({ error: 'Not found' });
+    if (req.restaurantId !== undefined && post.restaurantId !== req.restaurantId)
+      return res.status(404).json({ error: 'Not found' });
     if (!post.contentUrl) return res.status(400).json({ error: 'No content URL on this post — attach media first' });
 
     res.json({ success: true, message: 'Publishing to Instagram in background…' });
