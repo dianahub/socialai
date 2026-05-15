@@ -307,6 +307,11 @@
   .sw-preview-label {
     font-size: 0.68rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gold);
   }
+  .sw-saved {
+    font-size: 0.72rem; color: var(--green); opacity: 0;
+    transition: opacity 0.3s; margin-left: 0.5rem;
+  }
+  .sw-saved.show { opacity: 1; }
   .btn-clear {
     background: none; border: none; color: var(--text-muted); cursor: pointer;
     font-size: 0.78rem; padding: 0.15rem 0.4rem; border-radius: 4px; font-family: inherit;
@@ -392,7 +397,10 @@
     </div>
     <div class="sw-preview" id="scriptPreview" style="display:none">
       <div class="sw-preview-top">
-        <span class="sw-preview-label">Script — editable</span>
+        <div style="display:flex;align-items:center">
+          <span class="sw-preview-label">Script — editable</span>
+          <span class="sw-saved" id="scriptSaved">✓ Saved</span>
+        </div>
         <button class="btn-clear" onclick="clearScript()">✕ Clear</button>
       </div>
       <textarea class="sw-textarea" id="scriptText" rows="3"></textarea>
@@ -662,6 +670,7 @@ function clearScript() {
   document.getElementById('scriptText').value = '';
 }
 
+let savedTimer;
 async function saveScriptToConfig(script) {
   try {
     const rid = getRestaurantId();
@@ -670,6 +679,12 @@ async function saveScriptToConfig(script) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ restaurantId: rid, ownerScript: script }),
     });
+    const el = document.getElementById('scriptSaved');
+    if (el) {
+      el.classList.add('show');
+      clearTimeout(savedTimer);
+      savedTimer = setTimeout(() => el.classList.remove('show'), 2000);
+    }
   } catch {}
 }
 
