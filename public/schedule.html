@@ -1425,7 +1425,8 @@ async function startGenerateWeek() {
       days:           7,
       postFrequency:  freq,
       contentMix,
-      schedulePreset: document.getElementById('gwPreset').value || 'smart',
+      schedulePreset:   document.getElementById('gwPreset').value || 'smart',
+      timezoneOffset:   new Date().getTimezoneOffset(), // minutes behind UTC (e.g. 240 for UTC-4)
     });
 
     closeGenWeekModal();
@@ -1447,7 +1448,9 @@ async function startGenerateWeek() {
     })();
     await loadPosts();
   } catch (e) {
-    errEl.textContent = e.message;
+    errEl.textContent = e.message.includes('already scheduled')
+      ? e.message + ' — or clear the existing posts and try again.'
+      : e.message;
     errEl.style.display = 'block';
   } finally {
     btn.disabled = false;

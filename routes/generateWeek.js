@@ -70,12 +70,13 @@ function buildTypeSequence(mix, totalSlots) {
 router.post('/', async (req, res) => {
   try {
     const {
-      restaurantId   = 1,
+      restaurantId    = 1,
       startDate,
-      days           = 7,
-      postFrequency  = '3x_week',
+      days            = 7,
+      postFrequency   = '3x_week',
       contentMix,
-      schedulePreset = 'smart',
+      schedulePreset  = 'smart',
+      timezoneOffset  = 0,   // minutes behind UTC sent by browser (e.g. 240 for UTC-4)
     } = req.body;
 
     const preset = PRESETS[schedulePreset] || PRESETS.smart;
@@ -107,6 +108,22 @@ router.post('/', async (req, res) => {
       }
     }
 
+    // Reject if posts already exist in the target window (prevent duplicates)
+    const windowEnd = new Date(start);
+    windowEnd.setDate(start.getDate() + Number(days));
+    const existing = await db.scheduledPost.count({
+      where: {
+        restaurantId:  Number(restaurantId),
+        scheduledTime: { gte: start, lt: windowEnd },
+      },
+    });
+    if (existing > 0) {
+      return res.status(409).json({
+        error: `${existing} post(s) already scheduled in this window. Delete them first or pick a different start date.`,
+        existing,
+      });
+    }
+
     const isTwiceDaily = postFrequency === 'twice_daily';
     const offsets      = dayOffsets(postFrequency, days);
     const totalSlots   = isTwiceDaily ? offsets.length * 2 : offsets.length;
@@ -135,13 +152,15 @@ router.post('/', async (req, res) => {
         const scheduledTime = new Date(start);
         scheduledTime.setDate(start.getDate() + offset);
 
-        let hour;
+        let localHour;
         if (isTwiceDaily) {
-          hour = slot === 0 ? 9 : 18;  // AM: 9am (Reels break), PM: 6pm (dinner)
+          localHour = slot === 0 ? 9 : 18;
         } else {
-          hour = getOptimalHour(postType, scheduledTime, preset);
+          localHour = getOptimalHour(postType, scheduledTime, preset);
         }
-        scheduledTime.setHours(hour, 0, 0, 0);
+        // Store as UTC so the user's local time matches the intended optimal hour
+        const utcHour = localHour + Math.round(timezoneOffset / 60);
+        scheduledTime.setUTCHours(utcHour, 0, 0, 0);
 
         // Rotate through active script templates for video types
         let scriptTemplateId = null;
