@@ -931,6 +931,13 @@ function stopPolling() {
   document.getElementById('pollIndicator').style.display = 'none';
 }
 
+// Fire an immediate poll when the tab comes back into focus — Chrome throttles
+// setInterval to ~1 min in background tabs, so without this the user has to
+// manually refresh to see a completed job.
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && pollInterval) pollOutput();
+});
+
 let lastOutputHash = '';
 
 async function pollOutput() {
