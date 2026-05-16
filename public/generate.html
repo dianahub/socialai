@@ -103,6 +103,7 @@
   .gen-card:hover::before { opacity: 1; }
   .gen-card:active { transform: translateY(0); }
   .gen-card.generating { border-color: var(--gold); pointer-events: none; }
+  .gen-card.generating .btn-gen-twin { pointer-events: all; position: relative; z-index: 2; }
   .gen-card.done { border-color: var(--green); }
 
   .gen-icon { font-size: 2rem; margin-bottom: 0.75rem; }
@@ -504,7 +505,7 @@
           </p>
         </div>
 
-        <button class="btn-gen-twin" onclick="event.stopPropagation();generate('twin')" style="margin-top:0.9rem;width:100%">Generate Owner Twin</button>
+        <button class="btn-gen-twin" onclick="event.stopPropagation();generate('twin')" style="margin-top:0.9rem;width:100%;pointer-events:all;position:relative;z-index:2">Generate Owner Twin</button>
         <div class="gen-status" id="status-twin" style="display:none"></div>
       </div>
 
