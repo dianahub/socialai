@@ -284,9 +284,9 @@ async function mockImage(cfg, jobId, variant, overlayLabel, modelLabel) {
 async function generateVideo(config, jobId) {
   console.log('[generateVideo] Building food-photo slideshow');
 
-  const ffmpegInstaller = require('@ffmpeg-installer/ffmpeg');
-  const ffmpeg          = require('fluent-ffmpeg');
-  ffmpeg.setFfmpegPath(ffmpegInstaller.path);
+  const ffmpegStatic = require('ffmpeg-static');
+  const ffmpeg       = require('fluent-ffmpeg');
+  ffmpeg.setFfmpegPath(ffmpegStatic);
 
   const os = require('os');
 
