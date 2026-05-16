@@ -77,6 +77,7 @@ router.post('/', async (req, res) => {
       contentMix,
       schedulePreset  = 'smart',
       timezoneOffset  = 0,   // minutes behind UTC sent by browser (e.g. 240 for UTC-4)
+      force           = false,
     } = req.body;
 
     const preset = PRESETS[schedulePreset] || PRESETS.smart;
@@ -108,20 +109,27 @@ router.post('/', async (req, res) => {
       }
     }
 
-    // Reject if posts already exist in the target window (prevent duplicates)
+    // Check / clear existing posts in the target window
     const windowEnd = new Date(start);
     windowEnd.setDate(start.getDate() + Number(days));
-    const existing = await db.scheduledPost.count({
+    const existingPosts = await db.scheduledPost.findMany({
       where: {
         restaurantId:  Number(restaurantId),
         scheduledTime: { gte: start, lt: windowEnd },
       },
+      select: { id: true },
     });
-    if (existing > 0) {
-      return res.status(409).json({
-        error: `${existing} post(s) already scheduled in this window. Delete them first or pick a different start date.`,
-        existing,
-      });
+    if (existingPosts.length > 0) {
+      if (!force) {
+        return res.status(409).json({
+          error: `${existingPosts.length} post(s) already scheduled in this window. Delete them first or pick a different start date.`,
+          existing: existingPosts.length,
+        });
+      }
+      // force=true: delete existing jobs + posts before recreating
+      const postIds = existingPosts.map(p => p.id);
+      await db.generationJob.deleteMany({ where: { scheduledPostId: { in: postIds } } });
+      await db.scheduledPost.deleteMany({ where: { id: { in: postIds } } });
     }
 
     const isTwiceDaily = postFrequency === 'twice_daily';

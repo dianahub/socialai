@@ -1402,12 +1402,12 @@ function updateGwEst() {
     (videoSlots > 0 ? ` (${videoSlots} video${videoSlots > 1 ? 's' : ''} via HeyGen)` : '');
 }
 
-async function startGenerateWeek() {
+async function startGenerateWeek(force = false) {
   const btn = document.getElementById('gwStartBtn');
   const errEl = document.getElementById('gwError');
   errEl.style.display = 'none';
   btn.disabled = true;
-  btn.textContent = 'Queuing…';
+  btn.textContent = force ? 'Clearing…' : 'Queuing…';
 
   const startDate = document.getElementById('gwStartDate').value;
   const freq      = document.getElementById('gwFrequency').value;
@@ -1427,6 +1427,7 @@ async function startGenerateWeek() {
       contentMix,
       schedulePreset:   document.getElementById('gwPreset').value || 'smart',
       timezoneOffset:   new Date().getTimezoneOffset(), // minutes behind UTC (e.g. 240 for UTC-4)
+      force,
     });
 
     closeGenWeekModal();
@@ -1448,9 +1449,12 @@ async function startGenerateWeek() {
     })();
     await loadPosts();
   } catch (e) {
-    errEl.textContent = e.message.includes('already scheduled')
-      ? e.message + ' — or clear the existing posts and try again.'
-      : e.message;
+    if (e.message.includes('already scheduled')) {
+      errEl.innerHTML = e.message +
+        ' <button onclick="startGenerateWeek(true)" style="margin-left:0.5rem;padding:0.2rem 0.7rem;background:var(--gold-dim);color:var(--gold-light);border:1px solid var(--gold-border);border-radius:6px;cursor:pointer;font-size:0.8rem">Clear &amp; Regenerate</button>';
+    } else {
+      errEl.textContent = e.message;
+    }
     errEl.style.display = 'block';
   } finally {
     btn.disabled = false;
