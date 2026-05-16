@@ -435,6 +435,19 @@
     </div>
   </div>
 
+  <!-- Scheduled twin jobs notice — shown when pending owner_twin jobs exist -->
+  <div id="scheduledTwinNotice" style="display:none;background:rgba(200,168,75,0.07);border:1px solid rgba(200,168,75,0.3);border-radius:10px;padding:1rem 1.4rem;margin-bottom:1.5rem;display:none">
+    <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.4rem">
+      <span style="font-size:1rem">📅</span>
+      <strong id="scheduledTwinCount" style="font-size:0.88rem;color:var(--gold-light)"></strong>
+    </div>
+    <p style="font-size:0.8rem;color:var(--text-muted);line-height:1.5;margin:0">
+      The script saved in the <strong style="color:var(--text)">Owner Twin</strong> section below will be used for each one.
+      Review it now — edit if needed, then click <strong style="color:var(--text)">↻ Generate from brief</strong> to rewrite it from this week's info.
+      Your saved script is locked in automatically.
+    </p>
+  </div>
+
   <!-- Generation buttons -->
   <div class="gen-section">
     <h3>Generate Content</h3>
@@ -1083,9 +1096,26 @@ function pickTemplate() {
   document.getElementById('tmplPicker').value = '';
 }
 
+async function checkScheduledTwinJobs() {
+  try {
+    const rid  = getRestaurantId();
+    const jobs = await fetch(`/api/db/generation-jobs?restaurantId=${rid}&status=pending`)
+      .then(r => r.json()).catch(() => []);
+    const twinJobs = jobs.filter(j => j.jobType === 'owner_twin_video');
+    const notice   = document.getElementById('scheduledTwinNotice');
+    if (twinJobs.length) {
+      document.getElementById('scheduledTwinCount').textContent =
+        `${twinJobs.length} owner twin video${twinJobs.length > 1 ? 's' : ''} scheduled — review the script below before they generate`;
+      notice.style.display = 'block';
+    } else {
+      notice.style.display = 'none';
+    }
+  } catch {}
+}
+
 async function init() {
   await loadHeader();
-  await Promise.all([loadBrief(), loadScriptTemplates(), loadAutoGenSetting()]);
+  await Promise.all([loadBrief(), loadScriptTemplates(), loadAutoGenSetting(), checkScheduledTwinJobs()]);
 
   // Restore saved script — prefer server config, fall back to localStorage
   try {

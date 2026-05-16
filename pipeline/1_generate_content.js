@@ -310,7 +310,7 @@ async function generateVideo(config, jobId) {
     logoBuf = config._logoCached;
   } else if (config._logoUrl) {
     try {
-      const r = await fetch(config._logoUrl);
+      const r = await fetch(config._logoUrl, { signal: AbortSignal.timeout(10000) });
       if (r.ok) logoBuf = Buffer.from(await r.arrayBuffer());
     } catch {}
   }
@@ -319,7 +319,7 @@ async function generateVideo(config, jobId) {
   for (let i = 0; i < photoUrls.length; i++) {
     try {
       const url    = cloudinaryTransformUrl(photoUrls[i], 1920, 1080) || photoUrls[i];
-      const resp   = await fetch(url);
+      const resp   = await fetch(url, { signal: AbortSignal.timeout(15000) });
       if (!resp.ok) continue;
       let buf = Buffer.from(await resp.arrayBuffer());
 
@@ -373,6 +373,7 @@ async function generateVideo(config, jobId) {
 
   // Build xfade filter chain: each input scaled + padded, then chained fades
   await new Promise((resolve, reject) => {
+    const ffmpegTimeout = setTimeout(() => reject(new Error('ffmpeg timed out after 5 minutes')), 5 * 60 * 1000);
     let cmd = ffmpeg();
     for (const fp of framePaths) {
       cmd = cmd.input(fp).inputOptions(['-loop 1', `-t ${slideSec}`]);
@@ -399,8 +400,8 @@ async function generateVideo(config, jobId) {
                       '-crf 23', '-preset fast', '-movflags +faststart', '-r 25'])
       .output(outputPath)
       .on('start', cmd => console.log('[generateVideo] ffmpeg start:', cmd.slice(0, 120)))
-      .on('end',   ()  => resolve())
-      .on('error', err => reject(err))
+      .on('end',   ()  => { clearTimeout(ffmpegTimeout); resolve(); })
+      .on('error', err => { clearTimeout(ffmpegTimeout); reject(err); })
       .run();
   });
 
