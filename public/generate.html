@@ -936,7 +936,10 @@ function stopPolling() {
 // setInterval to ~1 min in background tabs, so without this the user has to
 // manually refresh to see a completed job.
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible' && pollInterval) pollOutput();
+  if (document.visibilityState === 'visible') {
+    pollOutput();                      // always refresh on tab focus
+    if (!pollInterval && activejobs.size > 0) startPolling(); // resume if frozen
+  }
 });
 
 let lastOutputHash = '';
