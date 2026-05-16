@@ -443,7 +443,7 @@ async function generateTwinClip(config, jobId, customScript) {
 
       if (config._ownerUrl) {
         try {
-          const resp = await fetch(config._ownerUrl);
+          const resp = await fetch(config._ownerUrl, { signal: AbortSignal.timeout(15000) });
           if (resp.ok) {
             const os_  = require('os');
             const tmp  = path.join(os_.tmpdir(), `owner_cloud_${Date.now()}.jpg`);

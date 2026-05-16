@@ -1132,8 +1132,15 @@ async function init() {
   } catch {}
   const items = await fetch('/api/output').then(r => r.json()).catch(() => []);
   if (items.length) {
+    // Treat any 'generating' job older than 15 min as stale — don't lock the card
+    const staleMs = 15 * 60 * 1000;
+    items.forEach(i => {
+      if (i.status === 'generating' && (Date.now() - new Date(i.created).getTime()) > staleMs) {
+        i.status = 'error';
+        i.error  = 'Timed out — please try again.';
+      }
+    });
     renderGallery(items);
-    // Check if any are still generating
     if (items.some(i => i.status === 'generating')) {
       items.filter(i => i.status === 'generating').forEach(i => {
         setCardState(i.type, 'generating');
