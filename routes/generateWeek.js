@@ -97,6 +97,16 @@ router.post('/', async (req, res) => {
       start.setHours(0, 0, 0, 0);
     }
 
+    // For Mon/Wed/Fri and Mon–Fri modes, snap to nearest upcoming Monday
+    // so posts land neatly in one calendar week instead of spanning two
+    if (postFrequency === '3x_week' || postFrequency === '5x_week') {
+      const dow = start.getDay(); // 0=Sun, 1=Mon … 6=Sat
+      if (dow !== 1) {
+        const daysUntilMonday = dow === 0 ? 1 : (8 - dow) % 7;
+        start.setDate(start.getDate() + daysUntilMonday);
+      }
+    }
+
     const isTwiceDaily = postFrequency === 'twice_daily';
     const offsets      = dayOffsets(postFrequency, days);
     const totalSlots   = isTwiceDaily ? offsets.length * 2 : offsets.length;

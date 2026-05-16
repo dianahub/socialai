@@ -1350,11 +1350,24 @@ function updateTimeHint() {
 }
 
 // ── Generate-Week modal ────────────────────────────────────────────────────
+function toLocalDateString(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function getNextMonday() {
+  const d = new Date();
+  const dow = d.getDay(); // 0=Sun … 6=Sat
+  const daysUntil = dow === 1 ? 7 : (8 - dow) % 7; // days until next Monday
+  d.setDate(d.getDate() + daysUntil);
+  return d;
+}
+
 function openGenWeekModal() {
-  // Default start date = tomorrow
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  document.getElementById('gwStartDate').value = tomorrow.toISOString().slice(0, 10);
+  // Default start date = next Monday (local date, not UTC)
+  document.getElementById('gwStartDate').value = toLocalDateString(getNextMonday());
   document.getElementById('gwError').style.display = 'none';
   updateGwEst();
   loadGwPresets();
@@ -1423,9 +1436,10 @@ async function startGenerateWeek() {
       startProgressTracking(result.generationJobs, result.estimatedMinutes);
     }
 
-    // Navigate to the week of the new content
+    // Navigate to the week of the first scheduled post
+    const anchor = result.scheduledPosts?.[0]?.scheduledTime || (startDate + 'T00:00:00');
     weekStart = (() => {
-      const d = new Date(startDate + 'T00:00:00');
+      const d = new Date(anchor);
       d.setHours(0,0,0,0);
       const dow = d.getDay();
       d.setDate(d.getDate() - ((dow + 6) % 7));
