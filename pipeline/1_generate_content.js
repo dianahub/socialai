@@ -666,14 +666,11 @@ function _findCaptionFfmpeg() {
 }
 
 function _findCaptionFont() {
-  // Nix store (Railway + nixpacks.toml dejavu_fonts)
-  try {
-    const { execFileSync: efs } = require('child_process');
-    const out = efs('find', ['/nix/store', '-name', 'DejaVuSans.ttf', '-type', 'f'],
-      { timeout: 15000, encoding: 'utf8' });
-    const p = out.trim().split('\n')[0];
-    if (p && fs.existsSync(p)) return p;
-  } catch {}
+  // 1. Bundled alongside this file — always available on Railway
+  const bundled = path.join(__dirname, 'DejaVuSans.ttf');
+  if (fs.existsSync(bundled) && fs.statSync(bundled).size > 100000) return bundled;
+
+  // 2. Standard system paths
   for (const p of [
     '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
     '/usr/share/fonts/dejavu/DejaVuSans.ttf',
@@ -681,6 +678,16 @@ function _findCaptionFont() {
   ]) {
     if (fs.existsSync(p)) return p;
   }
+
+  // 3. Nix store (if dejavu_fonts ever gets re-added to nixpacks.toml)
+  try {
+    const { execFileSync: efs } = require('child_process');
+    const out = efs('find', ['/nix/store', '-name', 'DejaVuSans.ttf', '-type', 'f'],
+      { timeout: 10000, encoding: 'utf8' });
+    const p = out.trim().split('\n')[0];
+    if (p && fs.existsSync(p)) return p;
+  } catch {}
+
   return null;
 }
 
