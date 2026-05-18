@@ -1069,7 +1069,7 @@ app.use('/api/instagram',       igAuthRouter);
 // ── Start ─────────────────────────────────────────────────────────────────────
 
 app.listen(PORT, () => {
-  console.log(`\n  Restaurant Social AI`);
+  console.log(`\n  ModernSocial.ai`);
   console.log(`  ─────────────────────────────`);
   console.log(`  http://localhost:${PORT}`);
   console.log(`  Data: ${DATA_DIR}\n`);

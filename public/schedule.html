@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Content Calendar — Restaurant Social AI</title>
+<title>Content Calendar — ModernSocial.ai</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="/nav.js"></script>
@@ -436,7 +436,7 @@ input[type="range"]::-webkit-slider-thumb {
 <body>
 
 <nav>
-  <span class="nav-brand">✦ Restaurant Social AI</span>
+  <span class="nav-brand">✦ ModernSocial.ai</span>
   <div class="nav-links">
     <a href="index.html">Assets</a>
     <a href="generate.html">Generate</a>
@@ -1006,6 +1006,9 @@ async function openDetailModal(postId) {
   document.getElementById('modalTime').value    = toDatetimeLocal(post.scheduledTime);
   document.getElementById('modalStatus').value  = post.status;
 
+  // Auto-generate caption + hashtags if empty
+  if (!post.caption) autoFillCaption(post);
+
   // Error banner (failed posts)
   const errEl = document.getElementById('modalLastError');
   if (post.lastError && post.status === 'failed') {
@@ -1036,6 +1039,31 @@ async function openDetailModal(postId) {
   }
 
   document.getElementById('detailBackdrop').classList.add('open');
+}
+
+async function autoFillCaption(post) {
+  const captionEl = document.getElementById('modalCaption');
+  captionEl.placeholder = 'Generating caption…';
+  try {
+    const [capData, tagData] = await Promise.all([
+      api('POST', '/api/generate-caption', {
+        restaurantId,
+        postType: post.postType,
+      }),
+      api('POST', '/api/generate-hashtags', {
+        restaurantId,
+      }),
+    ]);
+    const text = (capData.caption || '') +
+      (tagData.hashtags?.length ? '\n\n' + tagData.hashtags.join(' ') : '');
+    captionEl.value = text;
+    // Auto-save so it persists
+    if (activeModalPostId === post.id && text) {
+      await api('PATCH', `/api/db/scheduled-posts/${post.id}`, { caption: text }).catch(() => {});
+    }
+  } catch (e) {
+    captionEl.placeholder = 'Write your caption…';
+  }
 }
 
 function closeDetailModal() {

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Content Generator — Restaurant Social AI</title>
+<title>Content Generator — ModernSocial.ai</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="/nav.js"></script>
@@ -368,7 +368,7 @@
 <body>
 
 <nav>
-  <span class="nav-brand">✦ Restaurant Social AI</span>
+  <span class="nav-brand">✦ ModernSocial.ai</span>
   <div class="nav-links">
     <a href="index.html">Assets</a>
     <a href="generate.html" class="active">Generate</a>
@@ -562,6 +562,30 @@
 </div>
 
 <!-- Video preview modal -->
+<!-- ── Add-to-schedule modal ─────────────────────────────────────── -->
+<div id="scheduleModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:1000;align-items:center;justify-content:center" onclick="closeScheduleModal()">
+  <div style="background:#12121e;border:1px solid rgba(200,168,75,0.3);border-radius:14px;padding:2rem;width:320px;max-width:90vw" onclick="event.stopPropagation()">
+    <h3 style="margin:0 0 1.2rem;font-size:1rem;color:var(--gold-light)">Add to Schedule</h3>
+    <div style="margin-bottom:1rem">
+      <label style="display:block;font-size:0.78rem;color:#888;margin-bottom:0.3rem">Post type</label>
+      <div id="schedModalType" style="font-size:0.85rem;color:var(--text);background:rgba(255,255,255,0.05);padding:0.4rem 0.7rem;border-radius:6px"></div>
+    </div>
+    <div style="margin-bottom:1rem">
+      <label style="display:block;font-size:0.78rem;color:#888;margin-bottom:0.3rem">Date</label>
+      <input id="schedModalDate" type="date" style="width:100%;box-sizing:border-box;background:#1a1a2e;border:1px solid rgba(200,168,75,0.25);border-radius:6px;color:var(--text);padding:0.4rem 0.6rem;font-size:0.85rem;font-family:inherit">
+    </div>
+    <div style="margin-bottom:1.4rem">
+      <label style="display:block;font-size:0.78rem;color:#888;margin-bottom:0.3rem">Time</label>
+      <input id="schedModalTime" type="time" value="09:00" style="width:100%;box-sizing:border-box;background:#1a1a2e;border:1px solid rgba(200,168,75,0.25);border-radius:6px;color:var(--text);padding:0.4rem 0.6rem;font-size:0.85rem;font-family:inherit">
+    </div>
+    <div id="schedModalError" style="display:none;color:#f87171;font-size:0.78rem;margin-bottom:0.8rem"></div>
+    <div style="display:flex;gap:0.7rem;justify-content:flex-end">
+      <button onclick="closeScheduleModal()" style="background:transparent;border:1px solid rgba(255,255,255,0.15);color:#888;border-radius:6px;padding:0.45rem 1rem;cursor:pointer;font-size:0.82rem;font-family:inherit">Cancel</button>
+      <button id="schedModalSubmit" onclick="submitScheduleModal()" style="background:var(--gold-dim);border:1px solid var(--gold-border);color:var(--gold-light);border-radius:6px;padding:0.45rem 1rem;cursor:pointer;font-size:0.82rem;font-weight:600;font-family:inherit">Add to Schedule</button>
+    </div>
+  </div>
+</div>
+
 <div id="videoModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:1000;align-items:center;justify-content:center" onclick="closeVideoModal()">
   <div style="position:relative;max-width:90vw;max-height:90vh" onclick="event.stopPropagation()">
     <video id="videoPlayer" controls autoplay playsinline style="max-width:90vw;max-height:85vh;border-radius:8px;display:block"></video>
@@ -1039,6 +1063,15 @@ function renderGallery(items) {
 
     const deleteBtn = `<button class="btn-sm btn-delete" onclick="deleteJob('${item.id}', this)">✕ Delete</button>`;
 
+    const schedContentUrl = encodeURIComponent(file?.path || item.path || '');
+    const schedType = item.type === 'twin' ? 'owner_twin_video'
+                    : item.type === 'video' ? 'cinematic_video'
+                    : file?.variant === 'story' ? 'branded_image_story'
+                    : 'branded_image_feed';
+    const schedBtn = (!isGenerating && !isError && (file?.path || item.path))
+      ? `<button class="btn-sm" style="background:rgba(200,168,75,0.12);color:var(--gold-light);border:1px solid rgba(200,168,75,0.3)" onclick="openScheduleModal('${schedType}','${schedContentUrl}')">📅 Schedule</button>`
+      : '';
+
     const igPosted = item.instagram_url
       ? `<a class="btn-sm btn-ig-posted" href="${item.instagram_url}" target="_blank">✓ On Instagram</a>`
       : '';
@@ -1061,7 +1094,7 @@ function renderGallery(items) {
         ${model ? `<div class="card-model">${model}</div>` : ''}
         ${prompt ? `<div class="card-prompt">"${prompt}"</div>` : ''}
         ${note  ? `<div class="card-note">ℹ ${note}</div>` : ''}
-        <div class="card-actions">${downloadBtn}${igPosted}${igBtn}${deleteBtn}</div>
+        <div class="card-actions">${downloadBtn}${schedBtn}${igPosted}${igBtn}${deleteBtn}</div>
       </div>
     </div>`;
   }).join('');
@@ -1079,6 +1112,82 @@ function closeVideoModal() {
   player.pause();
   player.src = '';
   document.getElementById('videoModal').style.display = 'none';
+}
+
+// ── Add to Schedule modal ──────────────────────────────────────────────────
+let _schedType = '';
+let _schedContentUrl = '';
+
+const TYPE_LABELS = {
+  owner_twin_video:    'Owner Twin Video',
+  cinematic_video:     'Cinematic Video',
+  branded_image_feed:  'Image Post (Feed)',
+  branded_image_story: 'Image Post (Story)',
+};
+
+function openScheduleModal(postType, encodedUrl) {
+  _schedType       = postType;
+  _schedContentUrl = decodeURIComponent(encodedUrl);
+
+  // Default to tomorrow at 9 AM local
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const y = tomorrow.getFullYear();
+  const m = String(tomorrow.getMonth() + 1).padStart(2, '0');
+  const d = String(tomorrow.getDate()).padStart(2, '0');
+  document.getElementById('schedModalDate').value = `${y}-${m}-${d}`;
+  document.getElementById('schedModalTime').value = '09:00';
+  document.getElementById('schedModalType').textContent = TYPE_LABELS[postType] || postType;
+  document.getElementById('schedModalError').style.display = 'none';
+  document.getElementById('schedModalSubmit').disabled = false;
+  document.getElementById('schedModalSubmit').textContent = 'Add to Schedule';
+  document.getElementById('scheduleModal').style.display = 'flex';
+}
+
+function closeScheduleModal() {
+  document.getElementById('scheduleModal').style.display = 'none';
+}
+
+async function submitScheduleModal() {
+  const dateVal = document.getElementById('schedModalDate').value;
+  const timeVal = document.getElementById('schedModalTime').value;
+  const errEl   = document.getElementById('schedModalError');
+  const btn     = document.getElementById('schedModalSubmit');
+
+  if (!dateVal || !timeVal) {
+    errEl.textContent = 'Please choose a date and time.';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  // Build a local datetime → ISO string
+  const scheduledTime = new Date(`${dateVal}T${timeVal}:00`).toISOString();
+
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+  errEl.style.display = 'none';
+
+  try {
+    await fetch('/api/db/scheduled-posts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        restaurantId: getRestaurantId(),
+        postType:     _schedType,
+        contentUrl:   _schedContentUrl,
+        scheduledTime,
+        status:       'scheduled',
+      }),
+    }).then(r => r.ok ? r.json() : r.json().then(e => Promise.reject(new Error(e.error))));
+
+    closeScheduleModal();
+    toast('Added to schedule — open Schedule to view it', 'success');
+  } catch (e) {
+    errEl.textContent = e.message || 'Failed to save';
+    errEl.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = 'Add to Schedule';
+  }
 }
 
 // ── Init ───────────────────────────────────────────────────────────────────
