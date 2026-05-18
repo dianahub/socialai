@@ -398,7 +398,7 @@
   <!-- ── Step 1: Business Profile ── -->
   <div class="step active" id="step1">
     <div class="step-title" id="step1Title">Your Business</div>
-    <div class="step-subtitle">Let's start with the basics. This info appears in your generated content.</div>
+    <div class="step-subtitle">Choose your business type, then fill in the basics. This info appears in your generated content.</div>
 
     <div class="field-group" style="margin-bottom:1.5rem">
       <label>Business Type</label>
@@ -674,7 +674,7 @@ function applyBusinessType() {
   const meta  = BIZ_META[state.businessType] || BIZ_META.other;
   const label = getBizLabel();
 
-  document.getElementById('step1Title').textContent = isRestaurant ? 'Your Restaurant' : 'Your Business';
+  document.getElementById('step1Title').textContent = 'Your Business';
   document.getElementById('nameLabelEl').textContent = label + ' Name';
   document.getElementById('restaurantName').placeholder = meta.namePlaceholder;
 
