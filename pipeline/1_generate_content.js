@@ -118,7 +118,7 @@ async function heygenPost(endpoint, payload) {
   return res.json();
 }
 
-// Poll until video is complete; returns { videoUrl, thumbnailUrl }
+// Poll until video is complete; returns { videoUrl, thumbnailUrl, captionUrl }
 async function waitForVideo(videoId, maxMs = 10 * 60 * 1000) {
   const start = Date.now();
   while (Date.now() - start < maxMs) {
@@ -126,8 +126,12 @@ async function waitForVideo(videoId, maxMs = 10 * 60 * 1000) {
     const resp = await heygenGet(`/v1/video_status.get?video_id=${videoId}`);
     const d    = resp.data || {};
     console.log(`[heygen] ${videoId} → ${d.status}`);
-    if (d.status === 'completed') return { videoUrl: d.video_url, thumbnailUrl: d.thumbnail_url };
-    if (d.status === 'failed')    throw new Error('HeyGen failed: ' + JSON.stringify(d.error || d));
+    if (d.status === 'completed') return {
+      videoUrl:    d.video_url,
+      thumbnailUrl: d.thumbnail_url,
+      captionUrl:  d.caption_url || d.captionUrl || null,
+    };
+    if (d.status === 'failed') throw new Error('HeyGen failed: ' + JSON.stringify(d.error || d));
   }
   throw new Error('HeyGen timed out after 10 min');
 }
@@ -493,17 +497,21 @@ async function generateTwinClip(config, jobId, customScript) {
           background: { type: 'color', value: '#0a0a14' },
         }],
         aspect_ratio: '9:16',
+        caption: true,
         test: false,
       });
 
       const videoId = resp.data?.video_id;
       if (!videoId) throw new Error('No video_id returned');
 
-      const { videoUrl, thumbnailUrl } = await waitForVideo(videoId);
+      const { videoUrl, thumbnailUrl, captionUrl } = await waitForVideo(videoId);
       const filename  = `${jobId}_twin.mp4`;
       const thumbFile = `${jobId}_twin_thumb.jpg`;
+      const outPath   = path.join(OUTPUT_DIR, filename);
 
-      await downloadFile(videoUrl, path.join(OUTPUT_DIR, filename));
+      // Burn captions; fall back to plain download if anything fails
+      const burned = await burnTwinCaptions(videoUrl, captionUrl, script, outPath);
+      if (!burned) await downloadFile(videoUrl, outPath);
       if (thumbnailUrl) await downloadFile(thumbnailUrl, path.join(OUTPUT_DIR, thumbFile)).catch(() => {});
 
       return {
@@ -601,6 +609,185 @@ async function generateImagePost(config, jobId) {
     files,
     note: photoUrls.length ? null : 'Upload food photos on the Assets page for real images.',
   };
+}
+
+// ── Caption burning ───────────────────────────────────────────────────────────
+
+const TWIN_TEMP_DIR = '/tmp/restaurant_twin_videos';
+
+function _findCaptionFfmpeg() {
+  try {
+    const p = require('ffmpeg-static');
+    if (p && fs.existsSync(p)) return p;
+  } catch {}
+  try {
+    const p = require('@ffmpeg-installer/ffmpeg').path;
+    if (p && fs.existsSync(p)) return p;
+  } catch {}
+  return null;
+}
+
+function _findCaptionFont() {
+  // Nix store (Railway + nixpacks.toml dejavu_fonts)
+  try {
+    const { execFileSync: efs } = require('child_process');
+    const out = efs('find', ['/nix/store', '-name', 'DejaVuSans.ttf', '-type', 'f'],
+      { timeout: 15000, encoding: 'utf8' });
+    const p = out.trim().split('\n')[0];
+    if (p && fs.existsSync(p)) return p;
+  } catch {}
+  for (const p of [
+    '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
+    '/usr/share/fonts/dejavu/DejaVuSans.ttf',
+    '/usr/share/fonts/TTF/DejaVuSans.ttf',
+  ]) {
+    if (fs.existsSync(p)) return p;
+  }
+  return null;
+}
+
+function _vttToSrt(vtt) {
+  const lines = vtt.trim().split('\n');
+  const out   = [];
+  let counter = 1;
+  let i       = 0;
+  while (i < lines.length && !lines[i].match(/\d+:\d+.*-->/)) i++;
+  while (i < lines.length) {
+    const line = lines[i].trim();
+    if (line.match(/\d+:\d+.*-->/)) {
+      let timing = line.replace(/(\d{2}:\d{2}:\d{2})\.(\d{3})/g, '$1,$2');
+      timing     = timing.replace(/^(\d{2}:\d{2}),(\d{3})/, '00:$1,$2');
+      out.push(String(counter), timing);
+      counter++;
+      i++;
+      while (i < lines.length && lines[i].trim()) { out.push(lines[i].trim()); i++; }
+      out.push('');
+    } else {
+      i++;
+    }
+  }
+  return out.join('\n');
+}
+
+function _srtTs(secs) {
+  const h  = Math.floor(secs / 3600);
+  const m  = Math.floor((secs % 3600) / 60);
+  const s  = Math.floor(secs % 60);
+  const ms = Math.round((secs % 1) * 1000);
+  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')},${String(ms).padStart(3,'0')}`;
+}
+
+function _scriptToSrt(script, wordsPerSec = 2.5) {
+  const words  = script.split(/\s+/).filter(Boolean);
+  if (!words.length) return '';
+  const chunks = [];
+  for (let i = 0; i < words.length; i += 6) chunks.push(words.slice(i, i + 6));
+  const lines = [];
+  let t = 0;
+  chunks.forEach((chunk, idx) => {
+    const dur = chunk.length / wordsPerSec;
+    lines.push(String(idx + 1), `${_srtTs(t)} --> ${_srtTs(t + dur)}`, chunk.join(' '), '');
+    t += dur;
+  });
+  return lines.join('\n');
+}
+
+async function _getSrtContent(captionUrl, script) {
+  if (captionUrl) {
+    try {
+      const resp = await fetch(captionUrl, { signal: AbortSignal.timeout(15000) });
+      if (resp.ok) {
+        const converted = _vttToSrt(await resp.text());
+        if (converted.trim()) {
+          console.log('[twin captions] Using HeyGen VTT captions');
+          return converted;
+        }
+      }
+    } catch (e) {
+      console.warn('[twin captions] VTT fetch failed:', e.message);
+    }
+  }
+  console.log('[twin captions] Generating estimated timing from script');
+  return _scriptToSrt(script);
+}
+
+function _buildDrawtextFilters(srt, capDir, fontFile) {
+  const fontPart = fontFile ? `:fontfile=${fontFile}` : '';
+  const blocks   = srt.trim().split(/\n\s*\n/);
+  const filters  = [];
+  for (const block of blocks) {
+    const lines     = block.trim().split('\n');
+    const timingIdx = lines.findIndex(l => l.includes('-->'));
+    if (timingIdx === -1) continue;
+    const text = lines.slice(timingIdx + 1).join(' ').trim().slice(0, 80);
+    if (!text) continue;
+    const m = lines[timingIdx].match(/(\d+):(\d+):(\d+)[,.](\d+)\s*-->\s*(\d+):(\d+):(\d+)[,.](\d+)/);
+    if (!m) continue;
+    const ts = (h, mi, s, ms) => +h * 3600 + +mi * 60 + +s + +ms / 1000;
+    const t0 = ts(m[1], m[2], m[3], m[4]);
+    const t1 = ts(m[5], m[6], m[7], m[8]);
+    // Write cue to file — avoids all ffmpeg text-escaping issues
+    const cuePath = path.join(capDir, `cue_${filters.length}.txt`);
+    fs.writeFileSync(cuePath, text, 'utf8');
+    filters.push(
+      `drawtext=textfile='${cuePath}'` +
+      `:enable='between(t,${t0.toFixed(3)},${t1.toFixed(3)})'` +
+      `:fontsize=36${fontPart}` +
+      `:fontcolor=black:x=(w-text_w)/2:y=h*0.80` +
+      `:shadowx=1:shadowy=1:shadowcolor=white@0.4`
+    );
+  }
+  return filters.join(',');
+}
+
+async function burnTwinCaptions(videoUrl, captionUrl, script, outPath) {
+  const ffmpegBin = _findCaptionFfmpeg();
+  if (!ffmpegBin) {
+    console.log('[twin captions] ffmpeg not found — skipping');
+    return false;
+  }
+  fs.mkdirSync(TWIN_TEMP_DIR, { recursive: true });
+  const id      = require('crypto').randomUUID();
+  const rawPath = path.join(TWIN_TEMP_DIR, `${id}_raw.mp4`);
+  const capDir  = path.join(TWIN_TEMP_DIR, `${id}_caps`);
+  try {
+    fs.mkdirSync(capDir, { recursive: true });
+    console.log('[twin captions] Downloading video...');
+    await downloadFile(videoUrl, rawPath);
+
+    const srt = await _getSrtContent(captionUrl, script);
+    if (!srt.trim()) return false;
+
+    const fontFile = _findCaptionFont();
+    if (fontFile) console.log(`[twin captions] Font: ${fontFile}`);
+
+    const drawtextFilters = _buildDrawtextFilters(srt, capDir, fontFile);
+    if (!drawtextFilters) { console.log('[twin captions] No cues — skipping'); return false; }
+
+    // Light panel over bottom 28% + captions
+    const vf       = 'drawbox=x=0:y=ih*0.72:w=iw:h=ih*0.28:color=white@0.75:t=fill,' + drawtextFilters;
+    const cueCount = (drawtextFilters.match(/drawtext=/g) || []).length;
+    console.log(`[twin captions] Burning ${cueCount} cues...`);
+
+    const { spawnSync } = require('child_process');
+    const result = spawnSync(ffmpegBin,
+      ['-y', '-i', rawPath, '-vf', vf, '-c:a', 'copy', '-preset', 'fast', outPath],
+      { timeout: 180000, maxBuffer: 50 * 1024 * 1024 }
+    );
+    if (result.status !== 0) {
+      const stderr = (result.stderr || Buffer.alloc(0)).toString().slice(-2000);
+      console.error('[twin captions] ffmpeg failed:', stderr);
+      return false;
+    }
+    console.log(`[twin captions] Captions burned → ${outPath}`);
+    return true;
+  } catch (e) {
+    console.error('[twin captions] Error:', e.message);
+    return false;
+  } finally {
+    try { fs.unlinkSync(rawPath); } catch {}
+    try { fs.rmSync(capDir, { recursive: true }); } catch {}
+  }
 }
 
 module.exports = { generateVideo, generateTwinClip, generateImagePost };
