@@ -516,13 +516,13 @@
   <!-- ── Step 3: Assets ── -->
   <div class="step" id="step3">
     <div class="step-title">Upload Your Assets</div>
-    <div class="step-subtitle">Logo and owner portrait power the digital twin video. Food photos are used in branded posts.</div>
+    <div class="step-subtitle">Logo and owner portrait power the digital twin video. Photos are used in branded posts.</div>
 
     <div class="upload-grid">
       <div class="upload-zone" id="zonelogo">
         <input type="file" accept="image/*" onchange="uploadAsset('logo', this)" />
         <div class="upload-icon">🏷</div>
-        <div class="upload-label">Restaurant Logo</div>
+        <div class="upload-label" id="logoUploadLabel">Business Logo</div>
         <div class="upload-sublabel">PNG or SVG preferred</div>
         <div class="upload-status">✓ Uploaded</div>
       </div>
@@ -538,7 +538,7 @@
     <div class="upload-zone-wide" id="zonephotos">
       <input type="file" accept="image/*" multiple onchange="uploadPhotos(this)" />
       <div class="upload-icon">📸</div>
-      <div class="upload-label">Food Photos</div>
+      <div class="upload-label">Photos</div>
       <div class="upload-sublabel">Up to 6 photos · JPG or PNG</div>
       <div class="upload-status" id="photosStatus"></div>
     </div>
@@ -689,6 +689,11 @@ function applyBusinessType() {
 
   // Color preview emoji
   document.querySelector('.preview-logo-box').textContent = meta.icon;
+
+  // Assets step logo label
+  const logoLbl = document.getElementById('logoUploadLabel');
+  if (logoLbl) logoLbl.textContent = label + ' Logo';
+
   updatePreview();
 }
 
