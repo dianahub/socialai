@@ -1063,6 +1063,7 @@ app.use('/api/db/script-templates', require('./routes/scriptTemplates'));
 app.use('/api/db/food-photos',      require('./routes/foodPhotos'));
 app.use('/api/db/generation-jobs',  require('./routes/generationJobs'));
 app.use('/api/generate-week',       require('./routes/generateWeek'));
+app.use('/api/leads',               require('./routes/leads'));
 
 // Instagram OAuth routes (not under /api/ so they bypass auth middleware)
 const { router: igAuthRouter, refreshExpiringTokens } = require('./routes/instagramAuth');

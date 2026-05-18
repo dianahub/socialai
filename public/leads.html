@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Leads — ModernSocial.ai</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="nav.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg-deep:    #090910;
+    --bg-card:    #12121c;
+    --bg-surface: #1a1a28;
+    --gold:       #c8a84b;
+    --gold-light: #e5c97a;
+    --gold-dim:   rgba(200,168,75,0.14);
+    --gold-border:rgba(200,168,75,0.22);
+    --text:       #f0ede8;
+    --text-muted: #7a7773;
+    --border:     rgba(255,255,255,0.07);
+    --green:      #4a9960;
+    --green-dim:  rgba(74,153,96,0.15);
+    --red:        #cc4444;
+    --red-dim:    rgba(204,68,68,0.12);
+    --blue:       #4a7fcc;
+    --blue-dim:   rgba(74,127,204,0.15);
+  }
+  body { background: var(--bg-deep); color: var(--text); font-family: 'Inter', sans-serif; min-height: 100vh; }
+
+  /* ── Nav ── */
+  nav {
+    display: flex; align-items: center; gap: 1rem;
+    padding: 0 2rem; height: 58px;
+    background: rgba(9,9,16,0.92); border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 100; backdrop-filter: blur(12px);
+  }
+  .nav-brand { font-family: 'Playfair Display', serif; font-size: 1rem; color: var(--gold-light); letter-spacing: 0.05em; text-decoration: none; }
+  .nav-links { display: flex; gap: 0; }
+  .nav-links a { padding: 0 1rem; height: 58px; display: flex; align-items: center; font-size: 0.82rem; font-weight: 500; color: var(--text-muted); text-decoration: none; border-bottom: 2px solid transparent; transition: color 0.2s, border-color 0.2s; }
+  .nav-links a:hover { color: var(--text); }
+  .nav-links a.active { color: var(--gold-light); border-bottom-color: var(--gold); }
+
+  /* ── Layout ── */
+  main { max-width: 1100px; margin: 0 auto; padding: 2.5rem 2rem 4rem; }
+  .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem; }
+  .page-title { font-family: 'Playfair Display', serif; font-size: 1.6rem; color: var(--gold-light); }
+  .page-sub { font-size: 0.82rem; color: var(--text-muted); margin-top: 0.25rem; }
+
+  /* ── Stats row ── */
+  .stats-row { display: flex; gap: 1rem; margin-bottom: 2rem; flex-wrap: wrap; }
+  .stat-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 1rem 1.5rem; flex: 1; min-width: 120px; }
+  .stat-val { font-size: 1.8rem; font-weight: 600; color: var(--gold-light); line-height: 1; }
+  .stat-label { font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.07em; margin-top: 0.3rem; }
+
+  /* ── Toolbar ── */
+  .toolbar { display: flex; gap: 0.75rem; margin-bottom: 1.25rem; flex-wrap: wrap; align-items: center; }
+  .search-wrap { position: relative; flex: 1; min-width: 200px; }
+  .search-wrap input { width: 100%; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 0.6rem 0.9rem 0.6rem 2.2rem; color: var(--text); font-family: 'Inter', sans-serif; font-size: 0.85rem; outline: none; transition: border-color 0.2s; }
+  .search-wrap input:focus { border-color: var(--gold-border); }
+  .search-wrap::before { content: '🔍'; position: absolute; left: 0.65rem; top: 50%; transform: translateY(-50%); font-size: 0.8rem; pointer-events: none; }
+  .filter-select { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 0.6rem 0.9rem; color: var(--text); font-family: 'Inter', sans-serif; font-size: 0.85rem; outline: none; cursor: pointer; }
+  .filter-select:focus { border-color: var(--gold-border); }
+
+  /* ── Buttons ── */
+  .btn { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.6rem 1.1rem; border-radius: 8px; font-family: 'Inter', sans-serif; font-size: 0.83rem; font-weight: 600; cursor: pointer; border: none; transition: opacity 0.2s, background 0.2s; text-decoration: none; }
+  .btn:hover { opacity: 0.88; }
+  .btn:disabled { opacity: 0.45; cursor: default; }
+  .btn-gold { background: var(--gold); color: #090910; }
+  .btn-ghost { background: var(--bg-surface); border: 1px solid var(--border); color: var(--text-muted); }
+  .btn-ghost:hover { border-color: var(--gold-border); color: var(--text); opacity: 1; }
+  .btn-danger { background: var(--red-dim); border: 1px solid rgba(204,68,68,0.3); color: #f87171; }
+  .btn-convert { background: var(--green-dim); border: 1px solid rgba(74,153,96,0.3); color: #6fcf8a; }
+  .btn-sm { padding: 0.35rem 0.75rem; font-size: 0.75rem; }
+
+  /* ── Table ── */
+  .table-wrap { background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+  table { width: 100%; border-collapse: collapse; }
+  thead th { padding: 0.85rem 1rem; text-align: left; font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); border-bottom: 1px solid var(--border); white-space: nowrap; }
+  tbody tr { border-bottom: 1px solid var(--border); transition: background 0.15s; }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: rgba(255,255,255,0.02); }
+  td { padding: 0.85rem 1rem; font-size: 0.84rem; vertical-align: middle; }
+  td.name-cell { font-weight: 600; color: var(--text); }
+  td.muted { color: var(--text-muted); }
+
+  .badge { display: inline-flex; align-items: center; padding: 0.22rem 0.65rem; border-radius: 20px; font-size: 0.7rem; font-weight: 600; letter-spacing: 0.04em; white-space: nowrap; }
+  .badge-lead { background: var(--blue-dim); color: #7aabf0; border: 1px solid rgba(74,127,204,0.25); }
+  .badge-converted { background: var(--green-dim); color: #6fcf8a; border: 1px solid rgba(74,153,96,0.25); }
+
+  .actions-cell { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+
+  .empty-state { text-align: center; padding: 4rem 2rem; color: var(--text-muted); }
+  .empty-icon { font-size: 2.5rem; margin-bottom: 1rem; }
+  .empty-state h3 { font-size: 1rem; color: var(--text); margin-bottom: 0.5rem; }
+  .empty-state p { font-size: 0.83rem; }
+
+  /* ── Modal ── */
+  .modal-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.72); z-index: 500; align-items: center; justify-content: center; padding: 1rem; }
+  .modal-backdrop.open { display: flex; }
+  .modal { background: var(--bg-card); border: 1px solid var(--gold-border); border-radius: 16px; padding: 2rem; width: 100%; max-width: 520px; max-height: 92vh; overflow-y: auto; }
+  .modal-title { font-family: 'Playfair Display', serif; font-size: 1.25rem; color: var(--gold-light); margin-bottom: 1.5rem; }
+  .field-group { margin-bottom: 1rem; }
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .field-group label { display: block; font-size: 0.7rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 0.35rem; }
+  .field-group input, .field-group select, .field-group textarea { width: 100%; background: var(--bg-surface); border: 1px solid var(--border); border-radius: 8px; padding: 0.65rem 0.9rem; color: var(--text); font-family: 'Inter', sans-serif; font-size: 0.88rem; outline: none; transition: border-color 0.2s; }
+  .field-group input:focus, .field-group select:focus, .field-group textarea:focus { border-color: var(--gold-border); }
+  .field-group textarea { resize: vertical; min-height: 80px; }
+  .modal-actions { display: flex; gap: 0.75rem; margin-top: 1.5rem; justify-content: flex-end; }
+  .modal-error { color: #f87171; font-size: 0.8rem; margin-top: 0.75rem; display: none; }
+  .modal-error.show { display: block; }
+
+  /* ── Convert confirmation ── */
+  .convert-modal .convert-info { background: var(--bg-surface); border-radius: 10px; padding: 1rem; margin-bottom: 1.25rem; font-size: 0.85rem; line-height: 1.6; }
+  .convert-modal .convert-info strong { color: var(--gold-light); }
+  .convert-result { background: var(--bg-surface); border-radius: 10px; padding: 1rem; margin-top: 1rem; font-size: 0.82rem; }
+  .convert-result .copy-link { display: flex; gap: 0.5rem; margin-top: 0.75rem; align-items: center; }
+  .convert-result input[readonly] { flex: 1; background: var(--bg-deep); border: 1px solid var(--border); border-radius: 6px; padding: 0.4rem 0.7rem; color: var(--text-muted); font-size: 0.75rem; font-family: monospace; }
+  .toast { position: fixed; bottom: 1.5rem; right: 1.5rem; background: var(--bg-card); border: 1px solid var(--gold-border); border-radius: 10px; padding: 0.8rem 1.2rem; font-size: 0.84rem; z-index: 9999; transform: translateY(4rem); opacity: 0; transition: all 0.3s; pointer-events: none; }
+  .toast.show { transform: none; opacity: 1; }
+</style>
+</head>
+<body>
+
+<nav>
+  <span class="nav-brand">✦ ModernSocial.ai</span>
+  <div class="nav-links">
+    <a href="index.html">Assets</a>
+    <a href="generate.html">Generate</a>
+    <a href="schedule.html">Schedule</a>
+    <a href="scripts.html">Scripts</a>
+    <a href="approve.html">Approve</a>
+    <a href="leads.html" class="active">Leads</a>
+  </div>
+</nav>
+
+<main>
+  <div class="page-header">
+    <div>
+      <div class="page-title">Leads</div>
+      <div class="page-sub">Track prospects and convert them to ModernSocial.ai accounts</div>
+    </div>
+    <button class="btn btn-gold" onclick="openAddModal()">+ Add Lead</button>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-val" id="statTotal">—</div>
+      <div class="stat-label">Total Leads</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val" id="statActive">—</div>
+      <div class="stat-label">Active</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val" id="statConverted">—</div>
+      <div class="stat-label">Converted</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val" id="statStale">—</div>
+      <div class="stat-label">Not contacted in 7+ days</div>
+    </div>
+  </div>
+
+  <div class="toolbar">
+    <div class="search-wrap">
+      <input type="text" id="searchInput" placeholder="Search by name, business, email…" oninput="renderTable()">
+    </div>
+    <select class="filter-select" id="statusFilter" onchange="renderTable()">
+      <option value="">All statuses</option>
+      <option value="lead">Active leads</option>
+      <option value="converted">Converted</option>
+    </select>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Business</th>
+          <th>Contact</th>
+          <th>Last Contacted</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="leadsBody"></tbody>
+    </table>
+    <div class="empty-state" id="emptyState" style="display:none">
+      <div class="empty-icon">📋</div>
+      <h3>No leads yet</h3>
+      <p>Add your first prospect with the button above.</p>
+    </div>
+  </div>
+</main>
+
+<!-- ── Add / Edit Modal ── -->
+<div class="modal-backdrop" id="leadModal">
+  <div class="modal">
+    <div class="modal-title" id="modalTitle">Add Lead</div>
+    <div class="field-row">
+      <div class="field-group">
+        <label>Contact Name *</label>
+        <input type="text" id="fName" placeholder="e.g. Sofia Reyes">
+      </div>
+      <div class="field-group">
+        <label>Phone Number</label>
+        <input type="tel" id="fPhone" placeholder="e.g. (305) 555-0123">
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field-group">
+        <label>Business Name</label>
+        <input type="text" id="fBusiness" placeholder="e.g. Casa Marina">
+      </div>
+      <div class="field-group">
+        <label>Business Type</label>
+        <select id="fBizType">
+          <option value="">Select…</option>
+          <option value="restaurant">Restaurant</option>
+          <option value="spa">Spa</option>
+          <option value="gallery">Gallery</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+    </div>
+    <div class="field-group">
+      <label>Email</label>
+      <input type="email" id="fEmail" placeholder="e.g. sofia@casamarina.com">
+    </div>
+    <div class="field-group">
+      <label>Date Last Contacted</label>
+      <input type="date" id="fLastContacted">
+    </div>
+    <div class="field-group">
+      <label>Notes</label>
+      <textarea id="fNotes" placeholder="e.g. Met at food expo, interested in Instagram automation…"></textarea>
+    </div>
+    <div class="modal-error" id="modalError"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-gold" id="modalSaveBtn" onclick="saveLead()">Save Lead</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Convert Modal ── -->
+<div class="modal-backdrop" id="convertModal">
+  <div class="modal convert-modal">
+    <div class="modal-title">Convert to Business Account</div>
+    <div class="convert-info" id="convertInfo"></div>
+    <div id="convertResult" style="display:none">
+      <div style="color:var(--green);font-weight:600;margin-bottom:0.5rem">✓ Account created!</div>
+      <div class="convert-result">
+        <div style="color:var(--text-muted);margin-bottom:0.35rem">Send this onboarding link to your client:</div>
+        <div class="copy-link">
+          <input type="text" id="convertLink" readonly>
+          <button class="btn btn-ghost btn-sm" onclick="copyLink()">Copy</button>
+        </div>
+        <div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.5rem">This link logs them in directly so they can finish setting up their account.</div>
+      </div>
+    </div>
+    <div id="convertActions">
+      <p style="font-size:0.84rem;color:var(--text-muted);margin-bottom:1.5rem">This will create a ModernSocial.ai account for <strong id="convertName" style="color:var(--text)"></strong> and generate a login link you can send them to get started.</p>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="closeConvertModal()">Cancel</button>
+        <button class="btn btn-convert" id="convertBtn" onclick="doConvert()">Convert to Account →</button>
+      </div>
+    </div>
+    <div style="margin-top:1rem;text-align:right;display:none" id="convertDoneBtn">
+      <button class="btn btn-ghost" onclick="closeConvertModal()">Done</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let leads = [];
+let editingId = null;
+let convertingId = null;
+
+// ── Load ──────────────────────────────────────────────────────────────────
+async function loadLeads() {
+  try {
+    const res = await fetch('/api/leads');
+    leads = await res.json();
+    renderStats();
+    renderTable();
+  } catch (e) { showToast('Failed to load leads'); }
+}
+
+// ── Stats ─────────────────────────────────────────────────────────────────
+function renderStats() {
+  const total     = leads.length;
+  const active    = leads.filter(l => l.status === 'lead').length;
+  const converted = leads.filter(l => l.status === 'converted').length;
+  const cutoff    = new Date(); cutoff.setDate(cutoff.getDate() - 7);
+  const stale     = leads.filter(l => l.status === 'lead' && (!l.lastContactedAt || new Date(l.lastContactedAt) < cutoff)).length;
+  document.getElementById('statTotal').textContent     = total;
+  document.getElementById('statActive').textContent    = active;
+  document.getElementById('statConverted').textContent = converted;
+  document.getElementById('statStale').textContent     = stale;
+}
+
+// ── Table render ──────────────────────────────────────────────────────────
+function renderTable() {
+  const q       = document.getElementById('searchInput').value.toLowerCase();
+  const filter  = document.getElementById('statusFilter').value;
+  const tbody   = document.getElementById('leadsBody');
+  const empty   = document.getElementById('emptyState');
+
+  let filtered = leads.filter(l => {
+    if (filter && l.status !== filter) return false;
+    if (!q) return true;
+    return [l.name, l.businessName, l.email, l.phone, l.notes].some(v => v?.toLowerCase().includes(q));
+  });
+
+  if (!filtered.length) {
+    tbody.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+
+  tbody.innerHTML = filtered.map(l => {
+    const lastDate = l.lastContactedAt ? formatDate(l.lastContactedAt) : '<span style="color:var(--text-muted)">Never</span>';
+    const isStale  = l.status === 'lead' && (!l.lastContactedAt || daysSince(l.lastContactedAt) >= 7);
+    const dateCell = isStale ? `<span style="color:#f97316">${lastDate}</span>` : lastDate;
+    const badge    = l.status === 'converted'
+      ? `<span class="badge badge-converted">✓ Converted</span>`
+      : `<span class="badge badge-lead">Lead</span>`;
+
+    const bizType  = l.businessType ? `<span style="color:var(--text-muted);font-size:0.75rem;display:block">${capitalize(l.businessType)}</span>` : '';
+
+    return `<tr>
+      <td class="name-cell">${esc(l.name)}${l.notes ? `<span title="${esc(l.notes)}" style="margin-left:0.4rem;color:var(--text-muted);cursor:default">📝</span>` : ''}</td>
+      <td>${l.businessName ? esc(l.businessName) : '<span style="color:var(--text-muted)">—</span>'}${bizType}</td>
+      <td class="muted">${l.email ? `<div>${esc(l.email)}</div>` : ''}${l.phone ? `<div>${esc(l.phone)}</div>` : ''}${!l.email && !l.phone ? '—' : ''}</td>
+      <td>${dateCell}</td>
+      <td>${badge}</td>
+      <td><div class="actions-cell">
+        <button class="btn btn-ghost btn-sm" onclick="openEditModal(${l.id})">Edit</button>
+        ${l.status !== 'converted' ? `<button class="btn btn-convert btn-sm" onclick="openConvertModal(${l.id})">Convert</button>` : ''}
+        <button class="btn btn-danger btn-sm" onclick="deleteLead(${l.id})">Delete</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Add / Edit modal ──────────────────────────────────────────────────────
+function openAddModal() {
+  editingId = null;
+  document.getElementById('modalTitle').textContent = 'Add Lead';
+  document.getElementById('modalSaveBtn').textContent = 'Save Lead';
+  clearForm();
+  document.getElementById('leadModal').classList.add('open');
+}
+
+function openEditModal(id) {
+  const l = leads.find(x => x.id === id);
+  if (!l) return;
+  editingId = id;
+  document.getElementById('modalTitle').textContent = 'Edit Lead';
+  document.getElementById('modalSaveBtn').textContent = 'Save Changes';
+  document.getElementById('fName').value          = l.name || '';
+  document.getElementById('fPhone').value         = l.phone || '';
+  document.getElementById('fBusiness').value      = l.businessName || '';
+  document.getElementById('fBizType').value       = l.businessType || '';
+  document.getElementById('fEmail').value         = l.email || '';
+  document.getElementById('fLastContacted').value = l.lastContactedAt ? l.lastContactedAt.split('T')[0] : '';
+  document.getElementById('fNotes').value         = l.notes || '';
+  document.getElementById('modalError').classList.remove('show');
+  document.getElementById('leadModal').classList.add('open');
+}
+
+function closeModal() { document.getElementById('leadModal').classList.remove('open'); }
+
+function clearForm() {
+  ['fName','fPhone','fBusiness','fEmail','fNotes'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('fBizType').value = '';
+  document.getElementById('fLastContacted').value = '';
+  document.getElementById('modalError').classList.remove('show');
+}
+
+async function saveLead() {
+  const name    = document.getElementById('fName').value.trim();
+  const errEl   = document.getElementById('modalError');
+  errEl.classList.remove('show');
+  if (!name) { errEl.textContent = 'Contact name is required.'; errEl.classList.add('show'); return; }
+
+  const payload = {
+    name,
+    phone:           document.getElementById('fPhone').value.trim()        || null,
+    businessName:    document.getElementById('fBusiness').value.trim()     || null,
+    businessType:    document.getElementById('fBizType').value             || null,
+    email:           document.getElementById('fEmail').value.trim()        || null,
+    lastContactedAt: document.getElementById('fLastContacted').value       || null,
+    notes:           document.getElementById('fNotes').value.trim()        || null,
+  };
+
+  const btn = document.getElementById('modalSaveBtn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+
+  try {
+    const url    = editingId ? `/api/leads/${editingId}` : '/api/leads';
+    const method = editingId ? 'PATCH' : 'POST';
+    const res    = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    if (!res.ok) throw new Error((await res.json()).error || 'Save failed');
+    closeModal();
+    await loadLeads();
+    showToast(editingId ? 'Lead updated' : 'Lead added');
+  } catch (e) {
+    errEl.textContent = e.message; errEl.classList.add('show');
+  } finally {
+    btn.disabled = false; btn.textContent = editingId ? 'Save Changes' : 'Save Lead';
+  }
+}
+
+// ── Delete ────────────────────────────────────────────────────────────────
+async function deleteLead(id) {
+  const l = leads.find(x => x.id === id);
+  if (!confirm(`Delete lead for ${l?.name}? This cannot be undone.`)) return;
+  try {
+    await fetch(`/api/leads/${id}`, { method: 'DELETE' });
+    await loadLeads();
+    showToast('Lead deleted');
+  } catch { showToast('Delete failed', true); }
+}
+
+// ── Convert modal ─────────────────────────────────────────────────────────
+function openConvertModal(id) {
+  const l = leads.find(x => x.id === id);
+  if (!l) return;
+  convertingId = id;
+  document.getElementById('convertName').textContent = l.businessName || l.name;
+  document.getElementById('convertInfo').innerHTML =
+    `<strong>${esc(l.name)}</strong>${l.businessName ? ` · ${esc(l.businessName)}` : ''}` +
+    `${l.email ? `<br>Email: ${esc(l.email)}` : ''}` +
+    `${l.businessType ? `<br>Type: ${capitalize(l.businessType)}` : ''}`;
+  document.getElementById('convertResult').style.display   = 'none';
+  document.getElementById('convertActions').style.display  = 'block';
+  document.getElementById('convertDoneBtn').style.display  = 'none';
+  document.getElementById('convertBtn').disabled           = false;
+  document.getElementById('convertBtn').textContent        = 'Convert to Account →';
+  document.getElementById('convertModal').classList.add('open');
+}
+
+function closeConvertModal() {
+  document.getElementById('convertModal').classList.remove('open');
+  convertingId = null;
+}
+
+async function doConvert() {
+  const btn = document.getElementById('convertBtn');
+  btn.disabled = true; btn.textContent = 'Creating account…';
+  try {
+    const res  = await fetch(`/api/leads/${convertingId}/convert`, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Conversion failed');
+
+    // Build the onboarding link with the token
+    const link = `${location.origin}/auth-callback.html#token=${encodeURIComponent(data.token)}`;
+    document.getElementById('convertLink').value = link;
+    document.getElementById('convertResult').style.display  = 'block';
+    document.getElementById('convertActions').style.display = 'none';
+    document.getElementById('convertDoneBtn').style.display = 'block';
+    await loadLeads();
+    showToast('Account created!');
+  } catch (e) {
+    showToast(e.message, true);
+    btn.disabled = false; btn.textContent = 'Convert to Account →';
+  }
+}
+
+function copyLink() {
+  const input = document.getElementById('convertLink');
+  input.select();
+  document.execCommand('copy');
+  showToast('Link copied!');
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────
+function formatDate(iso) {
+  const d = new Date(iso);
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+function daysSince(iso) {
+  return Math.floor((Date.now() - new Date(iso)) / 86400000);
+}
+function capitalize(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : ''; }
+function esc(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function showToast(msg, error = false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.borderColor = error ? 'rgba(204,68,68,0.4)' : 'var(--gold-border)';
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// Close modals on backdrop click
+document.getElementById('leadModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeModal(); });
+document.getElementById('convertModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeConvertModal(); });
+
+loadLeads();
+</script>
+</body>
+</html>
