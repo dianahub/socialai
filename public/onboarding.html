@@ -354,6 +354,23 @@
     margin-top: 0.75rem; display: none;
   }
   .saving-msg.show { display: block; }
+
+  /* ── Business type pills ── */
+  .biz-type-row {
+    display: flex; gap: 0.6rem; flex-wrap: wrap; margin-top: 0.35rem;
+  }
+  .biz-pill {
+    background: var(--bg-surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 0.55rem 1.15rem;
+    color: var(--text-muted); font-family: 'Inter', sans-serif;
+    font-size: 0.85rem; font-weight: 500; cursor: pointer;
+    transition: all 0.2s; white-space: nowrap;
+  }
+  .biz-pill:hover { border-color: var(--gold-border); color: var(--text); }
+  .biz-pill.active {
+    background: var(--gold-dim); border-color: var(--gold-border);
+    color: var(--gold-light);
+  }
 </style>
 </head>
 <body>
@@ -378,17 +395,30 @@
 
 <div class="card">
 
-  <!-- ── Step 1: Restaurant Profile ── -->
+  <!-- ── Step 1: Business Profile ── -->
   <div class="step active" id="step1">
-    <div class="step-title">Your Restaurant</div>
+    <div class="step-title" id="step1Title">Your Business</div>
     <div class="step-subtitle">Let's start with the basics. This info appears in your generated content.</div>
 
+    <div class="field-group" style="margin-bottom:1.5rem">
+      <label>Business Type</label>
+      <div class="biz-type-row">
+        <button type="button" class="biz-pill active" data-type="restaurant" onclick="setBizType('restaurant')">Restaurant</button>
+        <button type="button" class="biz-pill" data-type="spa" onclick="setBizType('spa')">Spa</button>
+        <button type="button" class="biz-pill" data-type="gallery" onclick="setBizType('gallery')">Gallery</button>
+        <button type="button" class="biz-pill" data-type="other" onclick="setBizType('other')">Other</button>
+      </div>
+      <div id="otherTypeWrap" style="display:none;margin-top:0.75rem">
+        <input type="text" id="otherType" placeholder="e.g. Yoga Studio, Boutique, Salon…" oninput="applyBusinessType()" />
+      </div>
+    </div>
+
     <div class="field-group">
-      <label>Restaurant Name</label>
+      <label id="nameLabelEl">Business Name</label>
       <input type="text" id="restaurantName" placeholder="e.g. The Golden Fork" />
     </div>
     <div class="field-row">
-      <div class="field-group">
+      <div class="field-group" id="cuisineGroup">
         <label>Cuisine Type</label>
         <select id="cuisineType">
           <option value="">Select cuisine…</option>
@@ -414,7 +444,7 @@
     </div>
     <div class="field-row">
       <div class="field-group">
-        <label>Owner Name <span style="font-weight:400;text-transform:none;letter-spacing:0;opacity:0.7">(speaks in twin video)</span></label>
+        <label id="ownerLabelEl">Owner Name <span style="font-weight:400;text-transform:none;letter-spacing:0;opacity:0.7">(speaks in twin video)</span></label>
         <input type="text" id="ownerName" placeholder="e.g. Marco Rossi" />
       </div>
       <div class="field-group">
@@ -429,11 +459,11 @@
       </div>
     </div>
     <div class="field-row">
-      <div class="field-group">
+      <div class="field-group" id="chefNameGroup">
         <label>Executive Chef <span style="font-weight:400;text-transform:none;letter-spacing:0;opacity:0.7">(optional)</span></label>
         <input type="text" id="chefName" placeholder="e.g. Chef Marie Dubois" />
       </div>
-      <div class="field-group">
+      <div class="field-group" id="taglineGroup">
         <label>Tagline <span style="font-weight:400;text-transform:none;letter-spacing:0;opacity:0.7">(optional)</span></label>
         <input type="text" id="tagline" placeholder="e.g. Where every meal is a memory" />
       </div>
@@ -555,8 +585,8 @@
 
     <div class="done-summary" id="doneSummary">
       <div class="summary-row">
-        <span class="summary-icon">🍽</span>
-        <span class="summary-label">Restaurant</span>
+        <span class="summary-icon" id="sumBizIcon">🍽</span>
+        <span class="summary-label" id="sumBizLabel">Restaurant</span>
         <span class="summary-value" id="sumName">—</span>
       </div>
       <div class="summary-row">
@@ -605,6 +635,7 @@ const state = {
   primaryColor: '#c8a84b', accentColor: '#e5c97a', bgColor: '#090910',
   logoUploaded: false, ownerUploaded: false, photosCount: 0,
   igConnected: false,
+  businessType: 'restaurant',
 };
 
 let currentStep = 1;
@@ -613,12 +644,70 @@ function authHeaders() {
   return { 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json' };
 }
 
+// ── Business type helpers ──
+const BIZ_META = {
+  restaurant: { label: 'Restaurant', icon: '🍽', namePlaceholder: 'e.g. The Golden Fork' },
+  spa:        { label: 'Spa',        icon: '💆', namePlaceholder: 'e.g. Serenity Spa & Wellness' },
+  gallery:    { label: 'Gallery',    icon: '🖼', namePlaceholder: 'e.g. The Meridian Gallery' },
+  other:      { label: 'Business',   icon: '✨', namePlaceholder: 'e.g. Blue Moon Studio' },
+};
+
+function getBizLabel() {
+  if (state.businessType === 'other') {
+    const custom = document.getElementById('otherType')?.value.trim();
+    return custom || 'Business';
+  }
+  return BIZ_META[state.businessType]?.label || 'Business';
+}
+
+function setBizType(type) {
+  state.businessType = type;
+  document.querySelectorAll('.biz-pill').forEach(p =>
+    p.classList.toggle('active', p.dataset.type === type)
+  );
+  document.getElementById('otherTypeWrap').style.display = type === 'other' ? 'block' : 'none';
+  applyBusinessType();
+}
+
+function applyBusinessType() {
+  const isRestaurant = state.businessType === 'restaurant';
+  const meta  = BIZ_META[state.businessType] || BIZ_META.other;
+  const label = getBizLabel();
+
+  document.getElementById('step1Title').textContent = isRestaurant ? 'Your Restaurant' : 'Your Business';
+  document.getElementById('nameLabelEl').textContent = label + ' Name';
+  document.getElementById('restaurantName').placeholder = meta.namePlaceholder;
+
+  // Chef name only for restaurants
+  document.getElementById('chefNameGroup').style.display = isRestaurant ? '' : 'none';
+
+  // Cuisine type only for restaurants; non-restaurants don't need a menu type
+  document.getElementById('cuisineGroup').style.display = isRestaurant ? '' : 'none';
+
+  // When chef hidden, make tagline take full width
+  document.getElementById('taglineGroup').style.gridColumn = isRestaurant ? '' : '1 / -1';
+
+  // Color preview emoji
+  document.querySelector('.preview-logo-box').textContent = meta.icon;
+}
+
 // ── Pre-fill from existing config ──
 (async () => {
   try {
     const r = await fetch('/api/config', { headers: { Authorization: `Bearer ${TOKEN}` } });
     if (!r.ok) return;
     const cfg = await r.json();
+    if (cfg.businessType && cfg.businessType !== 'restaurant') {
+      // Restore pill selection
+      if (['spa', 'gallery', 'other'].includes(cfg.businessType)) {
+        setBizType(cfg.businessType);
+      } else {
+        // Could be a custom value stored as 'other'
+        setBizType('other');
+        const otherInput = document.getElementById('otherType');
+        if (otherInput) otherInput.value = cfg.businessType;
+      }
+    }
     if (cfg.restaurantName) {
       document.getElementById('restaurantName').value = cfg.restaurantName;
       state.restaurantName = cfg.restaurantName;
@@ -634,14 +723,14 @@ function authHeaders() {
 
   // Check IG
   try {
-    const me = await fetch('/api/auth/me', { headers: { Authorization: `Bearer ${TOKEN}` } });
-    const data = await me.json();
-    // IG connected if instagramUserId is set — check via restaurant record
     const rr = await fetch('/api/db/restaurants', { headers: { Authorization: `Bearer ${TOKEN}` } });
     const rs  = await rr.json();
     if (rs[0]?.instagramUserId) { state.igConnected = true; showIgConnected(); }
   } catch {}
 })();
+
+// Apply default business type labels on load
+applyBusinessType();
 
 // ── Step navigation ──
 function goStep(n) {
@@ -670,13 +759,20 @@ async function saveStep1() {
   const name = document.getElementById('restaurantName').value.trim();
   const err  = document.getElementById('err1');
   err.classList.remove('show');
-  if (!name) { err.textContent = 'Restaurant name is required.'; err.classList.add('show'); return; }
+  if (!name) { err.textContent = `${getBizLabel()} name is required.`; err.classList.add('show'); return; }
+
+  const isRestaurant = state.businessType === 'restaurant';
+
+  // businessType saved as the slug ('restaurant','spa','gallery') or the custom text for 'other'
+  const bizTypeToSave = state.businessType === 'other'
+    ? (document.getElementById('otherType').value.trim() || 'other')
+    : state.businessType;
 
   state.restaurantName = name;
-  state.cuisineType    = document.getElementById('cuisineType').value;
+  state.cuisineType    = isRestaurant ? document.getElementById('cuisineType').value : '';
   state.location       = document.getElementById('location').value.trim();
   state.ownerName      = document.getElementById('ownerName').value.trim();
-  state.chefName       = document.getElementById('chefName').value.trim();
+  state.chefName       = isRestaurant ? document.getElementById('chefName').value.trim() : '';
   state.voiceTone      = document.getElementById('voiceTone').value;
   state.tagline        = document.getElementById('tagline').value.trim();
 
@@ -691,6 +787,7 @@ async function saveStep1() {
         chefName:       state.chefName,
         tagline:        state.tagline,
         voiceTone:      state.voiceTone,
+        businessType:   bizTypeToSave,
       }),
     });
     if (!res.ok) throw new Error((await res.json()).error || 'Save failed');
@@ -837,6 +934,9 @@ if (window.location.search.includes('ig_connected=1')) {
 
 // ── Step 5: Summary & generate ──
 function buildSummary() {
+  const meta = BIZ_META[state.businessType] || BIZ_META.other;
+  document.getElementById('sumBizIcon').textContent  = meta.icon;
+  document.getElementById('sumBizLabel').textContent = getBizLabel();
   document.getElementById('sumName').textContent    = state.restaurantName || '—';
   document.getElementById('sumLogo').innerHTML      = state.logoUploaded  ? '<span class="check">✓ Uploaded</span>' : '<span class="skip">Skipped</span>';
   document.getElementById('sumOwner').innerHTML     = state.ownerUploaded ? '<span class="check">✓ Uploaded</span>' : '<span class="skip">Skipped</span>';

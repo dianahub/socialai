@@ -454,12 +454,14 @@ function restaurantToConfig(r) {
     twinStyle:      r.twinStyle     || '',
     twinUsecase:    r.twinUsecase   || '',
     ownerScript:    r.ownerScript   || '',
+    businessType:   r.businessType  || 'restaurant',
   };
 }
 
 app.post('/api/config', async (req, res) => {
   const { restaurantId: rId, restaurantName, cuisineType, ownerName, tagline,
-          primaryColor, accentColor, bgColor, platforms, twinStyle, twinUsecase, ownerScript } = req.body;
+          primaryColor, accentColor, bgColor, platforms, twinStyle, twinUsecase, ownerScript,
+          businessType } = req.body;
   const restaurantId = req.restaurantId || Number(rId) || 1;
   const data = {};
   if (restaurantName !== undefined) data.name                = restaurantName;
@@ -473,6 +475,7 @@ app.post('/api/config', async (req, res) => {
   if (twinStyle      !== undefined) data.twinStyle           = twinStyle;
   if (twinUsecase    !== undefined) data.twinUsecase         = twinUsecase;
   if (ownerScript    !== undefined) data.ownerScript         = ownerScript;
+  if (businessType   !== undefined) data.businessType        = businessType;
   try {
     await db.restaurant.update({ where: { id: restaurantId }, data });
     // Also write file fallback so local dev without DB still works
