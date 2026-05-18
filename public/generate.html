@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <title>Content Generator — ModernSocial.app</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -105,6 +106,8 @@
   .gen-card:active { transform: translateY(0); }
   .gen-card.generating { border-color: var(--gold); pointer-events: none; }
   .gen-card.generating .btn-gen-twin { pointer-events: all; position: relative; z-index: 2; }
+  /* Twin card stays fully interactive even while generating — JS guards against double-trigger */
+  #card-twin, #card-twin.generating { pointer-events: auto; }
   .gen-card.done { border-color: var(--green); }
 
   .gen-icon { font-size: 2rem; margin-bottom: 0.75rem; }
