@@ -397,55 +397,21 @@
 
   <!-- ── Step 1: Business Profile ── -->
   <div class="step active" id="step1">
-    <div class="step-title" id="step1Title">Your Business</div>
-    <div class="step-subtitle">Choose your business type, then fill in the basics. This info appears in your generated content.</div>
-
-    <div class="field-group" style="margin-bottom:1.5rem">
-      <label>Business Type</label>
-      <div class="biz-type-row">
-        <button type="button" class="biz-pill active" data-type="restaurant" onclick="setBizType('restaurant')">Restaurant</button>
-        <button type="button" class="biz-pill" data-type="spa" onclick="setBizType('spa')">Spa</button>
-        <button type="button" class="biz-pill" data-type="gallery" onclick="setBizType('gallery')">Gallery</button>
-        <button type="button" class="biz-pill" data-type="other" onclick="setBizType('other')">Other</button>
-      </div>
-      <div id="otherTypeWrap" style="display:none;margin-top:0.75rem">
-        <input type="text" id="otherType" placeholder="e.g. Yoga Studio, Boutique, Salon…" oninput="applyBusinessType()" />
-      </div>
-    </div>
+    <div class="step-title">Your Business</div>
+    <div class="step-subtitle">Fill in the basics. This info appears in your generated content.</div>
 
     <div class="field-group">
-      <label id="nameLabelEl">Business Name</label>
-      <input type="text" id="restaurantName" placeholder="e.g. The Golden Fork" />
+      <label>Business Name</label>
+      <input type="text" id="restaurantName" placeholder="e.g. Blue Moon Studio" />
     </div>
-    <div class="field-row">
-      <div class="field-group" id="cuisineGroup">
-        <label>Cuisine Type</label>
-        <select id="cuisineType">
-          <option value="">Select cuisine…</option>
-          <option>Fine Dining</option>
-          <option>Italian</option>
-          <option>Japanese</option>
-          <option>French</option>
-          <option>Mexican</option>
-          <option>Mediterranean</option>
-          <option>American</option>
-          <option>Seafood</option>
-          <option>Steakhouse</option>
-          <option>Asian Fusion</option>
-          <option>Farm-to-Table</option>
-          <option>Cocktail Bar</option>
-          <option>Other</option>
-        </select>
-      </div>
-      <div class="field-group">
-        <label>City / Location</label>
-        <input type="text" id="location" placeholder="e.g. Miami, FL" />
-      </div>
+    <div class="field-group">
+      <label>City / Location</label>
+      <input type="text" id="location" placeholder="e.g. Miami, FL" />
     </div>
     <div class="field-row">
       <div class="field-group">
-        <label id="ownerLabelEl">Owner Name <span style="font-weight:400;text-transform:none;letter-spacing:0;opacity:0.7">(speaks in twin video)</span></label>
-        <input type="text" id="ownerName" placeholder="e.g. Marco Rossi" />
+        <label>Owner Name <span style="font-weight:400;text-transform:none;letter-spacing:0;opacity:0.7">(speaks in twin video)</span></label>
+        <input type="text" id="ownerName" placeholder="e.g. Alex Rivera" />
       </div>
       <div class="field-group">
         <label>Brand Voice</label>
@@ -458,15 +424,9 @@
         </select>
       </div>
     </div>
-    <div class="field-row">
-      <div class="field-group" id="chefNameGroup">
-        <label>Executive Chef <span style="font-weight:400;text-transform:none;letter-spacing:0;opacity:0.7">(optional)</span></label>
-        <input type="text" id="chefName" placeholder="e.g. Chef Marie Dubois" />
-      </div>
-      <div class="field-group" id="taglineGroup">
-        <label>Tagline <span style="font-weight:400;text-transform:none;letter-spacing:0;opacity:0.7">(optional)</span></label>
-        <input type="text" id="tagline" placeholder="e.g. Where every meal is a memory" />
-      </div>
+    <div class="field-group">
+      <label>Tagline <span style="font-weight:400;text-transform:none;letter-spacing:0;opacity:0.7">(optional)</span></label>
+      <input type="text" id="tagline" placeholder="e.g. Where every moment is a memory" />
     </div>
 
     <div class="btn-row">
@@ -561,13 +521,8 @@
       <div class="ig-icon">📷</div>
       <div class="ig-text">
         <h3>Instagram Business</h3>
-        <p>Connect your professional or creator account to enable auto-publishing.</p>
+        <p>Contact support to connect your Instagram account and enable auto-publishing.</p>
       </div>
-      <a class="btn-ig" id="igBtn" href="/auth/instagram/start">Connect</a>
-    </div>
-
-    <div id="igConnected" class="ig-connected">
-      <span>✓</span> Instagram connected
     </div>
 
     <div class="btn-row">
@@ -670,30 +625,6 @@ function setBizType(type) {
 }
 
 function applyBusinessType() {
-  const isRestaurant = state.businessType === 'restaurant';
-  const meta  = BIZ_META[state.businessType] || BIZ_META.other;
-  const label = getBizLabel();
-
-  document.getElementById('step1Title').textContent = 'Your Business';
-  document.getElementById('nameLabelEl').textContent = label + ' Name';
-  document.getElementById('restaurantName').placeholder = meta.namePlaceholder;
-
-  // Chef name only for restaurants
-  document.getElementById('chefNameGroup').style.display = isRestaurant ? '' : 'none';
-
-  // Cuisine type only for restaurants; non-restaurants don't need a menu type
-  document.getElementById('cuisineGroup').style.display = isRestaurant ? '' : 'none';
-
-  // When chef hidden, make tagline take full width
-  document.getElementById('taglineGroup').style.gridColumn = isRestaurant ? '' : '1 / -1';
-
-  // Color preview emoji
-  document.querySelector('.preview-logo-box').textContent = meta.icon;
-
-  // Assets step logo label
-  const logoLbl = document.getElementById('logoUploadLabel');
-  if (logoLbl) logoLbl.textContent = label + ' Logo';
-
   updatePreview();
 }
 
@@ -703,24 +634,6 @@ function applyBusinessType() {
     const r = await fetch('/api/config', { headers: { Authorization: `Bearer ${TOKEN}` } });
     if (!r.ok) return;
     const cfg = await r.json();
-    if (cfg.businessType && cfg.businessType !== 'restaurant') {
-      // Restore pill selection
-      if (['spa', 'gallery', 'other'].includes(cfg.businessType)) {
-        setBizType(cfg.businessType);
-      } else {
-        // Could be a custom value stored as 'other'
-        setBizType('other');
-        const otherInput = document.getElementById('otherType');
-        if (otherInput) otherInput.value = cfg.businessType;
-      }
-    }
-    if (cfg.restaurantName) {
-      document.getElementById('restaurantName').value = cfg.restaurantName;
-      state.restaurantName = cfg.restaurantName;
-    }
-    if (cfg.cuisineType)  document.getElementById('cuisineType').value  = cfg.cuisineType;
-    if (cfg.ownerName)    document.getElementById('ownerName').value    = cfg.ownerName;
-    if (cfg.tagline)      document.getElementById('tagline').value      = cfg.tagline;
     if (cfg.primaryColor) { document.getElementById('primaryColor').value = cfg.primaryColor; document.getElementById('primaryHex').value = cfg.primaryColor; }
     if (cfg.accentColor)  { document.getElementById('accentColor').value  = cfg.accentColor;  document.getElementById('accentHex').value  = cfg.accentColor; }
     if (cfg.bgColor)      { document.getElementById('bgColor').value      = cfg.bgColor;      document.getElementById('bgHex').value      = cfg.bgColor; }
@@ -731,7 +644,7 @@ function applyBusinessType() {
   try {
     const rr = await fetch('/api/db/restaurants', { headers: { Authorization: `Bearer ${TOKEN}` } });
     const rs  = await rr.json();
-    if (rs[0]?.instagramUserId) { state.igConnected = true; showIgConnected(); }
+    if (rs[0]?.instagramUserId) state.igConnected = true;
   } catch {}
 })();
 
@@ -767,18 +680,9 @@ async function saveStep1() {
   err.classList.remove('show');
   if (!name) { err.textContent = `${getBizLabel()} name is required.`; err.classList.add('show'); return; }
 
-  const isRestaurant = state.businessType === 'restaurant';
-
-  // businessType saved as the slug ('restaurant','spa','gallery') or the custom text for 'other'
-  const bizTypeToSave = state.businessType === 'other'
-    ? (document.getElementById('otherType').value.trim() || 'other')
-    : state.businessType;
-
   state.restaurantName = name;
-  state.cuisineType    = isRestaurant ? document.getElementById('cuisineType').value : '';
   state.location       = document.getElementById('location').value.trim();
   state.ownerName      = document.getElementById('ownerName').value.trim();
-  state.chefName       = isRestaurant ? document.getElementById('chefName').value.trim() : '';
   state.voiceTone      = document.getElementById('voiceTone').value;
   state.tagline        = document.getElementById('tagline').value.trim();
 
@@ -788,12 +692,9 @@ async function saveStep1() {
       headers: authHeaders(),
       body: JSON.stringify({
         restaurantName: state.restaurantName,
-        cuisineType:    state.cuisineType,
         ownerName:      state.ownerName,
-        chefName:       state.chefName,
         tagline:        state.tagline,
         voiceTone:      state.voiceTone,
-        businessType:   bizTypeToSave,
       }),
     });
     if (!res.ok) throw new Error((await res.json()).error || 'Save failed');
@@ -836,10 +737,7 @@ function updatePreview() {
   document.getElementById('previewTag').style.color  = primary;
   document.getElementById('previewName').textContent = state.restaurantName || document.getElementById('restaurantName')?.value || 'Your Business';
   const loc = document.getElementById('location')?.value || state.location || '';
-  const isRestaurant = state.businessType === 'restaurant';
-  // Only show cuisine in the preview if it's a restaurant and a cuisine was actually chosen
-  const cui = isRestaurant ? (document.getElementById('cuisineType')?.value || state.cuisineType || '') : '';
-  document.getElementById('previewTag').textContent = [cui, loc].filter(Boolean).join(' · ');
+  document.getElementById('previewTag').textContent = loc;
 }
 
 async function saveStep2() {
@@ -929,15 +827,7 @@ async function uploadPhotos(input) {
 
 // ── Step 4: Instagram ──
 function showIgConnected() {
-  document.getElementById('igBtn').style.display   = 'none';
-  document.getElementById('igConnected').style.display = 'flex';
-}
-
-// Check if returning from IG OAuth
-if (window.location.search.includes('ig_connected=1')) {
   state.igConnected = true;
-  // clean URL
-  history.replaceState({}, '', '/onboarding.html');
 }
 
 // ── Step 5: Summary & generate ──
