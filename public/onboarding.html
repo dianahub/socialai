@@ -400,6 +400,16 @@
     <div class="step-title">Your Business</div>
     <div class="step-subtitle">Fill in the basics. This info appears in your generated content.</div>
 
+    <div class="field-group" style="margin-bottom:1.5rem">
+      <label>Business Type</label>
+      <div class="biz-type-row">
+        <button type="button" class="biz-pill" data-type="restaurant" onclick="setBizType('restaurant')">Restaurant</button>
+        <button type="button" class="biz-pill" data-type="spa" onclick="setBizType('spa')">Spa</button>
+        <button type="button" class="biz-pill" data-type="gallery" onclick="setBizType('gallery')">Gallery</button>
+        <button type="button" class="biz-pill" data-type="other" onclick="setBizType('other')">Other</button>
+      </div>
+    </div>
+
     <div class="field-group">
       <label>Business Name</label>
       <input type="text" id="restaurantName" placeholder="e.g. Blue Moon Studio" />
@@ -624,6 +634,13 @@ function setBizType(type) {
   applyBusinessType();
 }
 
+function setBizType(type) {
+  state.businessType = type;
+  document.querySelectorAll('.biz-pill').forEach(p =>
+    p.classList.toggle('active', p.dataset.type === type)
+  );
+}
+
 function applyBusinessType() {
   updatePreview();
 }
@@ -695,6 +712,7 @@ async function saveStep1() {
         ownerName:      state.ownerName,
         tagline:        state.tagline,
         voiceTone:      state.voiceTone,
+        businessType:   state.businessType,
       }),
     });
     if (!res.ok) throw new Error((await res.json()).error || 'Save failed');
