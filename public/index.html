@@ -634,9 +634,15 @@
     </div>
 
     <div class="form-grid" style="grid-template-columns:1fr 1fr;gap:1rem;margin-top:0.25rem">
+      <div class="field-group" style="grid-column:1/-1">
+        <label for="igUrl">Instagram Profile URL</label>
+        <input type="url" id="igUrl" placeholder="https://www.instagram.com/yourbusiness"
+               onblur="lookupIgId()" autocomplete="off">
+        <span id="igLookupStatus" style="font-size:0.72rem;margin-top:0.25rem;display:none"></span>
+      </div>
       <div class="field-group">
         <label for="igAccountId">Instagram Account ID</label>
-        <input type="text" id="igAccountId" placeholder="e.g. 17841400000000000">
+        <input type="text" id="igAccountId" placeholder="Auto-filled from URL above">
       </div>
       <div class="field-group">
         <label for="igAccessToken">Access Token</label>
@@ -933,6 +939,7 @@ async function loadSavedState() {
     // Load Instagram credentials + login email
     try {
       const rest = await fetch(`/api/db/restaurants/${rid}`).then(r => r.json());
+      if (rest.instagramUrl)    document.getElementById('igUrl').value = rest.instagramUrl;
       if (rest.instagramUserId) document.getElementById('igAccountId').value = rest.instagramUserId;
       if (rest.instagramAccessToken) {
         document.getElementById('igAccessToken').placeholder = '••••••• (saved — enter new value to update)';
@@ -985,18 +992,44 @@ async function saveLoginCredentials() {
 // ── Instagram credentials ──────────────────────────────────────────────────
 async function saveIgCreds() {
   const rid   = getRestaurantId();
+  const url   = document.getElementById('igUrl').value.trim();
   const id    = document.getElementById('igAccountId').value.trim();
   const token = document.getElementById('igAccessToken').value.trim();
+  const body  = { instagramUrl: url || undefined, instagramUserId: id, instagramAccessToken: token };
   try {
     const res = await fetch(`/api/db/restaurants/${rid}`, {
       method:  'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ instagramUserId: id, instagramAccessToken: token }),
+      body: JSON.stringify(body),
     });
     if (!res.ok) throw new Error((await res.json()).error);
     toast('Instagram credentials saved', 'success');
     await loadIgStatus();
   } catch (e) { toast('Save failed: ' + e.message, 'error'); }
+}
+
+async function lookupIgId() {
+  const url = document.getElementById('igUrl').value.trim();
+  if (!url) return;
+  const statusEl = document.getElementById('igLookupStatus');
+  statusEl.style.display = 'block';
+  statusEl.style.color   = 'var(--text-muted)';
+  statusEl.textContent   = 'Looking up account ID…';
+  try {
+    const res  = await fetch('/api/instagram/lookup-id', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ instagramUrl: url, restaurantId: getRestaurantId() }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    document.getElementById('igAccountId').value = data.accountId;
+    statusEl.style.color   = '#4ade80';
+    statusEl.textContent   = `✓ Found @${data.username}`;
+  } catch (e) {
+    statusEl.style.color   = '#f87171';
+    statusEl.textContent   = e.message;
+  }
 }
 
 async function loadIgStatus() {

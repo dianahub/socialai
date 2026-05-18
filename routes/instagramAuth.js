@@ -166,6 +166,58 @@ router.get('/status', async (req, res) => {
   }
 });
 
+// POST /api/instagram/lookup-id — resolve IG username → business account ID
+// Strategy 1: walk the restaurant's own saved token through their FB pages.
+// Strategy 2: use the system INSTAGRAM_ACCESS_TOKEN + Business Discovery API.
+router.post('/lookup-id', async (req, res) => {
+  const { instagramUrl, restaurantId } = req.body;
+  const rid = restaurantId || req.restaurantId;
+
+  let username = (instagramUrl || '').trim();
+  const match = username.match(/instagram\.com\/([^/?#]+)/);
+  if (match) username = match[1].replace(/\/$/, '');
+  if (!username) return res.status(400).json({ error: 'No Instagram username found in URL' });
+
+  try {
+    // Strategy 1: restaurant's own saved token → walk their FB pages
+    const r = await db.restaurant.findUnique({
+      where:  { id: Number(rid) },
+      select: { instagramAccessToken: true },
+    });
+    if (r?.instagramAccessToken) {
+      const token     = r.instagramAccessToken;
+      const pagesRes  = await fetch(`${GRAPH}/me/accounts?access_token=${encodeURIComponent(token)}`);
+      const pagesData = await pagesRes.json();
+      if (!pagesData.error) {
+        for (const page of (pagesData.data || [])) {
+          const igRes  = await fetch(`${GRAPH}/${page.id}?fields=instagram_business_account{id,username}&access_token=${encodeURIComponent(token)}`);
+          const igData = await igRes.json();
+          const ig     = igData.instagram_business_account;
+          if (ig?.username?.toLowerCase() === username.toLowerCase()) {
+            return res.json({ accountId: ig.id, username: ig.username });
+          }
+        }
+      }
+    }
+
+    // Strategy 2: system token + Business Discovery API (looks up any public IG business account)
+    const sysToken     = process.env.INSTAGRAM_ACCESS_TOKEN;
+    const sysAccountId = process.env.INSTAGRAM_ACCOUNT_ID;
+    if (sysToken && sysAccountId) {
+      const bdRes  = await fetch(`${GRAPH}/${sysAccountId}?fields=business_discovery.fields(id,username)&username=${encodeURIComponent(username)}&access_token=${encodeURIComponent(sysToken)}`);
+      const bdData = await bdRes.json();
+      if (bdData.business_discovery?.id) {
+        return res.json({ accountId: bdData.business_discovery.id, username: bdData.business_discovery.username });
+      }
+      if (bdData.error) return res.status(400).json({ error: bdData.error.message });
+    }
+
+    res.status(404).json({ error: `Could not find Instagram business account for @${username}` });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Daily token refresh for restaurants whose tokens expire within 7 days
 async function refreshExpiringTokens() {
   if (!oauthEnabled()) return;
