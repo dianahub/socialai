@@ -197,6 +197,87 @@ app.get('/auth/google/callback', async (req, res) => {
   }
 });
 
+// ── Admin panel ──────────────────────────────────────────────────────────────
+
+const crypto = require('crypto');
+
+function adminTokenValue() {
+  // Deterministic token derived from ADMIN_SECRET — no session store needed
+  return crypto.createHmac('sha256', process.env.ADMIN_SECRET || 'no-secret')
+    .update('modernsocial-admin-v1')
+    .digest('hex');
+}
+
+function isAdminAuthed(req) {
+  return getCookie(req, 'admin_tok') === adminTokenValue();
+}
+
+function requireAdmin(req, res, next) {
+  if (isAdminAuthed(req)) return next();
+  res.redirect('/admin/login');
+}
+
+// Admin login page
+app.get('/admin/login', (req, res) => {
+  if (isAdminAuthed(req)) return res.redirect('/admin/leads');
+  res.send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Login — ModernSocial.ai</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  body{background:#090910;color:#f0ede8;font-family:'Inter',sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:2rem}
+  .card{background:#12121c;border:1px solid rgba(200,168,75,0.22);border-radius:16px;padding:2.5rem;width:100%;max-width:380px}
+  .brand{font-family:'Playfair Display',serif;font-size:1.05rem;color:#e5c97a;margin-bottom:0.4rem}
+  h1{font-family:'Playfair Display',serif;font-size:1.4rem;margin-bottom:0.3rem}
+  .sub{font-size:0.82rem;color:#7a7773;margin-bottom:2rem}
+  label{display:block;font-size:0.7rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:#7a7773;margin-bottom:0.35rem}
+  input{width:100%;background:#1a1a28;border:1px solid rgba(255,255,255,0.07);border-radius:8px;padding:0.7rem 0.9rem;color:#f0ede8;font-family:'Inter',sans-serif;font-size:0.9rem;outline:none;margin-bottom:1.1rem;transition:border-color 0.2s}
+  input:focus{border-color:rgba(200,168,75,0.4)}
+  button{width:100%;background:#c8a84b;color:#090910;border:none;border-radius:8px;padding:0.78rem;font-family:'Inter',sans-serif;font-size:0.9rem;font-weight:600;cursor:pointer;transition:opacity 0.2s}
+  button:hover{opacity:0.88}
+  .err{color:#f87171;font-size:0.8rem;margin-top:0.75rem;display:none}
+  .err.show{display:block}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="brand">✦ ModernSocial.ai</div>
+  <h1>Admin</h1>
+  <p class="sub">Enter your admin password to continue.</p>
+  <form method="POST" action="/admin/login">
+    <label>Password</label>
+    <input type="password" name="password" autofocus autocomplete="current-password">
+    <button type="submit">Sign in</button>
+    ${req.query.error ? '<div class="err show">Incorrect password.</div>' : ''}
+  </form>
+</div>
+</body>
+</html>`);
+});
+
+app.post('/admin/login', express.urlencoded({ extended: false }), (req, res) => {
+  if (!process.env.ADMIN_SECRET) return res.redirect('/admin/login?error=1');
+  if (req.body.password !== process.env.ADMIN_SECRET) return res.redirect('/admin/login?error=1');
+  const tok      = adminTokenValue();
+  const isSecure = (process.env.APP_URL || '').startsWith('https');
+  res.setHeader('Set-Cookie', `admin_tok=${tok}; HttpOnly; SameSite=Lax; Max-Age=86400; Path=/${isSecure ? '; Secure' : ''}`);
+  res.redirect('/admin/leads');
+});
+
+app.get('/admin/logout', (req, res) => {
+  res.setHeader('Set-Cookie', 'admin_tok=; HttpOnly; Max-Age=0; Path=/');
+  res.redirect('/admin/login');
+});
+
+// Admin leads page — served from memory, not from public/
+app.get('/admin/leads', requireAdmin, (req, res) => {
+  res.sendFile(path.resolve('admin/leads.html'));
+});
+
 // ── Global auth middleware (protects all /api/ except /api/auth/*) ─────────
 app.use((req, res, next) => {
   if (!req.path.startsWith('/api/') || req.path.startsWith('/api/auth/')) return next();
