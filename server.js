@@ -228,7 +228,7 @@ app.get('/admin/login', (req, res) => {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Admin Login — ModernSocial.ai</title>
+<title>Admin Login — ModernSocial.app</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -248,7 +248,7 @@ app.get('/admin/login', (req, res) => {
 </head>
 <body>
 <div class="card">
-  <div class="brand">✦ ModernSocial.ai</div>
+  <div class="brand">✦ ModernSocial.app</div>
   <h1>Admin</h1>
   <p class="sub">Sign in with your admin credentials.</p>
   <form method="POST" action="/admin/login">
@@ -1163,7 +1163,7 @@ app.use('/api/instagram',       igAuthRouter);
 // ── Start ─────────────────────────────────────────────────────────────────────
 
 app.listen(PORT, () => {
-  console.log(`\n  ModernSocial.ai`);
+  console.log(`\n  ModernSocial.app`);
   console.log(`  ─────────────────────────────`);
   console.log(`  http://localhost:${PORT}`);
   console.log(`  Data: ${DATA_DIR}\n`);
