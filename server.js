@@ -216,6 +216,10 @@ function requireAdmin(req, res, next) {
   res.redirect('/admin/login');
 }
 
+// Admin index redirect
+app.get('/admin', (req, res) => res.redirect('/admin/leads'));
+app.get('/admin/', (req, res) => res.redirect('/admin/leads'));
+
 // Admin login page
 app.get('/admin/login', (req, res) => {
   if (isAdminAuthed(req)) return res.redirect('/admin/leads');
