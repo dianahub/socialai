@@ -202,10 +202,9 @@ app.get('/auth/google/callback', async (req, res) => {
 const crypto = require('crypto');
 
 function adminTokenValue() {
-  // Deterministic token derived from ADMIN_SECRET — no session store needed
-  return crypto.createHmac('sha256', process.env.ADMIN_SECRET || 'no-secret')
-    .update('modernsocial-admin-v1')
-    .digest('hex');
+  // Deterministic token derived from admin credentials — no session store needed
+  const key = (process.env.ADMIN_EMAIL || '') + ':' + (process.env.ADMIN_PASSWORD || '');
+  return crypto.createHmac('sha256', key).update('modernsocial-admin-v1').digest('hex');
 }
 
 function isAdminAuthed(req) {
@@ -247,12 +246,14 @@ app.get('/admin/login', (req, res) => {
 <div class="card">
   <div class="brand">✦ ModernSocial.ai</div>
   <h1>Admin</h1>
-  <p class="sub">Enter your admin password to continue.</p>
+  <p class="sub">Sign in with your admin credentials.</p>
   <form method="POST" action="/admin/login">
+    <label>Email</label>
+    <input type="email" name="email" placeholder="your@email.com" autocomplete="email">
     <label>Password</label>
-    <input type="password" name="password" autofocus autocomplete="current-password">
+    <input type="password" name="password" autocomplete="current-password">
     <button type="submit">Sign in</button>
-    ${req.query.error ? '<div class="err show">Incorrect password.</div>' : ''}
+    ${req.query.error ? '<div class="err show">Incorrect email or password.</div>' : ''}
   </form>
 </div>
 </body>
@@ -260,8 +261,11 @@ app.get('/admin/login', (req, res) => {
 });
 
 app.post('/admin/login', express.urlencoded({ extended: false }), (req, res) => {
-  if (!process.env.ADMIN_SECRET) return res.redirect('/admin/login?error=1');
-  if (req.body.password !== process.env.ADMIN_SECRET) return res.redirect('/admin/login?error=1');
+  const validEmail    = process.env.ADMIN_EMAIL    || '';
+  const validPassword = process.env.ADMIN_PASSWORD || '';
+  if (!validEmail || !validPassword) return res.redirect('/admin/login?error=1');
+  if (req.body.email !== validEmail || req.body.password !== validPassword)
+    return res.redirect('/admin/login?error=1');
   const tok      = adminTokenValue();
   const isSecure = (process.env.APP_URL || '').startsWith('https');
   res.setHeader('Set-Cookie', `admin_tok=${tok}; HttpOnly; SameSite=Lax; Max-Age=86400; Path=/${isSecure ? '; Secure' : ''}`);
@@ -281,9 +285,11 @@ app.get('/admin/leads', requireAdmin, (req, res) => {
 // ── Global auth middleware (protects all /api/ except /api/auth/*) ─────────
 app.use((req, res, next) => {
   if (!req.path.startsWith('/api/') || req.path.startsWith('/api/auth/')) return next();
-  // ADMIN_SECRET header bypasses JWT auth (for Diana's admin operations)
+  // ADMIN_SECRET header bypasses JWT auth (for scripted admin operations)
   const adminSecret = req.headers['x-admin-secret'];
   if (adminSecret && adminSecret === process.env.ADMIN_SECRET) return next();
+  // Admin cookie session (used by /admin/* pages) also bypasses JWT
+  if (isAdminAuthed(req)) return next();
   requireAuth(req, res, next);
 });
 
