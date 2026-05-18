@@ -531,14 +531,19 @@
       <div class="ig-icon">📷</div>
       <div class="ig-text">
         <h3>Instagram Business</h3>
-        <p>Contact support to connect your Instagram account and enable auto-publishing.</p>
+        <p>Share your Instagram link and our team will connect it for you.</p>
       </div>
+    </div>
+
+    <div class="field-group">
+      <label>Instagram Profile URL</label>
+      <input type="url" id="igUrl" placeholder="https://www.instagram.com/yourbusiness" autocomplete="off" />
     </div>
 
     <div class="btn-row">
       <button class="btn-secondary" onclick="goStep(3)">← Back</button>
       <button class="btn-skip" onclick="goStep(5)">Skip for now</button>
-      <button class="btn-primary" id="igNextBtn" onclick="goStep(5)">Continue →</button>
+      <button class="btn-primary" id="igNextBtn" onclick="saveStep4()">Continue →</button>
     </div>
   </div>
 
@@ -848,6 +853,21 @@ function showIgConnected() {
   state.igConnected = true;
 }
 
+async function saveStep4() {
+  const url = document.getElementById('igUrl').value.trim();
+  if (url) {
+    state.igUrl = url;
+    try {
+      await fetch('/api/config', {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({ instagramUrl: url }),
+      });
+    } catch {}
+  }
+  goStep(5);
+}
+
 // ── Step 5: Summary & generate ──
 function buildSummary() {
   const meta = BIZ_META[state.businessType] || BIZ_META.other;
@@ -857,7 +877,7 @@ function buildSummary() {
   document.getElementById('sumLogo').innerHTML      = state.logoUploaded  ? '<span class="check">✓ Uploaded</span>' : '<span class="skip">Skipped</span>';
   document.getElementById('sumOwner').innerHTML     = state.ownerUploaded ? '<span class="check">✓ Uploaded</span>' : '<span class="skip">Skipped</span>';
   document.getElementById('sumPhotos').innerHTML    = state.photosCount   ? `<span class="check">✓ ${state.photosCount} photo${state.photosCount > 1 ? 's' : ''}</span>` : '<span class="skip">Skipped</span>';
-  document.getElementById('sumIg').innerHTML        = state.igConnected   ? '<span class="check">✓ Connected</span>' : '<span class="skip">Skipped</span>';
+  document.getElementById('sumIg').innerHTML        = state.igUrl ? `<span class="check">${state.igUrl.replace('https://www.instagram.com/','@').replace('https://instagram.com/','@')}</span>` : state.igConnected ? '<span class="check">✓ Connected</span>' : '<span class="skip">Skipped</span>';
 }
 
 async function generateAndFinish() {
