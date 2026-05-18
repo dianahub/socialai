@@ -529,7 +529,7 @@
 
   <!-- ── Logo ── -->
   <div class="section">
-    <div class="section-title">Restaurant Logo</div>
+    <div class="section-title" id="logoSectionTitle">Business Logo</div>
     <div class="section-subtitle">PNG with transparent background preferred. Used as watermark on all images.</div>
     <div class="drop-zone" id="logoZone">
       <input type="file" id="logoInput" accept="image/*">
@@ -542,7 +542,7 @@
 
   <!-- ── Food Photos ── -->
   <div class="section">
-    <div class="section-title">Food &amp; Atmosphere Photos</div>
+    <div class="section-title" id="photosSectionTitle">Photos</div>
     <div class="section-subtitle">Upload up to 6 hero images. Drag and drop or click each slot.</div>
     <div class="photo-grid" id="photoGrid">
       <!-- Slots injected by JS -->
@@ -910,6 +910,8 @@ async function loadSavedState() {
     if (config.twinStyle)   document.getElementById('twinStyle').value   = config.twinStyle;
     if (config.twinUsecase) document.getElementById('twinUsecase').value = config.twinUsecase;
 
+    applyBusinessTypeLabels(config.businessType || 'restaurant');
+
     // Restore uploads
     if (assets.logo) {
       logoUploaded = assets.logo;
@@ -941,6 +943,20 @@ async function loadSavedState() {
     console.warn('Could not load saved state:', e.message);
     buildPhotoGrid();
   }
+}
+
+// ── Business type label adaptation ────────────────────────────────────────
+function applyBusinessTypeLabels(businessType) {
+  const isRestaurant = !businessType || businessType === 'restaurant';
+  const label = isRestaurant ? 'Restaurant'
+    : businessType === 'spa'     ? 'Spa'
+    : businessType === 'gallery' ? 'Gallery'
+    : businessType.charAt(0).toUpperCase() + businessType.slice(1);
+
+  const logoTitle   = document.getElementById('logoSectionTitle');
+  const photosTitle = document.getElementById('photosSectionTitle');
+  if (logoTitle)   logoTitle.textContent   = label + ' Logo';
+  if (photosTitle) photosTitle.textContent = isRestaurant ? 'Food & Atmosphere Photos' : 'Photos';
 }
 
 // ── Login credentials ──────────────────────────────────────────────────────

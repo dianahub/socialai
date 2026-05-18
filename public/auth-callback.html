@@ -15,12 +15,22 @@
   const hash   = window.location.hash.slice(1);
   const params = new URLSearchParams(hash);
   const token  = params.get('token');
-  if (token) {
-    localStorage.setItem('authToken', token);
-    const dest = localStorage.getItem('onboardingComplete') ? '/index.html' : '/onboarding.html';
-    window.location.replace(dest);
-  } else {
+
+  if (!token) {
     window.location.replace('/login.html?error=oauth_failed');
+  } else {
+    localStorage.setItem('authToken', token);
+    // Ask the server if this account is already configured (has a restaurant name saved)
+    fetch('/api/config', { headers: { Authorization: 'Bearer ' + token } })
+      .then(r => r.ok ? r.json() : {})
+      .then(cfg => {
+        const alreadySetUp = cfg.restaurantName && cfg.restaurantName.trim().length > 0;
+        window.location.replace(alreadySetUp ? '/index.html' : '/onboarding.html');
+      })
+      .catch(() => {
+        // On error fall back to onboarding to be safe
+        window.location.replace('/onboarding.html');
+      });
   }
 </script>
 </body>
