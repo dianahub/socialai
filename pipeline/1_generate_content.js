@@ -496,6 +496,7 @@ async function generateTwinClip(config, jobId, customScript) {
           voice: voiceInput,
           background: { type: 'color', value: '#0a0a14' },
         }],
+        dimension:    { width: 720, height: 1280 },
         aspect_ratio: '9:16',
         caption: true,
         test: false,
@@ -777,9 +778,9 @@ function _buildDrawtextFilters(srt, capDir, fontFile) {
     filters.push(
       `drawtext=textfile='${cuePath}'` +
       `:enable='between(t,${t0.toFixed(3)},${t1.toFixed(3)})'` +
-      `:fontsize=36${fontPart}` +
-      `:fontcolor=black:x=(w-text_w)/2:y=h*0.80` +
-      `:shadowx=1:shadowy=1:shadowcolor=white@0.4`
+      `:fontsize=28${fontPart}` +
+      `:fontcolor=white:x=(w-text_w)/2:y=1002` +
+      `:shadowx=2:shadowy=2:shadowcolor=black@0.9`
     );
   }
   return filters.join(',');
@@ -809,8 +810,8 @@ async function burnTwinCaptions(videoUrl, captionUrl, script, outPath) {
     const drawtextFilters = _buildDrawtextFilters(srt, capDir, fontFile);
     if (!drawtextFilters) { console.log('[twin captions] No cues — skipping'); return false; }
 
-    // Light panel over bottom 28% + captions
-    const vf       = 'drawbox=x=0:y=ih*0.72:w=iw:h=ih*0.28:color=white@0.75:t=fill,' + drawtextFilters;
+    // Dark panel over bottom 28% of 1280px frame + captions (matches ai-trading-research)
+    const vf       = 'drawbox=x=0:y=922:w=iw:h=358:color=black@0.82:t=fill,' + drawtextFilters;
     const cueCount = (drawtextFilters.match(/drawtext=/g) || []).length;
     console.log(`[twin captions] Burning ${cueCount} cues...`);
 
