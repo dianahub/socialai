@@ -684,6 +684,80 @@ Requirements: first person, warm and personal, specific to the topic and any wee
   }
 });
 
+// POST /api/generate/previews — generate all three content pieces from the weekly brief
+app.post('/api/generate/previews', async (req, res) => {
+  const restaurantId = req.restaurantId || Number(req.body.restaurantId) || 1;
+
+  let restaurant = {}, brief = {};
+  try {
+    [restaurant, brief] = await Promise.all([
+      db.restaurant.findUnique({ where: { id: restaurantId } }).catch(() => ({})),
+      db.weeklyBrief.findUnique({ where: { restaurantId_weekOf: { restaurantId, weekOf: getMondayOfWeek() } } }).catch(() => ({})),
+    ]);
+    restaurant = restaurant || {};
+    brief      = brief      || {};
+  } catch {}
+
+  const ownerName      = restaurant.ownerName      || 'the owner';
+  const restaurantName = restaurant.name           || 'the restaurant';
+  const cuisineType    = restaurant.cuisineType    || 'fine dining';
+
+  const briefLines = [
+    brief.featuredDish && `Featured dish: ${brief.featuredDish}`,
+    brief.event        && `Event: ${brief.event}`,
+    brief.promotion    && `Promotion: ${brief.promotion}`,
+    brief.notes        && `Notes: ${brief.notes}`,
+  ].filter(Boolean);
+  const briefContext = briefLines.join('\n');
+  const briefSummary = briefLines.join('. ');
+
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return res.json({
+      twinScript:    `Hello, I'm ${ownerName} from ${restaurantName}. ${briefSummary || 'We pour our heart into every dish.'} Come visit us soon!`,
+      videoCaption:  `✨ ${restaurantName} — ${briefSummary || 'Experience fine dining at its best.'} #food #restaurant`,
+      imageCaption:  `📸 This week at ${restaurantName}: ${briefSummary || 'Something special awaits.'} #foodie #dining`,
+      note: 'Template previews — add ANTHROPIC_API_KEY to enable AI-written content.',
+    });
+  }
+
+  try {
+    const Anthropic = require('@anthropic-ai/sdk');
+    const client    = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+    const [scriptMsg, videoCaptionMsg, imageCaptionMsg] = await Promise.all([
+      client.messages.create({
+        model: 'claude-haiku-4-5-20251001', max_tokens: 300,
+        system: 'You write short spoken scripts for restaurant owner social videos. Output only the spoken words — no labels, no quotes.',
+        messages: [{ role: 'user', content:
+          `Write a 15–20 second spoken script (40–55 words) for a restaurant owner Instagram video.\nOwner: ${ownerName}\nRestaurant: ${restaurantName}\nCuisine: ${cuisineType}\n${briefContext ? `This week:\n${briefContext}` : ''}\nFirst person, warm and personal, end with an invitation to visit or follow.`
+        }],
+      }),
+      client.messages.create({
+        model: 'claude-haiku-4-5-20251001', max_tokens: 200,
+        system: 'You write punchy Instagram captions for restaurant food videos. Output only the caption text.',
+        messages: [{ role: 'user', content:
+          `Write an Instagram caption for a cinematic food video from ${restaurantName} (${cuisineType}).\n${briefContext ? `This week:\n${briefContext}` : ''}\n2–3 sentences max. End with 4–5 relevant hashtags.`
+        }],
+      }),
+      client.messages.create({
+        model: 'claude-haiku-4-5-20251001', max_tokens: 200,
+        system: 'You write punchy Instagram captions for restaurant photo posts. Output only the caption text.',
+        messages: [{ role: 'user', content:
+          `Write an Instagram caption for a branded image post from ${restaurantName} (${cuisineType}).\n${briefContext ? `This week:\n${briefContext}` : ''}\n1–2 sentences, inviting and specific. End with 4–5 relevant hashtags.`
+        }],
+      }),
+    ]);
+
+    res.json({
+      twinScript:   scriptMsg.content[0].text.trim(),
+      videoCaption: videoCaptionMsg.content[0].text.trim(),
+      imageCaption: imageCaptionMsg.content[0].text.trim(),
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ── Generate ──────────────────────────────────────────────────────────────────
 
 app.post('/api/generate', async (req, res) => {
