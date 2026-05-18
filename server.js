@@ -216,9 +216,9 @@ function requireAdmin(req, res, next) {
   res.redirect('/admin/login');
 }
 
-// Admin index redirect
-app.get('/admin', (req, res) => res.redirect('/admin/leads'));
-app.get('/admin/', (req, res) => res.redirect('/admin/leads'));
+// Admin dashboard
+app.get('/admin',  requireAdmin, (req, res) => res.sendFile(path.resolve('admin/index.html')));
+app.get('/admin/', requireAdmin, (req, res) => res.sendFile(path.resolve('admin/index.html')));
 
 // Admin login page
 app.get('/admin/login', (req, res) => {
@@ -282,9 +282,8 @@ app.get('/admin/logout', (req, res) => {
 });
 
 // Admin leads page — served from memory, not from public/
-app.get('/admin/leads', requireAdmin, (req, res) => {
-  res.sendFile(path.resolve('admin/leads.html'));
-});
+app.get('/admin/leads', requireAdmin, (req, res) => res.sendFile(path.resolve('admin/leads.html')));
+app.get('/admin/users', requireAdmin, (req, res) => res.sendFile(path.resolve('admin/users.html')));
 
 // ── Global auth middleware (protects all /api/ except /api/auth/*) ─────────
 app.use((req, res, next) => {

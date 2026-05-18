@@ -34,7 +34,11 @@
     position: sticky; top: 0; z-index: 100; backdrop-filter: blur(12px);
   }
   .nav-brand { font-family: 'Playfair Display', serif; font-size: 1rem; color: var(--gold-light); letter-spacing: 0.05em; }
-  .nav-badge { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--gold); background: var(--gold-dim); border: 1px solid var(--gold-border); border-radius: 4px; padding: 0.15rem 0.45rem; margin-left: 0.25rem; }
+  .nav-badge { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--gold); background: var(--gold-dim); border: 1px solid var(--gold-border); border-radius: 4px; padding: 0.15rem 0.45rem; }
+  .nav-links { display: flex; gap: 0; }
+  .nav-links a { padding: 0 1rem; height: 58px; display: flex; align-items: center; font-size: 0.82rem; font-weight: 500; color: var(--text-muted); text-decoration: none; border-bottom: 2px solid transparent; transition: color 0.2s; }
+  .nav-links a:hover { color: var(--text); }
+  .nav-links a.active { color: var(--gold-light); border-bottom-color: var(--gold); }
   .nav-right { margin-left: auto; }
   .nav-logout { background: none; border: 1px solid var(--border); border-radius: 6px; color: var(--text-muted); font-family: 'Inter', sans-serif; font-size: 0.75rem; padding: 0.3rem 0.75rem; cursor: pointer; transition: color 0.2s, border-color 0.2s; }
   .nav-logout:hover { color: var(--text); border-color: rgba(255,255,255,0.2); }
@@ -114,8 +118,13 @@
 <body>
 
 <nav>
-  <span class="nav-brand">✦ ModernSocial.ai</span>
+  <a class="nav-brand" href="/admin" style="text-decoration:none">✦ ModernSocial.ai</a>
   <span class="nav-badge">Admin</span>
+  <div class="nav-links">
+    <a href="/admin">Dashboard</a>
+    <a href="/admin/leads" class="active">Leads</a>
+    <a href="/admin/users">Users</a>
+  </div>
   <div class="nav-right">
     <button class="nav-logout" onclick="location.href='/admin/logout'">Log out</button>
   </div>

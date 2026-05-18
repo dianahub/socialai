@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — ModernSocial.ai</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg-deep:    #090910;
+    --bg-card:    #12121c;
+    --bg-surface: #1a1a28;
+    --gold:       #c8a84b;
+    --gold-light: #e5c97a;
+    --gold-dim:   rgba(200,168,75,0.14);
+    --gold-border:rgba(200,168,75,0.22);
+    --text:       #f0ede8;
+    --text-muted: #7a7773;
+    --border:     rgba(255,255,255,0.07);
+    --green:      #4a9960;
+    --green-dim:  rgba(74,153,96,0.15);
+    --blue-dim:   rgba(74,127,204,0.15);
+  }
+  body { background: var(--bg-deep); color: var(--text); font-family: 'Inter', sans-serif; min-height: 100vh; }
+
+  nav {
+    display: flex; align-items: center; gap: 1rem; padding: 0 2rem; height: 58px;
+    background: rgba(9,9,16,0.92); border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 100; backdrop-filter: blur(12px);
+  }
+  .nav-brand { font-family: 'Playfair Display', serif; font-size: 1rem; color: var(--gold-light); letter-spacing: 0.05em; }
+  .nav-badge { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--gold); background: var(--gold-dim); border: 1px solid var(--gold-border); border-radius: 4px; padding: 0.15rem 0.45rem; margin-left: 0.25rem; }
+  .nav-right { margin-left: auto; }
+  .nav-logout { background: none; border: 1px solid var(--border); border-radius: 6px; color: var(--text-muted); font-family: 'Inter', sans-serif; font-size: 0.75rem; padding: 0.3rem 0.75rem; cursor: pointer; transition: color 0.2s, border-color 0.2s; }
+  .nav-logout:hover { color: var(--text); border-color: rgba(255,255,255,0.2); }
+
+  main { max-width: 900px; margin: 0 auto; padding: 3rem 2rem; }
+
+  .page-title { font-family: 'Playfair Display', serif; font-size: 1.8rem; color: var(--gold-light); margin-bottom: 0.4rem; }
+  .page-sub { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 2.5rem; }
+
+  .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.25rem; }
+
+  .nav-card {
+    background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px;
+    padding: 2rem; text-decoration: none; color: var(--text);
+    transition: border-color 0.2s, background 0.2s; display: block;
+  }
+  .nav-card:hover { border-color: var(--gold-border); background: #14141f; }
+  .nav-card-icon { font-size: 2rem; margin-bottom: 1rem; }
+  .nav-card-title { font-family: 'Playfair Display', serif; font-size: 1.15rem; color: var(--gold-light); margin-bottom: 0.35rem; }
+  .nav-card-desc { font-size: 0.82rem; color: var(--text-muted); line-height: 1.5; }
+  .nav-card-stat { margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid var(--border); display: flex; gap: 1.5rem; }
+  .stat { font-size: 0.78rem; color: var(--text-muted); }
+  .stat strong { display: block; font-size: 1.25rem; font-weight: 600; color: var(--text); margin-bottom: 0.1rem; }
+</style>
+</head>
+<body>
+
+<nav>
+  <span class="nav-brand">✦ ModernSocial.ai</span>
+  <span class="nav-badge">Admin</span>
+  <div class="nav-right">
+    <button class="nav-logout" onclick="location.href='/admin/logout'">Log out</button>
+  </div>
+</nav>
+
+<main>
+  <div class="page-title">Admin Dashboard</div>
+  <div class="page-sub">Manage your platform.</div>
+
+  <div class="card-grid">
+    <a class="nav-card" href="/admin/leads">
+      <div class="nav-card-icon">📋</div>
+      <div class="nav-card-title">Leads</div>
+      <div class="nav-card-desc">Track prospects, manage follow-ups, and convert leads into paying business accounts.</div>
+      <div class="nav-card-stat">
+        <div class="stat"><strong id="statLeads">—</strong>Total leads</div>
+        <div class="stat"><strong id="statActive">—</strong>Active</div>
+        <div class="stat"><strong id="statConverted">—</strong>Converted</div>
+      </div>
+    </a>
+
+    <a class="nav-card" href="/admin/users">
+      <div class="nav-card-icon">🏢</div>
+      <div class="nav-card-title">Users</div>
+      <div class="nav-card-desc">View and manage all business accounts on the platform.</div>
+      <div class="nav-card-stat">
+        <div class="stat"><strong id="statUsers">—</strong>Accounts</div>
+      </div>
+    </a>
+  </div>
+</main>
+
+<script>
+(async () => {
+  try {
+    const [leads, users] = await Promise.all([
+      fetch('/api/leads').then(r => r.json()),
+      fetch('/api/db/restaurants').then(r => r.json()),
+    ]);
+    document.getElementById('statLeads').textContent     = leads.length;
+    document.getElementById('statActive').textContent    = leads.filter(l => l.status === 'lead').length;
+    document.getElementById('statConverted').textContent = leads.filter(l => l.status === 'converted').length;
+    document.getElementById('statUsers').textContent     = users.length;
+  } catch {}
+})();
+</script>
+</body>
+</html>
