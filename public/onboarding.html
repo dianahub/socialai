@@ -689,6 +689,7 @@ function applyBusinessType() {
 
   // Color preview emoji
   document.querySelector('.preview-logo-box').textContent = meta.icon;
+  updatePreview();
 }
 
 // ── Pre-fill from existing config ──
@@ -825,12 +826,14 @@ function updatePreview() {
   const accent  = document.getElementById('accentColor').value;
   const bg      = document.getElementById('bgColor').value;
   const preview = document.getElementById('colorPreview');
-  preview.style.background     = bg;
+  preview.style.background = bg;
   document.getElementById('previewName').style.color = accent;
   document.getElementById('previewTag').style.color  = primary;
-  document.getElementById('previewName').textContent = state.restaurantName || document.getElementById('restaurantName')?.value || 'Your Restaurant';
+  document.getElementById('previewName').textContent = state.restaurantName || document.getElementById('restaurantName')?.value || 'Your Business';
   const loc = document.getElementById('location')?.value || state.location || '';
-  const cui = document.getElementById('cuisineType')?.value || state.cuisineType || 'Fine Dining';
+  const isRestaurant = state.businessType === 'restaurant';
+  // Only show cuisine in the preview if it's a restaurant and a cuisine was actually chosen
+  const cui = isRestaurant ? (document.getElementById('cuisineType')?.value || state.cuisineType || '') : '';
   document.getElementById('previewTag').textContent = [cui, loc].filter(Boolean).join(' · ');
 }
 
