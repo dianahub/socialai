@@ -55,18 +55,41 @@
     gap: 0.5rem;
   }
 
-  .login-title {
+  .login-tagline {
     font-family: 'Playfair Display', Georgia, serif;
-    font-size: 1.5rem;
+    font-size: 1.55rem;
     font-weight: 600;
     color: var(--text);
-    margin-bottom: 0.4rem;
+    line-height: 1.25;
+    margin-bottom: 0.6rem;
+  }
+  .login-tagline em {
+    font-style: italic;
+    color: var(--gold-light);
   }
 
   .login-sub {
-    font-size: 0.85rem;
+    font-size: 0.83rem;
     color: var(--text-muted);
-    margin-bottom: 2rem;
+    line-height: 1.55;
+    margin-bottom: 1.2rem;
+  }
+
+  .feature-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    margin-bottom: 1.75rem;
+  }
+  .feature-chip {
+    font-size: 0.7rem;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    color: var(--gold);
+    background: var(--gold-dim);
+    border: 1px solid var(--gold-border);
+    border-radius: 20px;
+    padding: 0.25rem 0.65rem;
   }
 
   .field-group {
@@ -167,8 +190,13 @@
 
 <div class="login-card">
   <div class="login-logo">✦ ModernSocial.app</div>
-  <h1 class="login-title">Sign in</h1>
-  <p class="login-sub">Enter your restaurant credentials to continue.</p>
+  <p class="login-tagline">Your restaurant,<br><em>posting itself.</em></p>
+  <p class="login-sub">AI-generated Reels, cinematic slideshows & branded posts for fine dining — scheduled weekly, no agency needed.</p>
+  <div class="feature-chips">
+    <span class="feature-chip">👤 Owner twin videos</span>
+    <span class="feature-chip">🎬 Food photo Reels</span>
+    <span class="feature-chip">📅 Auto-scheduled</span>
+  </div>
 
   <a class="btn-google" id="googleBtn" href="/auth/google">
     <svg width="18" height="18" viewBox="0 0 18 18">
