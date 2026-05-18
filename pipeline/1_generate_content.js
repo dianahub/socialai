@@ -616,14 +616,52 @@ async function generateImagePost(config, jobId) {
 const TWIN_TEMP_DIR = '/tmp/restaurant_twin_videos';
 
 function _findCaptionFfmpeg() {
+  const { execFileSync } = require('child_process');
+
+  // Return true if this ffmpeg binary has the drawtext filter compiled in
+  function hasDrawtext(bin) {
+    try {
+      const out = execFileSync(bin, ['-filters'], { timeout: 5000, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+      return out.includes('drawtext');
+    } catch { return false; }
+  }
+
+  const candidates = [];
+
+  // npm bundled binaries
+  try { const p = require('ffmpeg-static');                  if (p) candidates.push(p); } catch {}
+  try { const p = require('@ffmpeg-installer/ffmpeg').path;  if (p) candidates.push(p); } catch {}
+
+  // Nix profile paths Railway installs ffmpeg to
+  candidates.push(
+    '/root/.nix-profile/bin/ffmpeg',
+    '/nix/var/nix/profiles/default/bin/ffmpeg',
+    '/usr/local/bin/ffmpeg',
+    '/usr/bin/ffmpeg',
+  );
+
+  // Also check whatever bash resolves as 'ffmpeg'
   try {
-    const p = require('ffmpeg-static');
-    if (p && fs.existsSync(p)) return p;
+    const p = execFileSync('bash', ['-c', 'which ffmpeg'], { timeout: 5000, encoding: 'utf8' }).trim();
+    if (p) candidates.push(p);
   } catch {}
-  try {
-    const p = require('@ffmpeg-installer/ffmpeg').path;
-    if (p && fs.existsSync(p)) return p;
-  } catch {}
+
+  // Return the first binary that actually has drawtext
+  for (const p of candidates) {
+    if (p && fs.existsSync(p) && hasDrawtext(p)) {
+      console.log(`[twin captions] Using ffmpeg with drawtext: ${p}`);
+      return p;
+    }
+  }
+
+  // Last resort: return first existing binary even without drawtext (will fail gracefully)
+  for (const p of candidates) {
+    if (p && fs.existsSync(p)) {
+      console.warn(`[twin captions] No drawtext-capable ffmpeg found, using ${p} (captions may fail)`);
+      return p;
+    }
+  }
+
   return null;
 }
 
