@@ -1054,10 +1054,15 @@ async function saveIgCreds() {
 async function lookupIgId() {
   const url = document.getElementById('igUrl').value.trim();
   if (!url) return;
+
+  // Extract username from URL for display regardless of API result
+  const usernameMatch = url.match(/instagram\.com\/([^/?#]+)/);
+  const username = usernameMatch ? usernameMatch[1].replace(/\/$/, '') : null;
+
   const statusEl = document.getElementById('igLookupStatus');
   statusEl.style.display = 'block';
   statusEl.style.color   = 'var(--text-muted)';
-  statusEl.textContent   = 'Looking up account ID…';
+  statusEl.textContent   = 'Looking up account…';
   try {
     const res  = await fetch('/api/instagram/lookup-id', {
       method:  'POST',
@@ -1070,8 +1075,11 @@ async function lookupIgId() {
     statusEl.style.color   = '#4ade80';
     statusEl.textContent   = `✓ Found @${data.username}`;
   } catch (e) {
-    statusEl.style.color   = '#f87171';
-    statusEl.textContent   = e.message;
+    // Don't show a scary error — the URL is saved and the account ID can be filled in manually
+    statusEl.style.color   = 'var(--text-muted)';
+    statusEl.textContent   = username
+      ? `@${username} saved — account ID can be filled in manually if needed`
+      : 'URL saved — account ID can be filled in manually if needed';
   }
 }
 
