@@ -886,7 +886,7 @@ async function submitIgPost() {
     if (!res.ok) throw new Error(data.error || 'Post failed');
     closeIgModal();
     toast('Posting to Instagram — check back in a minute!', 'success');
-    setTimeout(() => { fetch('/api/output').then(r => r.json()).then(renderGallery); }, 90000);
+    setTimeout(() => { fetch(`/api/output?restaurantId=${getRestaurantId()}`).then(r => r.json()).then(renderGallery); }, 90000);
   } catch (e) {
     document.getElementById('igError').textContent = e.message;
     document.getElementById('igError').style.display = 'block';
@@ -1065,7 +1065,7 @@ let lastOutputHash = '';
 
 async function pollOutput() {
   try {
-    const items = await fetch('/api/output').then(r => r.json());
+    const items = await fetch(`/api/output?restaurantId=${getRestaurantId()}`).then(r => r.json());
     const hash  = items.map(i => i.id + ':' + i.status).join('|');
     if (hash === lastOutputHash) return;
     lastOutputHash = hash;
@@ -1338,7 +1338,7 @@ async function init() {
     const saved = cfg.ownerScript || localStorage.getItem('ownerScript');
     if (saved) setScript(saved);
   } catch {}
-  const items = await fetch('/api/output').then(r => r.json()).catch(() => []);
+  const items = await fetch(`/api/output?restaurantId=${getRestaurantId()}`).then(r => r.json()).catch(() => []);
   if (items.length) {
     // Treat any 'generating' job older than 15 min as stale — don't lock the card
     const staleMs = 15 * 60 * 1000;

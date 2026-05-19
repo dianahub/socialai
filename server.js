@@ -799,7 +799,7 @@ app.post('/api/generate', async (req, res) => {
   }
 
   const jobId = uuidv4();
-  const job   = { id: jobId, type, status: 'generating', created: new Date().toISOString() };
+  const job   = { id: jobId, type, status: 'generating', created: new Date().toISOString(), restaurantId: Number(restaurantId) || 1 };
   fs.writeFileSync(path.join(OUTPUT_DIR, `${jobId}_meta.json`), JSON.stringify(job, null, 2));
 
   res.json({ success: true, jobId, status: 'generating' });
@@ -814,7 +814,7 @@ async function kickOffGeneration(restaurantId, config) {
     const jobId = uuidv4();
     fs.writeFileSync(
       path.join(OUTPUT_DIR, `${jobId}_meta.json`),
-      JSON.stringify({ id: jobId, type, status: 'generating', created: new Date().toISOString(), auto: true }, null, 2)
+      JSON.stringify({ id: jobId, type, status: 'generating', created: new Date().toISOString(), auto: true, restaurantId: Number(restaurantId) || 1 }, null, 2)
     );
     const customScript = type === 'twin' ? (config.ownerScript || null) : null;
     runGeneration(jobId, type, { ...config }, customScript, restaurantId);
@@ -935,12 +935,12 @@ async function runGeneration(jobId, type, config, customScript, restaurantId = 1
       }
     }
 
-    const meta = { ...result, id: jobId, type, status: 'ready', created: new Date().toISOString() };
+    const meta = { ...result, id: jobId, type, status: 'ready', created: new Date().toISOString(), restaurantId: Number(restaurantId) || 1 };
     fs.writeFileSync(path.join(OUTPUT_DIR, `${jobId}_meta.json`), JSON.stringify(meta, null, 2));
     console.log(`[generate] Job ${jobId} (${type}) complete`);
   } catch (err) {
     console.error(`[generate] Job ${jobId} failed:`, err.message);
-    const meta = { id: jobId, type, status: 'error', error: err.message, created: new Date().toISOString() };
+    const meta = { id: jobId, type, status: 'error', error: err.message, created: new Date().toISOString(), restaurantId: Number(restaurantId) || 1 };
     fs.writeFileSync(path.join(OUTPUT_DIR, `${jobId}_meta.json`), JSON.stringify(meta, null, 2));
   }
 }
@@ -949,6 +949,7 @@ async function runGeneration(jobId, type, config, customScript, restaurantId = 1
 
 app.get('/api/output', (req, res) => {
   if (!fs.existsSync(OUTPUT_DIR)) return res.json([]);
+  const rid = req.restaurantId || Number(req.query.restaurantId) || null;
   const items = fs.readdirSync(OUTPUT_DIR)
     .filter(f => f.endsWith('_meta.json'))
     .map(f => {
@@ -956,6 +957,7 @@ app.get('/api/output', (req, res) => {
       catch { return null; }
     })
     .filter(Boolean)
+    .filter(item => !rid || !item.restaurantId || item.restaurantId === rid)
     .sort((a, b) => new Date(b.created) - new Date(a.created));
   res.json(items);
 });
