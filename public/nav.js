@@ -27,8 +27,8 @@
         return payload.restaurantId || 1;
       } catch { /* fall through */ }
     }
-    // Admin/dev mode: honour ?restaurantId= in the URL
-    const urlId = new URLSearchParams(location.search).get('restaurantId');
+    // Admin/dev mode: honour ?id= in the URL
+    const urlId = new URLSearchParams(location.search).get('id');
     if (urlId) {
       localStorage.setItem('selectedRestaurantId', urlId);
       return Number(urlId);
