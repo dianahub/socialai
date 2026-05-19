@@ -1452,17 +1452,26 @@ async function previewSchedule() {
       timezoneOffset:  new Date().getTimezoneOffset(),
     });
 
-    const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    document.getElementById('gwPreviewList').innerHTML = result.posts.map(p => {
+    const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    document.getElementById('gwPreviewList').innerHTML = result.posts.map((p, i) => {
       const d = new Date(p.scheduledTime);
-      const dateStr = `${days[d.getDay()]} ${months[d.getMonth()]} ${d.getDate()}`;
+      const dateStr = `${DAYS[d.getDay()]} ${MONTHS[d.getMonth()]} ${d.getDate()}`;
       const hour = d.getHours();
       const timeStr = `${hour % 12 || 12}:00 ${hour < 12 ? 'AM' : 'PM'}`;
-      return `<div style="display:flex;align-items:center;gap:0.75rem;padding:0.45rem 0.65rem;background:rgba(255,255,255,0.04);border-radius:6px;font-size:0.78rem">
-        <span style="min-width:4.5rem;color:var(--text-muted)">${dateStr}</span>
-        <span style="min-width:4rem;color:var(--text-muted)">${timeStr}</span>
-        <span>${p.icon} ${p.label}</span>
+      const scriptField = p.postType === 'owner_twin_video'
+        ? `<textarea id="gwScript_${i}" placeholder="Leave blank to auto-generate from weekly brief…"
+             style="width:100%;margin-top:0.4rem;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);
+                    border-radius:5px;color:#e2e8f0;font-size:0.72rem;font-family:inherit;padding:0.4rem 0.5rem;
+                    resize:vertical;min-height:52px;box-sizing:border-box" rows="2"></textarea>`
+        : '';
+      return `<div style="padding:0.5rem 0.65rem;background:rgba(255,255,255,0.04);border-radius:6px;font-size:0.78rem">
+        <div style="display:flex;align-items:center;gap:0.75rem">
+          <span style="min-width:4.5rem;color:var(--text-muted)">${dateStr}</span>
+          <span style="min-width:4rem;color:var(--text-muted)">${timeStr}</span>
+          <span>${p.icon} ${p.label}</span>
+        </div>
+        ${scriptField}
       </div>`;
     }).join('');
     document.getElementById('gwPreviewEst').textContent = `${result.posts.length} posts — estimated generation time ~${result.estimatedMinutes} min`;
@@ -1495,6 +1504,13 @@ async function startGenerateWeek(force = false) {
     branded_image_story: Number(document.getElementById('mixStory').value),
   };
 
+  // Collect any custom scripts entered in the preview step
+  const customScripts = {};
+  document.querySelectorAll('[id^="gwScript_"]').forEach(el => {
+    const idx = el.id.split('_')[1];
+    if (el.value.trim()) customScripts[idx] = el.value.trim();
+  });
+
   try {
     const result = await api('POST', '/api/generate-week', {
       restaurantId,
@@ -1503,8 +1519,9 @@ async function startGenerateWeek(force = false) {
       postFrequency:  freq,
       contentMix,
       schedulePreset:   document.getElementById('gwPreset').value || 'smart',
-      timezoneOffset:   new Date().getTimezoneOffset(), // minutes behind UTC (e.g. 240 for UTC-4)
+      timezoneOffset:   new Date().getTimezoneOffset(),
       force,
+      customScripts,
     });
 
     closeGenWeekModal();

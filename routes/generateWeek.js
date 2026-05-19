@@ -135,6 +135,7 @@ router.post('/', async (req, res) => {
       schedulePreset  = 'smart',
       timezoneOffset  = 0,   // minutes behind UTC sent by browser (e.g. 240 for UTC-4)
       force           = false,
+      customScripts   = {},  // { [postIndex]: scriptText } for owner_twin_video slots
     } = req.body;
 
     const preset = PRESETS[schedulePreset] || PRESETS.smart;
@@ -234,13 +235,18 @@ router.post('/', async (req, res) => {
           tmplIdx++;
         }
 
+        const slotIndex = createdPosts.length;
+        const customScript = (postType === 'owner_twin_video' && customScripts[slotIndex])
+          ? customScripts[slotIndex] : null;
+
         const post = await db.scheduledPost.create({
           data: {
             restaurantId:    Number(restaurantId),
             postType,
             scheduledTime,
             status:          'draft',
-            scriptTemplateId,
+            scriptTemplateId: customScript ? null : scriptTemplateId,
+            customScript,
           },
         });
         createdPosts.push(post);
