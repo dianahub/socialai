@@ -670,6 +670,11 @@
 
 <script>
 // ── State ──────────────────────────────────────────────────────────────────
+function authHeaders(extra = {}) {
+  const token = localStorage.getItem('authToken');
+  return token ? { 'Authorization': `Bearer ${token}`, ...extra } : { ...extra };
+}
+
 const photoSlots = Array(6).fill(null); // null | { path, filename }
 let logoUploaded   = null;
 let ownerUploaded  = null;
@@ -786,7 +791,7 @@ async function removePhoto(idx, slot) {
   if (!photoSlots[idx]) return;
   try {
     const filename = photoSlots[idx].filename;
-    await fetch(`/api/assets/photos/${encodeURIComponent(filename)}?restaurantId=${getRestaurantId()}`, { method: 'DELETE' });
+    await fetch(`/api/assets/photos/${encodeURIComponent(filename)}?restaurantId=${getRestaurantId()}`, { method: 'DELETE', headers: authHeaders() });
     photoSlots[idx] = null;
     buildPhotoGrid();
     toast('Photo removed');
@@ -800,7 +805,7 @@ async function uploadFile(url, field, file, extras = {}) {
   const fd = new FormData();
   fd.append(field, file);
   Object.entries(extras).forEach(([k, v]) => fd.append(k, v));
-  const res = await fetch(url, { method: 'POST', body: fd });
+  const res = await fetch(url, { method: 'POST', headers: authHeaders(), body: fd });
   if (!res.ok) throw new Error('Upload error ' + res.status);
   return res.json();
 }
@@ -865,7 +870,7 @@ async function saveAndGenerate() {
   try {
     const res = await fetch('/api/config', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(config),
     });
     if (!res.ok) throw new Error('Save failed');
@@ -884,7 +889,7 @@ async function loadSavedState() {
   try {
     const [assets, config] = await Promise.all([
       fetch(`/api/assets?restaurantId=${rid}`).then(r => r.json()),
-      fetch(`/api/config?restaurantId=${rid}`).then(r => r.json()),
+      fetch(`/api/config?restaurantId=${rid}`, { headers: authHeaders() }).then(r => r.json()),
     ]);
 
     // Restore config fields
@@ -941,7 +946,7 @@ async function loadSavedState() {
 
     // Load Instagram credentials + login email
     try {
-      const rest = await fetch(`/api/db/restaurants/${rid}`).then(r => r.json());
+      const rest = await fetch(`/api/db/restaurants/${rid}`, { headers: authHeaders() }).then(r => r.json());
       if (rest.instagramUrl)    document.getElementById('igUrl').value = rest.instagramUrl;
       if (rest.instagramUserId) document.getElementById('igAccountId').value = rest.instagramUserId;
       if (rest.instagramAccessToken) {
@@ -1042,7 +1047,7 @@ async function saveIgCreds() {
   try {
     const res = await fetch(`/api/db/restaurants/${rid}`, {
       method:  'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(body),
     });
     if (!res.ok) throw new Error((await res.json()).error);
@@ -1066,7 +1071,7 @@ async function lookupIgId() {
   try {
     const res  = await fetch('/api/instagram/lookup-id', {
       method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ instagramUrl: url, restaurantId: getRestaurantId() }),
     });
     const data = await res.json();
@@ -1086,7 +1091,7 @@ async function lookupIgId() {
 async function loadIgStatus() {
   try {
     const rid  = getRestaurantId();
-    const data = await fetch(`/api/instagram/status?restaurantId=${rid}`).then(r => r.json());
+    const data = await fetch(`/api/instagram/status?restaurantId=${rid}`, { headers: authHeaders() }).then(r => r.json());
 
     // OAuth connect button
     const oauthRow = document.getElementById('igOauthRow');
@@ -1138,7 +1143,7 @@ async function refreshIgToken() {
     const rid = getRestaurantId();
     const res = await fetch(`/api/instagram/refresh`, {
       method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ restaurantId: rid }),
     });
     const data = await res.json();
