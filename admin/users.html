@@ -56,7 +56,15 @@
   .btn:disabled { opacity: 0.45; cursor: default; }
   .btn-ghost { background: var(--bg-surface); border: 1px solid var(--border); color: var(--text-muted); }
   .btn-ghost:hover { border-color: var(--gold-border); color: var(--text); opacity: 1; }
+  .btn-gold { background: rgba(200,168,75,0.15); border: 1px solid var(--gold-border); color: var(--gold-light); }
+  .btn-gold:hover { background: rgba(200,168,75,0.25); opacity: 1; }
   .btn-danger { background: var(--red-dim); border: 1px solid rgba(204,68,68,0.3); color: #f87171; }
+
+  .field-group { display: flex; flex-direction: column; gap: 0.35rem; margin-bottom: 1rem; }
+  .field-group label { font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-muted); }
+  .field-group input { background: var(--bg-surface); border: 1px solid var(--border); border-radius: 8px; padding: 0.6rem 0.8rem; color: var(--text); font-family: 'Inter', sans-serif; font-size: 0.85rem; outline: none; width: 100%; }
+  .field-group input:focus { border-color: var(--gold-border); }
+  .field-error { font-size: 0.78rem; color: #f87171; margin-top: 0.25rem; display: none; }
   .btn-sm { padding: 0.35rem 0.75rem; font-size: 0.75rem; }
 
   .table-wrap { background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
@@ -116,6 +124,7 @@
       <div class="page-title">Users</div>
       <div class="page-sub">All business accounts on the platform</div>
     </div>
+    <button class="btn btn-gold" onclick="openAddUser()">+ Add User</button>
   </div>
 
   <div class="toolbar">
@@ -144,6 +153,30 @@
     </div>
   </div>
 </main>
+
+<!-- Add User modal -->
+<div class="modal-backdrop" id="addUserModal">
+  <div class="modal">
+    <div class="modal-title">Add User</div>
+    <div class="field-group">
+      <label>Business Name</label>
+      <input type="text" id="newName" placeholder="e.g. The Golden Fork" autocomplete="off">
+    </div>
+    <div class="field-group">
+      <label>Email</label>
+      <input type="email" id="newEmail" placeholder="owner@example.com" autocomplete="off">
+    </div>
+    <div class="field-group">
+      <label>Password</label>
+      <input type="password" id="newPassword" placeholder="Min 8 characters">
+    </div>
+    <div class="field-error" id="addUserError"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeAddUser()">Cancel</button>
+      <button class="btn btn-gold" id="addUserBtn" onclick="submitAddUser()">Create Account</button>
+    </div>
+  </div>
+</div>
 
 <!-- Detail modal -->
 <div class="modal-backdrop" id="detailModal">
@@ -256,6 +289,50 @@ async function doDelete(id) {
   } catch (e) { showToast(e.message, true); }
 }
 
+function openAddUser() {
+  document.getElementById('newName').value = '';
+  document.getElementById('newEmail').value = '';
+  document.getElementById('newPassword').value = '';
+  document.getElementById('addUserError').style.display = 'none';
+  document.getElementById('addUserModal').classList.add('open');
+  document.getElementById('newName').focus();
+}
+
+function closeAddUser() {
+  document.getElementById('addUserModal').classList.remove('open');
+}
+
+async function submitAddUser() {
+  const name     = document.getElementById('newName').value.trim();
+  const email    = document.getElementById('newEmail').value.trim();
+  const password = document.getElementById('newPassword').value;
+  const errEl    = document.getElementById('addUserError');
+  const btn      = document.getElementById('addUserBtn');
+
+  errEl.style.display = 'none';
+  if (!name || !email || !password) { errEl.textContent = 'All fields are required.'; errEl.style.display = 'block'; return; }
+  if (password.length < 8)          { errEl.textContent = 'Password must be at least 8 characters.'; errEl.style.display = 'block'; return; }
+
+  btn.disabled = true; btn.textContent = 'Creating…';
+  try {
+    const res  = await fetch('/api/auth/signup', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ restaurantName: name, email, password }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to create account');
+    closeAddUser();
+    await loadUsers();
+    showToast(`Account created for ${name}`);
+  } catch (e) {
+    errEl.textContent = e.message;
+    errEl.style.display = 'block';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Create Account';
+  }
+}
+
 function capitalize(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : ''; }
 function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
@@ -268,6 +345,7 @@ function showToast(msg, error = false) {
 }
 
 document.getElementById('detailModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeDetail(); });
+document.getElementById('addUserModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeAddUser(); });
 
 loadUsers();
 </script>
