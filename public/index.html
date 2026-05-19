@@ -118,6 +118,9 @@
     gap: 1.25rem;
   }
   .form-grid .span2 { grid-column: 1 / -1; }
+  .biz-other-input { display: none; margin-top: 0.5rem; width: 100%; background: var(--bg-surface); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 0.6rem 0.9rem; color: var(--text); font-family: inherit; font-size: 0.85rem; outline: none; box-sizing: border-box; }
+  .biz-other-input:focus { border-color: rgba(200,168,75,0.4); }
+  .biz-other-input.visible { display: block; }
   label {
     display: block;
     font-size: 0.75rem;
@@ -438,7 +441,7 @@
           <option value="gallery">Gallery</option>
           <option value="other">Other…</option>
         </select>
-        <input type="text" id="businessTypeOther" placeholder="Describe your business type" style="display:none;margin-top:0.5rem;width:100%;background:var(--bg-surface,#1a1a28);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:0.6rem 0.9rem;color:var(--text,#f0ede8);font-family:inherit;font-size:0.85rem;outline:none;">
+        <input type="text" id="businessTypeOther" class="biz-other-input" placeholder="Describe your business type">
       </div>
       <div>
         <label for="cuisineType">Cuisine / Specialty</label>
@@ -973,7 +976,7 @@ function onBizTypeChange() {
   const sel     = document.getElementById('businessType');
   const otherEl = document.getElementById('businessTypeOther');
   const isOther = sel.value === 'other';
-  otherEl.style.display = isOther ? '' : 'none';
+  otherEl.classList.toggle('visible', isOther);
   if (isOther) { otherEl.focus(); }
   else         { otherEl.value = ''; }
   applyBusinessTypeLabels(getEffectiveBizType());
@@ -995,11 +998,11 @@ function setBizTypeDropdown(businessType) {
   const isPreset = !businessType || _PRESET_BIZ.includes(businessType);
   if (isPreset) {
     sel.value = businessType || 'restaurant';
-    otherEl.style.display = 'none';
+    otherEl.classList.remove('visible');
     otherEl.value = '';
   } else {
     sel.value = 'other';
-    otherEl.style.display = '';
+    otherEl.classList.add('visible');
     otherEl.value = businessType;
   }
   applyBusinessTypeLabels(businessType || 'restaurant');
