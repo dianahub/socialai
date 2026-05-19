@@ -421,15 +421,27 @@
 
   <!-- ── Restaurant Info ── -->
   <div class="section">
-    <div class="section-title">Restaurant Information</div>
+    <div class="section-title">Business Information</div>
     <div class="section-subtitle">Core details used in every AI-generated caption and visual prompt.</div>
     <div class="form-grid">
       <div>
-        <label for="restaurantName">Restaurant Name</label>
+        <label for="restaurantName">Business Name</label>
         <input type="text" id="restaurantName" placeholder="e.g. Le Bernardin" autocomplete="off">
       </div>
       <div>
-        <label for="cuisineType">Cuisine Type</label>
+        <label for="businessType">Business Type</label>
+        <select id="businessType" onchange="onBizTypeChange()">
+          <option value="restaurant">Restaurant</option>
+          <option value="spa">Spa</option>
+          <option value="salon">Salon</option>
+          <option value="gym">Gym</option>
+          <option value="gallery">Gallery</option>
+          <option value="other">Other…</option>
+        </select>
+        <input type="text" id="businessTypeOther" placeholder="Describe your business type" style="display:none;margin-top:0.5rem;width:100%;background:var(--bg-surface,#1a1a28);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:0.6rem 0.9rem;color:var(--text,#f0ede8);font-family:inherit;font-size:0.85rem;outline:none;">
+      </div>
+      <div>
+        <label for="cuisineType">Cuisine / Specialty</label>
         <select id="cuisineType">
           <option value="">Select cuisine…</option>
           <option>French Fine Dining</option>
@@ -841,6 +853,7 @@ async function saveAndGenerate() {
   const config = {
     restaurantId:   getRestaurantId(),
     restaurantName: name,
+    businessType:   getEffectiveBizType(),
     cuisineType:    document.getElementById('cuisineType').value,
     ownerName:      document.getElementById('ownerName').value.trim(),
     chefName:       document.getElementById('chefName').value.trim(),
@@ -917,7 +930,7 @@ async function loadSavedState() {
     if (config.twinStyle)   document.getElementById('twinStyle').value   = config.twinStyle;
     if (config.twinUsecase) document.getElementById('twinUsecase').value = config.twinUsecase;
 
-    applyBusinessTypeLabels(config.businessType || 'restaurant');
+    setBizTypeDropdown(config.businessType || 'restaurant');
 
     // Restore uploads
     if (assets.logo) {
@@ -953,11 +966,51 @@ async function loadSavedState() {
   }
 }
 
-// ── Business type label adaptation ────────────────────────────────────────
+// ── Business type helpers ─────────────────────────────────────────────────
+const _PRESET_BIZ = ['restaurant','spa','salon','gym','gallery','other'];
+
+function onBizTypeChange() {
+  const sel     = document.getElementById('businessType');
+  const otherEl = document.getElementById('businessTypeOther');
+  const isOther = sel.value === 'other';
+  otherEl.style.display = isOther ? '' : 'none';
+  if (isOther) { otherEl.focus(); }
+  else         { otherEl.value = ''; }
+  applyBusinessTypeLabels(getEffectiveBizType());
+}
+
+function getEffectiveBizType() {
+  const sel = document.getElementById('businessType');
+  if (!sel) return 'restaurant';
+  if (sel.value === 'other') {
+    return document.getElementById('businessTypeOther').value.trim() || 'other';
+  }
+  return sel.value || 'restaurant';
+}
+
+function setBizTypeDropdown(businessType) {
+  const sel     = document.getElementById('businessType');
+  const otherEl = document.getElementById('businessTypeOther');
+  if (!sel) return;
+  const isPreset = !businessType || _PRESET_BIZ.includes(businessType);
+  if (isPreset) {
+    sel.value = businessType || 'restaurant';
+    otherEl.style.display = 'none';
+    otherEl.value = '';
+  } else {
+    sel.value = 'other';
+    otherEl.style.display = '';
+    otherEl.value = businessType;
+  }
+  applyBusinessTypeLabels(businessType || 'restaurant');
+}
+
 function applyBusinessTypeLabels(businessType) {
   const isRestaurant = !businessType || businessType === 'restaurant';
   const label = isRestaurant ? 'Restaurant'
     : businessType === 'spa'     ? 'Spa'
+    : businessType === 'salon'   ? 'Salon'
+    : businessType === 'gym'     ? 'Gym'
     : businessType === 'gallery' ? 'Gallery'
     : businessType.charAt(0).toUpperCase() + businessType.slice(1);
 
