@@ -728,7 +728,7 @@ setupDropZone('ownerZone', 'ownerInput', 'owner', async (file) => {
   await uploadFile('/api/upload/owner', 'file', file, { restaurantId: getRestaurantId() });
   ownerUploaded = file.name;
   showPreview('ownerPreview', 'ownerIcon', 'ownerLabel', URL.createObjectURL(file));
-  toast('Chef photo uploaded', 'success');
+  toast('Owner photo uploaded', 'success');
 });
 
 // ── Photo grid ─────────────────────────────────────────────────────────────
