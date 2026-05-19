@@ -191,13 +191,16 @@
       <div class="field-group"><label>Business Name</label><input type="text" id="fBusiness" placeholder="e.g. Casa Marina"></div>
       <div class="field-group">
         <label>Business Type</label>
-        <select id="fBizType">
+        <select id="fBizType" onchange="onBizTypeChange()">
           <option value="">Select…</option>
           <option value="restaurant">Restaurant</option>
           <option value="spa">Spa</option>
+          <option value="salon">Salon</option>
+          <option value="gym">Gym</option>
           <option value="gallery">Gallery</option>
-          <option value="other">Other</option>
+          <option value="other">Other…</option>
         </select>
+        <input type="text" id="fBizTypeOther" placeholder="Describe the business type" style="display:none;margin-top:0.5rem">
       </div>
     </div>
     <div class="field-group"><label>Email</label><input type="email" id="fEmail" placeholder="e.g. sofia@casamarina.com"></div>
@@ -323,7 +326,12 @@ function openEditModal(id) {
   document.getElementById('fName').value          = l.name || '';
   document.getElementById('fPhone').value         = l.phone || '';
   document.getElementById('fBusiness').value      = l.businessName || '';
-  document.getElementById('fBizType').value       = l.businessType || '';
+  const bt = l.businessType || '';
+  const isPreset = !bt || PRESET_BIZ_TYPES.includes(bt);
+  document.getElementById('fBizType').value = isPreset ? bt : 'other';
+  const otherEl = document.getElementById('fBizTypeOther');
+  if (!isPreset) { otherEl.style.display = ''; otherEl.value = bt; }
+  else           { otherEl.style.display = 'none'; otherEl.value = ''; }
   document.getElementById('fEmail').value         = l.email || '';
   document.getElementById('fLastContacted').value = l.lastContactedAt ? l.lastContactedAt.split('T')[0] : '';
   document.getElementById('fNotes').value         = l.notes || '';
@@ -333,9 +341,20 @@ function openEditModal(id) {
 
 function closeModal() { document.getElementById('leadModal').classList.remove('open'); }
 
+const PRESET_BIZ_TYPES = ['restaurant','spa','salon','gym','gallery','other'];
+
+function onBizTypeChange() {
+  const other = document.getElementById('fBizTypeOther');
+  const isOther = document.getElementById('fBizType').value === 'other';
+  other.style.display = isOther ? '' : 'none';
+  if (isOther) other.focus();
+  else other.value = '';
+}
+
 function clearForm() {
-  ['fName','fPhone','fBusiness','fEmail','fNotes'].forEach(id => document.getElementById(id).value = '');
+  ['fName','fPhone','fBusiness','fEmail','fNotes','fBizTypeOther'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('fBizType').value = '';
+  document.getElementById('fBizTypeOther').style.display = 'none';
   document.getElementById('fLastContacted').value = '';
   document.getElementById('modalError').classList.remove('show');
 }
@@ -350,7 +369,9 @@ async function saveLead() {
     name,
     phone:           document.getElementById('fPhone').value.trim()    || null,
     businessName:    document.getElementById('fBusiness').value.trim() || null,
-    businessType:    document.getElementById('fBizType').value         || null,
+    businessType:    (document.getElementById('fBizType').value === 'other'
+                       ? document.getElementById('fBizTypeOther').value.trim()
+                       : document.getElementById('fBizType').value) || null,
     email:           document.getElementById('fEmail').value.trim()    || null,
     lastContactedAt: document.getElementById('fLastContacted').value   || null,
     notes:           document.getElementById('fNotes').value.trim()    || null,
