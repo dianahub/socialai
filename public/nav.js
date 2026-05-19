@@ -27,6 +27,12 @@
         return payload.restaurantId || 1;
       } catch { /* fall through */ }
     }
+    // Admin/dev mode: honour ?restaurantId= in the URL
+    const urlId = new URLSearchParams(location.search).get('restaurantId');
+    if (urlId) {
+      localStorage.setItem('selectedRestaurantId', urlId);
+      return Number(urlId);
+    }
     return Number(localStorage.getItem('selectedRestaurantId')) || 1;
   };
 
