@@ -233,6 +233,7 @@ function renderTable() {
       <td class="muted">${joined}</td>
       <td><div class="actions-cell">
         <button class="btn btn-ghost btn-sm" onclick="openDetail(${u.id})">View</button>
+        <button class="btn btn-gold btn-sm" onclick="loginAs(${u.id})">Login as</button>
         <button class="btn btn-danger btn-sm" onclick="confirmDelete(${u.id})">Delete</button>
       </div></td>
     </tr>`;
@@ -286,6 +287,20 @@ async function doDelete(id) {
     if (!res.ok) throw new Error((await res.json()).error || 'Delete failed');
     await loadUsers();
     showToast('Account deleted');
+  } catch (e) { showToast(e.message, true); }
+}
+
+async function loginAs(id) {
+  const u = users.find(x => x.id === id);
+  if (!confirm(`Log in as "${u?.name}"?\n\nThis will open their dashboard in a new tab using a temporary token.`)) return;
+  try {
+    const res  = await fetch(`/api/admin/impersonate/${id}`, { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed');
+    const url = new URL('/index.html', location.origin);
+    url.searchParams.set('impersonate_token', data.token);
+    url.searchParams.set('restaurantId', data.restaurantId);
+    window.open(url.toString(), '_blank');
   } catch (e) { showToast(e.message, true); }
 }
 

@@ -1,6 +1,17 @@
 // nav.js — restaurant switcher (admin mode) OR restaurant name + logout (auth mode)
 // Intercepts all /api/ fetch calls to add Bearer token automatically.
 (function () {
+  // ── Impersonation: admin passes token via query param ────────────────────
+  const _params = new URLSearchParams(location.search);
+  const _impToken = _params.get('impersonate_token');
+  if (_impToken) {
+    localStorage.setItem('authToken', _impToken);
+    _params.delete('impersonate_token');
+    _params.delete('restaurantId');
+    const clean = location.pathname + (_params.toString() ? '?' + _params.toString() : '');
+    history.replaceState(null, '', clean);
+  }
+
   // ── Auth helpers ─────────────────────────────────────────────────────────
 
   window.getAuthToken = function () {

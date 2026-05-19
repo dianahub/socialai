@@ -285,6 +285,19 @@ app.get('/admin/logout', (req, res) => {
 app.get('/admin/leads', requireAdmin, (req, res) => res.sendFile(path.resolve('admin/leads.html')));
 app.get('/admin/users', requireAdmin, (req, res) => res.sendFile(path.resolve('admin/users.html')));
 
+// POST /api/admin/impersonate/:id — generate a JWT for any restaurant (admin only)
+app.post('/api/admin/impersonate/:id', requireAdmin, async (req, res) => {
+  const id = Number(req.params.id);
+  try {
+    const r = await db.restaurant.findUnique({ where: { id }, select: { id: true, name: true } });
+    if (!r) return res.status(404).json({ error: 'Restaurant not found' });
+    const token = createToken(r.id);
+    res.json({ token, restaurantId: r.id, restaurantName: r.name });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ── Global auth middleware (protects all /api/ except /api/auth/*) ─────────
 app.use((req, res, next) => {
   if (!req.path.startsWith('/api/') || req.path.startsWith('/api/auth/')) return next();
