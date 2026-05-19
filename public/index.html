@@ -634,14 +634,14 @@
       <button onclick="refreshIgToken()" style="margin-left:0.75rem;background:rgba(251,191,36,0.15);border:1px solid rgba(251,191,36,0.3);border-radius:6px;padding:0.2rem 0.6rem;color:#fbbf24;font-family:inherit;font-size:0.75rem;cursor:pointer">Refresh Now</button>
     </div>
 
-    <div class="form-grid" style="grid-template-columns:1fr 1fr;gap:1rem;margin-top:0.25rem">
-      <div class="field-group" style="grid-column:1/-1">
-        <label for="igUrl">Instagram Profile URL</label>
-        <input type="text" id="igUrl" placeholder="https://www.instagram.com/yourbusiness"
-               onblur="lookupIgId()" autocomplete="off"
-               style="font-size:1rem;padding:0.85rem 1rem;">
-        <span id="igLookupStatus" style="font-size:0.72rem;margin-top:0.25rem;display:none"></span>
-      </div>
+    <div class="field-group" style="margin-top:0.25rem;margin-bottom:1rem">
+      <label for="igUrl">Instagram Profile URL</label>
+      <input type="text" id="igUrl" placeholder="https://www.instagram.com/yourbusiness"
+             onblur="lookupIgId()" autocomplete="off"
+             style="font-size:1rem;padding:0.85rem 1rem;width:100%;">
+      <span id="igLookupStatus" style="font-size:0.72rem;margin-top:0.25rem;display:none"></span>
+    </div>
+    <div class="form-grid" style="grid-template-columns:1fr 1fr;gap:1rem">
       <div class="field-group">
         <label for="igAccountId">Instagram Account ID</label>
         <input type="text" id="igAccountId" placeholder="Auto-filled from URL above">
