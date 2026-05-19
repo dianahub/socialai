@@ -419,7 +419,7 @@
 <main>
   <div class="page-header">
     <h1>Asset Manager</h1>
-    <p>Configure your restaurant profile and upload brand assets to power AI content generation.</p>
+    <p>Configure your business profile and upload brand assets to power AI content generation.</p>
   </div>
 
   <!-- ── Restaurant Info ── -->
@@ -444,9 +444,9 @@
         <input type="text" id="businessTypeOther" class="biz-other-input" placeholder="Describe your business type">
       </div>
       <div>
-        <label for="cuisineType">Cuisine / Specialty</label>
+        <label for="cuisineType">Specialty / Style</label>
         <select id="cuisineType">
-          <option value="">Select cuisine…</option>
+          <option value="">Select specialty…</option>
           <option>French Fine Dining</option>
           <option>Italian Contemporary</option>
           <option>Japanese Omakase</option>
@@ -458,7 +458,11 @@
           <option>Seafood &amp; Raw Bar</option>
           <option>Contemporary Asian</option>
           <option>Modern European</option>
-          <option>Other Fine Dining</option>
+          <option>Luxury Spa &amp; Wellness</option>
+          <option>Beauty &amp; Aesthetics</option>
+          <option>Fitness &amp; Performance</option>
+          <option>Art &amp; Design</option>
+          <option>Other</option>
         </select>
       </div>
       <div>
@@ -466,11 +470,11 @@
         <input type="text" id="ownerName" placeholder="e.g. Jean-Pierre Martin" autocomplete="off">
       </div>
       <div>
-        <label for="chefName">Executive Chef <span style="font-weight:400;opacity:0.6;text-transform:none;letter-spacing:0">(optional)</span></label>
-        <input type="text" id="chefName" placeholder="e.g. Chef Marie Dubois" autocomplete="off">
+        <label for="chefName">Team Member / Title <span style="font-weight:400;opacity:0.6;text-transform:none;letter-spacing:0">(optional)</span></label>
+        <input type="text" id="chefName" placeholder="e.g. Head Stylist, Lead Trainer" autocomplete="off">
       </div>
       <div class="span2">
-        <label for="tagline">Restaurant Tagline</label>
+        <label for="tagline">Business Tagline</label>
         <input type="text" id="tagline" placeholder="e.g. Where the sea meets art" autocomplete="off">
       </div>
     </div>
@@ -567,12 +571,12 @@
 
   <!-- ── Owner Photo ── -->
   <div class="section">
-    <div class="section-title">Owner / Chef Photo</div>
+    <div class="section-title">Owner Photo</div>
     <div class="section-subtitle">Used to generate a digital twin animation via Higgsfield Soul.</div>
     <div class="drop-zone" id="ownerZone">
       <input type="file" id="ownerInput" accept="image/*">
       <div class="drop-icon" id="ownerIcon">👤</div>
-      <div class="drop-label" id="ownerLabel">Drop chef photo here or <u>click to browse</u></div>
+      <div class="drop-label" id="ownerLabel">Drop owner photo here or <u>click to browse</u></div>
       <div class="drop-hint">Best results: clear face, good lighting · Max 10 MB</div>
       <img class="drop-preview" id="ownerPreview" alt="Owner preview">
     </div>
@@ -590,8 +594,8 @@
         <label for="twinUsecase">Use Case</label>
         <select id="twinUsecase">
           <option value="welcome message">Welcome Message</option>
-          <option value="chef's table introduction">Chef's Table Introduction</option>
-          <option value="seasonal menu announcement">Seasonal Menu Announcement</option>
+          <option value="business introduction">Business Introduction</option>
+          <option value="new offer announcement">New Offer Announcement</option>
           <option value="thank you message">Thank You Message</option>
           <option value="behind the scenes story">Behind the Scenes Story</option>
         </select>
@@ -602,12 +606,12 @@
   <!-- ── Login Credentials ── -->
   <div class="section" style="margin-top:1.5rem">
     <div class="section-title">Login Credentials
-      <span class="section-subtitle">Email + password restaurant owners use to sign in</span>
+      <span class="section-subtitle">Email + password the business owner uses to sign in</span>
     </div>
     <div class="form-grid" style="grid-template-columns:1fr 1fr;gap:1rem;margin-top:0.75rem">
       <div class="field-group">
         <label for="loginEmail">Email Address</label>
-        <input type="email" id="loginEmail" placeholder="owner@yourrestaurant.com">
+        <input type="email" id="loginEmail" placeholder="owner@yourbusiness.com">
       </div>
       <div class="field-group">
         <label for="loginPassword">Password <span style="font-size:0.7rem;color:var(--text-muted)">(min 8 chars)</span></label>
@@ -615,7 +619,7 @@
       </div>
     </div>
     <p style="font-size:0.75rem;color:var(--text-muted);margin-top:0.75rem">
-      Credentials are restaurant-specific — each owner logs in independently.
+      Credentials are account-specific — each owner logs in independently.
       <button id="credSaveBtn" onclick="saveLoginCredentials()" style="margin-left:1rem;background:rgba(200,168,75,0.15);border:1px solid rgba(200,168,75,0.25);border-radius:6px;padding:0.25rem 0.75rem;color:var(--gold-light);cursor:pointer;font-size:0.78rem;font-family:inherit">Save Credentials</button>
     </p>
   </div>
@@ -623,7 +627,7 @@
   <!-- ── Instagram Credentials ── -->
   <div class="section" style="margin-top:1.5rem">
     <div class="section-title">Instagram Credentials
-      <span class="section-subtitle">Per-restaurant — stored securely in the database</span>
+      <span class="section-subtitle">Per-account — stored securely in the database</span>
     </div>
 
     <!-- OAuth connect button (shown when FB_APP_ID is configured on the server) -->
@@ -665,7 +669,7 @@
       </div>
     </div>
     <p style="font-size:0.75rem;color:var(--text-muted);margin-top:0.75rem">
-      Saved per restaurant. Falls back to <code style="font-size:0.7rem;color:var(--gold)">INSTAGRAM_ACCOUNT_ID</code> /
+      Saved per account. Falls back to <code style="font-size:0.7rem;color:var(--gold)">INSTAGRAM_ACCOUNT_ID</code> /
       <code style="font-size:0.7rem;color:var(--gold)">INSTAGRAM_ACCESS_TOKEN</code> env vars if blank.
       <button id="igSaveBtn" onclick="saveIgCreds()" style="margin-left:1rem;background:rgba(200,168,75,0.15);border:1px solid rgba(200,168,75,0.25);border-radius:6px;padding:0.25rem 0.75rem;color:var(--gold-light);cursor:pointer;font-size:0.78rem;font-family:inherit">Save Instagram</button>
     </p>
@@ -848,7 +852,7 @@ function setupDropZone(zoneId, inputId, type, handler) {
 // ── Save & Generate ────────────────────────────────────────────────────────
 async function saveAndGenerate() {
   const name = document.getElementById('restaurantName').value.trim();
-  if (!name) { toast('Please enter a restaurant name', 'error'); return; }
+  if (!name) { toast('Please enter a business name', 'error'); return; }
 
   const platforms = [...document.querySelectorAll('.platform-toggle input:checked')]
     .map(cb => cb.value);
@@ -1020,7 +1024,7 @@ function applyBusinessTypeLabels(businessType) {
   const logoTitle   = document.getElementById('logoSectionTitle');
   const photosTitle = document.getElementById('photosSectionTitle');
   if (logoTitle)   logoTitle.textContent   = label + ' Logo';
-  if (photosTitle) photosTitle.textContent = isRestaurant ? 'Food & Atmosphere Photos' : 'Photos';
+  if (photosTitle) photosTitle.textContent = 'Photos';
 }
 
 // ── Login credentials ──────────────────────────────────────────────────────
