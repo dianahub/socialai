@@ -178,6 +178,42 @@
   </div>
 </div>
 
+<!-- Edit User modal -->
+<div class="modal-backdrop" id="editUserModal">
+  <div class="modal">
+    <div class="modal-title">Edit User</div>
+    <div class="field-group">
+      <label>Business Name</label>
+      <input type="text" id="editName" autocomplete="off">
+    </div>
+    <div class="field-group">
+      <label>Email</label>
+      <input type="email" id="editEmail" autocomplete="off">
+    </div>
+    <div class="field-group">
+      <label>Business Type</label>
+      <input type="text" id="editBizType" placeholder="e.g. restaurant, salon, gym">
+    </div>
+    <div class="field-group">
+      <label>Cuisine / Specialty</label>
+      <input type="text" id="editCuisine" placeholder="e.g. Italian, Hair, CrossFit">
+    </div>
+    <div class="field-group">
+      <label>Location</label>
+      <input type="text" id="editLocation" placeholder="City, State">
+    </div>
+    <div class="field-group">
+      <label>Owner Name</label>
+      <input type="text" id="editOwner" placeholder="Full name">
+    </div>
+    <div class="field-error" id="editUserError"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeEdit()">Cancel</button>
+      <button class="btn btn-gold" id="editUserBtn" onclick="submitEdit()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
 <!-- Detail modal -->
 <div class="modal-backdrop" id="detailModal">
   <div class="modal">
@@ -233,6 +269,7 @@ function renderTable() {
       <td class="muted">${joined}</td>
       <td><div class="actions-cell">
         <button class="btn btn-ghost btn-sm" onclick="openDetail(${u.id})">View</button>
+        <button class="btn btn-ghost btn-sm" onclick="openEdit(${u.id})">Edit</button>
         <button class="btn btn-gold btn-sm" onclick="loginAs(${u.id})">Login as</button>
         <button class="btn btn-danger btn-sm" onclick="confirmDelete(${u.id})">Delete</button>
       </div></td>
@@ -304,6 +341,65 @@ async function loginAs(id) {
   } catch (e) { showToast(e.message, true); }
 }
 
+let editingId = null;
+
+function openEdit(id) {
+  const u = users.find(x => x.id === id);
+  if (!u) return;
+  editingId = id;
+  document.getElementById('editName').value     = u.name || '';
+  document.getElementById('editEmail').value    = u.loginEmail || '';
+  document.getElementById('editBizType').value  = u.businessType || '';
+  document.getElementById('editCuisine').value  = u.cuisineType || '';
+  document.getElementById('editLocation').value = u.location || '';
+  document.getElementById('editOwner').value    = u.ownerName || '';
+  document.getElementById('editUserError').style.display = 'none';
+  document.getElementById('editUserModal').classList.add('open');
+  document.getElementById('editName').focus();
+}
+
+function closeEdit() {
+  document.getElementById('editUserModal').classList.remove('open');
+  editingId = null;
+}
+
+async function submitEdit() {
+  const errEl = document.getElementById('editUserError');
+  const btn   = document.getElementById('editUserBtn');
+  errEl.style.display = 'none';
+
+  const name = document.getElementById('editName').value.trim();
+  if (!name) { errEl.textContent = 'Business name is required.'; errEl.style.display = 'block'; return; }
+
+  const body = {
+    name,
+    loginEmail:   document.getElementById('editEmail').value.trim() || undefined,
+    businessType: document.getElementById('editBizType').value.trim() || undefined,
+    cuisineType:  document.getElementById('editCuisine').value.trim() || undefined,
+    location:     document.getElementById('editLocation').value.trim() || undefined,
+    ownerName:    document.getElementById('editOwner').value.trim() || undefined,
+  };
+
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try {
+    const res  = await fetch(`/api/db/restaurants/${editingId}`, {
+      method:  'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify(body),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Save failed');
+    closeEdit();
+    await loadUsers();
+    showToast('Changes saved');
+  } catch (e) {
+    errEl.textContent = e.message;
+    errEl.style.display = 'block';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Save Changes';
+  }
+}
+
 function openAddUser() {
   document.getElementById('newName').value = '';
   document.getElementById('newEmail').value = '';
@@ -361,6 +457,7 @@ function showToast(msg, error = false) {
 
 document.getElementById('detailModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeDetail(); });
 document.getElementById('addUserModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeAddUser(); });
+document.getElementById('editUserModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeEdit(); });
 
 loadUsers();
 </script>
