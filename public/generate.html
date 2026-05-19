@@ -393,7 +393,7 @@
     </div>
     <div class="rh-info">
       <h2 id="headerName">Loading…</h2>
-      <p id="headerMeta">Fine Dining Restaurant</p>
+      <p id="headerMeta"></p>
     </div>
     <a href="index.html" class="rh-link btn btn-ghost" style="font-size:0.78rem">← Edit Assets</a>
   </div>
@@ -406,20 +406,20 @@
     </div>
     <div class="brief-grid">
       <div class="brief-group">
-        <label>Featured dish or special</label>
-        <input type="text" id="briefDish" placeholder='e.g. "Truffle risotto"'>
+        <label>Featured product or offer</label>
+        <input type="text" id="briefDish" placeholder="What's your feature this week?">
       </div>
       <div class="brief-group">
         <label>Event this week</label>
-        <input type="text" id="briefEvent" placeholder='e.g. "Wine tasting Thursday 7pm"'>
+        <input type="text" id="briefEvent" placeholder="Any event or special day this week?">
       </div>
       <div class="brief-group">
         <label>Promotion or offer</label>
-        <input type="text" id="briefPromo" placeholder='e.g. "Happy hour 5–7pm daily"'>
+        <input type="text" id="briefPromo" placeholder="Any discount, deal, or promotion?">
       </div>
       <div class="brief-group">
         <label>Notes for AI</label>
-        <input type="text" id="briefNotes" placeholder='e.g. "Romantic Valentine's vibe this week"'>
+        <input type="text" id="briefNotes" placeholder="Vibe, tone, or anything extra for the AI">
       </div>
     </div>
     <div class="brief-footer">
@@ -499,8 +499,8 @@
       <div class="gen-card" id="card-video" onclick="generate('video')">
         <div class="gen-icon">🎬</div>
         <div class="gen-title">Cinematic Video</div>
-        <div class="gen-desc">Food photo slideshow with Ken Burns zoom and crossfade transitions. Uses your uploaded restaurant photos.</div>
-        <div class="gen-model">Food Photo Slideshow</div>
+        <div class="gen-desc">Photo slideshow with Ken Burns zoom and crossfade transitions. Uses your uploaded photos.</div>
+        <div class="gen-model">Photo Slideshow</div>
         <div class="gen-status" id="status-video" style="display:none"></div>
       </div>
 
@@ -541,7 +541,7 @@
           </div>
 
           <p style="font-size:0.7rem;color:var(--text-muted);margin-top:0.55rem;line-height:1.45">
-            <strong style="color:var(--text)">First time:</strong> click ↻ and we'll write it from your restaurant info.
+            <strong style="color:var(--text)">First time:</strong> click ↻ and we'll write it from your business info.
             Every week after, update the brief above and click ↻ again to refresh.
             Edit freely before generating.
           </p>
@@ -686,7 +686,7 @@ async function loadHeader() {
     if (config.restaurantName) {
       document.getElementById('headerName').textContent = config.restaurantName;
       document.getElementById('headerMeta').textContent =
-        [config.cuisineType, config.ownerName ? `Owner: ${config.ownerName}` : null, config.chefName ? `Chef: ${config.chefName}` : null].filter(Boolean).join(' · ');
+        [config.cuisineType, config.ownerName ? `Owner: ${config.ownerName}` : null, config.chefName ? config.chefName : null].filter(Boolean).join(' · ');
     }
     if (assets.logo) {
       const img = document.getElementById('headerLogo');
