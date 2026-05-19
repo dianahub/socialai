@@ -679,87 +679,81 @@ input[type="range"]::-webkit-slider-thumb {
 <div class="modal-backdrop" id="genWeekBackdrop" onclick="closeGenWeekModal(event)">
   <div class="gw-modal">
     <div class="modal-header">
-      <span class="modal-title">⚡ Generate This Week's Content</span>
+      <span class="modal-title" id="gwModalTitle">⚡ Generate This Week's Content</span>
       <button class="modal-close" onclick="closeGenWeekModal()">✕</button>
     </div>
-    <div class="modal-body">
 
-      <!-- Posting preset -->
-      <div class="form-group">
-        <label class="form-label">Posting Schedule Preset</label>
-        <select class="form-select" id="gwPreset" onchange="onPresetChange()">
-          <!-- populated from /api/generate-week/presets -->
-        </select>
-        <p id="gwPresetPreview" style="font-size:0.72rem;color:#6dbb88;margin-top:0.3rem"></p>
-      </div>
-
-      <div class="form-row">
+    <!-- Step 1: Settings -->
+    <div id="gwStep1">
+      <div class="modal-body">
         <div class="form-group">
-          <label class="form-label">Start Date</label>
-          <input type="date" class="form-input" id="gwStartDate">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Post Frequency</label>
-          <select class="form-select" id="gwFrequency">
-            <option value="daily">Daily (7 posts)</option>
-            <option value="twice_daily">Twice Daily (14 posts)</option>
-            <option value="5x_week">5× / Week (Mon–Fri)</option>
-            <option value="3x_week" selected>3× / Week (Mon/Wed/Fri)</option>
-            <option value="every_other_day">Every Other Day</option>
+          <label class="form-label">Posting Schedule Preset</label>
+          <select class="form-select" id="gwPreset" onchange="onPresetChange()">
+            <!-- populated from /api/generate-week/presets -->
           </select>
+          <p id="gwPresetPreview" style="font-size:0.72rem;color:#6dbb88;margin-top:0.3rem"></p>
         </div>
-      </div>
-
-      <div class="form-group">
-        <label class="form-label">Content Mix</label>
-        <div style="display:flex;flex-direction:column;gap:0.6rem;margin-top:0.25rem">
-          <div>
-            <div class="mix-row">
-              <label class="mix-label">👤 Owner Twin Video</label>
-              <span class="mix-pct" id="mixPctTwin">40%</span>
-            </div>
-            <input type="range" id="mixTwin" min="0" max="100" value="40"
-              oninput="updateMixLabel('Twin',this.value)">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Start Date</label>
+            <input type="date" class="form-input" id="gwStartDate">
           </div>
-          <div>
-            <div class="mix-row">
-              <label class="mix-label">🎬 Cinematic Video</label>
-              <span class="mix-pct" id="mixPctCine">30%</span>
-            </div>
-            <input type="range" id="mixCine" min="0" max="100" value="30"
-              oninput="updateMixLabel('Cine',this.value)">
-          </div>
-          <div>
-            <div class="mix-row">
-              <label class="mix-label">🖼 Branded Feed Image</label>
-              <span class="mix-pct" id="mixPctFeed">20%</span>
-            </div>
-            <input type="range" id="mixFeed" min="0" max="100" value="20"
-              oninput="updateMixLabel('Feed',this.value)">
-          </div>
-          <div>
-            <div class="mix-row">
-              <label class="mix-label">📱 Story Image</label>
-              <span class="mix-pct" id="mixPctStory">10%</span>
-            </div>
-            <input type="range" id="mixStory" min="0" max="100" value="10"
-              oninput="updateMixLabel('Story',this.value)">
+          <div class="form-group">
+            <label class="form-label">Post Frequency</label>
+            <select class="form-select" id="gwFrequency">
+              <option value="daily">Daily (7 posts)</option>
+              <option value="twice_daily">Twice Daily (14 posts)</option>
+              <option value="5x_week">5× / Week (Mon–Fri)</option>
+              <option value="3x_week" selected>3× / Week (Mon/Wed/Fri)</option>
+              <option value="every_other_day">Every Other Day</option>
+            </select>
           </div>
         </div>
-        <p style="font-size:0.7rem;color:var(--text-muted);margin-top:0.5rem">
-          Percentages are relative — they don't need to add up to 100.
-        </p>
+        <div class="form-group">
+          <label class="form-label">Content Mix</label>
+          <div style="display:flex;flex-direction:column;gap:0.6rem;margin-top:0.25rem">
+            <div>
+              <div class="mix-row"><label class="mix-label">👤 Owner Twin Video</label><span class="mix-pct" id="mixPctTwin">40%</span></div>
+              <input type="range" id="mixTwin" min="0" max="100" value="40" oninput="updateMixLabel('Twin',this.value)">
+            </div>
+            <div>
+              <div class="mix-row"><label class="mix-label">🎬 Cinematic Video</label><span class="mix-pct" id="mixPctCine">30%</span></div>
+              <input type="range" id="mixCine" min="0" max="100" value="30" oninput="updateMixLabel('Cine',this.value)">
+            </div>
+            <div>
+              <div class="mix-row"><label class="mix-label">🖼 Branded Feed Image</label><span class="mix-pct" id="mixPctFeed">20%</span></div>
+              <input type="range" id="mixFeed" min="0" max="100" value="20" oninput="updateMixLabel('Feed',this.value)">
+            </div>
+            <div>
+              <div class="mix-row"><label class="mix-label">📱 Story Image</label><span class="mix-pct" id="mixPctStory">10%</span></div>
+              <input type="range" id="mixStory" min="0" max="100" value="10" oninput="updateMixLabel('Story',this.value)">
+            </div>
+          </div>
+          <p style="font-size:0.7rem;color:var(--text-muted);margin-top:0.5rem">Percentages are relative — they don't need to add up to 100.</p>
+        </div>
+        <p id="gwEst" style="font-size:0.78rem;color:var(--text-muted)"></p>
+        <p id="gwError" style="color:#f87171;font-size:0.8rem;display:none"></p>
       </div>
+      <div class="modal-footer" style="justify-content:flex-end">
+        <button class="btn btn-ghost btn-sm" onclick="closeGenWeekModal()">Cancel</button>
+        <button class="btn btn-primary btn-sm" id="gwPreviewBtn" onclick="previewSchedule()">Preview Schedule →</button>
+      </div>
+    </div>
 
-      <p id="gwEst" style="font-size:0.78rem;color:var(--text-muted)"></p>
-      <p id="gwError" style="color:#f87171;font-size:0.8rem;display:none"></p>
+    <!-- Step 2: Preview -->
+    <div id="gwStep2" style="display:none">
+      <div class="modal-body">
+        <p style="font-size:0.78rem;color:var(--text-muted);margin-bottom:0.75rem">Review the posts that will be created and queued for generation:</p>
+        <div id="gwPreviewList" style="display:flex;flex-direction:column;gap:0.4rem;max-height:320px;overflow-y:auto"></div>
+        <p id="gwPreviewEst" style="font-size:0.75rem;color:var(--text-muted);margin-top:0.75rem"></p>
+        <p id="gwError2" style="color:#f87171;font-size:0.8rem;display:none;margin-top:0.5rem"></p>
+      </div>
+      <div class="modal-footer" style="justify-content:space-between">
+        <button class="btn btn-ghost btn-sm" onclick="gwBackToSettings()">← Back</button>
+        <button class="btn btn-primary btn-sm" id="gwStartBtn" onclick="startGenerateWeek()">⚡ Confirm & Generate</button>
+      </div>
     </div>
-    <div class="modal-footer" style="justify-content:flex-end">
-      <button class="btn btn-ghost btn-sm" onclick="closeGenWeekModal()">Cancel</button>
-      <button class="btn btn-primary btn-sm" id="gwStartBtn" onclick="startGenerateWeek()">
-        ⚡ Start Generation
-      </button>
-    </div>
+
   </div>
 </div>
 
@@ -1431,9 +1425,63 @@ function updateGwEst() {
     (videoSlots > 0 ? ` (${videoSlots} video${videoSlots > 1 ? 's' : ''} via HeyGen)` : '');
 }
 
+function gwBackToSettings() {
+  document.getElementById('gwStep1').style.display = '';
+  document.getElementById('gwStep2').style.display = 'none';
+  document.getElementById('gwModalTitle').textContent = '⚡ Generate This Week\'s Content';
+}
+
+async function previewSchedule() {
+  const btn = document.getElementById('gwPreviewBtn');
+  btn.disabled = true;
+  btn.textContent = 'Loading…';
+  document.getElementById('gwError').style.display = 'none';
+  try {
+    const result = await api('POST', '/api/generate-week/preview', {
+      restaurantId,
+      startDate:      document.getElementById('gwStartDate').value,
+      days:           7,
+      postFrequency:  document.getElementById('gwFrequency').value,
+      contentMix: {
+        owner_twin_video:    Number(document.getElementById('mixTwin').value),
+        cinematic_video:     Number(document.getElementById('mixCine').value),
+        branded_image_feed:  Number(document.getElementById('mixFeed').value),
+        branded_image_story: Number(document.getElementById('mixStory').value),
+      },
+      schedulePreset:  document.getElementById('gwPreset').value || 'smart',
+      timezoneOffset:  new Date().getTimezoneOffset(),
+    });
+
+    const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    document.getElementById('gwPreviewList').innerHTML = result.posts.map(p => {
+      const d = new Date(p.scheduledTime);
+      const dateStr = `${days[d.getDay()]} ${months[d.getMonth()]} ${d.getDate()}`;
+      const hour = d.getHours();
+      const timeStr = `${hour % 12 || 12}:00 ${hour < 12 ? 'AM' : 'PM'}`;
+      return `<div style="display:flex;align-items:center;gap:0.75rem;padding:0.45rem 0.65rem;background:rgba(255,255,255,0.04);border-radius:6px;font-size:0.78rem">
+        <span style="min-width:4.5rem;color:var(--text-muted)">${dateStr}</span>
+        <span style="min-width:4rem;color:var(--text-muted)">${timeStr}</span>
+        <span>${p.icon} ${p.label}</span>
+      </div>`;
+    }).join('');
+    document.getElementById('gwPreviewEst').textContent = `${result.posts.length} posts — estimated generation time ~${result.estimatedMinutes} min`;
+
+    document.getElementById('gwStep1').style.display = 'none';
+    document.getElementById('gwStep2').style.display = '';
+    document.getElementById('gwModalTitle').textContent = '📋 Review Schedule';
+  } catch (e) {
+    document.getElementById('gwError').textContent = e.message;
+    document.getElementById('gwError').style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Preview Schedule →';
+  }
+}
+
 async function startGenerateWeek(force = false) {
   const btn = document.getElementById('gwStartBtn');
-  const errEl = document.getElementById('gwError');
+  const errEl = document.getElementById('gwError2');
   errEl.style.display = 'none';
   btn.disabled = true;
   btn.textContent = force ? 'Clearing…' : 'Queuing…';
@@ -1487,7 +1535,7 @@ async function startGenerateWeek(force = false) {
     errEl.style.display = 'block';
   } finally {
     btn.disabled = false;
-    btn.textContent = '⚡ Start Generation';
+    btn.textContent = '⚡ Confirm & Generate';
   }
 }
 

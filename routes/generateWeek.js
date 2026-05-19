@@ -66,6 +66,63 @@ function buildTypeSequence(mix, totalSlots) {
   return result;
 }
 
+// Shared logic: build the schedule plan without writing to DB
+function buildPlan({ startDate, days = 7, postFrequency = '3x_week', contentMix, schedulePreset = 'smart', timezoneOffset = 0 }) {
+  const preset = PRESETS[schedulePreset] || PRESETS.smart;
+  const mix = contentMix || { owner_twin_video: 40, cinematic_video: 30, branded_image_feed: 20, branded_image_story: 10 };
+
+  let start;
+  if (startDate) {
+    start = new Date(startDate + 'T00:00:00');
+  } else {
+    start = new Date();
+    start.setDate(start.getDate() + 1);
+    start.setHours(0, 0, 0, 0);
+  }
+
+  if (postFrequency === '3x_week' || postFrequency === '5x_week') {
+    const dow = start.getDay();
+    if (dow !== 1) start.setDate(start.getDate() + (dow === 0 ? 1 : (8 - dow) % 7));
+  }
+
+  const isTwiceDaily = postFrequency === 'twice_daily';
+  const offsets      = dayOffsets(postFrequency, days);
+  const totalSlots   = isTwiceDaily ? offsets.length * 2 : offsets.length;
+  const typeSeq      = buildTypeSequence(mix, totalSlots);
+
+  const TYPE_ICON = { owner_twin_video: '👤', cinematic_video: '🎬', branded_image_feed: '🖼', branded_image_story: '📱' };
+  const TYPE_LABEL = { owner_twin_video: 'Owner Twin Video', cinematic_video: 'Cinematic Video', branded_image_feed: 'Branded Feed Image', branded_image_story: 'Story Image' };
+
+  let typeIdx = 0;
+  let estSecs = 0;
+  const posts = [];
+
+  for (const offset of offsets) {
+    const slotsThisDay = isTwiceDaily ? 2 : 1;
+    for (let slot = 0; slot < slotsThisDay; slot++) {
+      const postType = typeSeq[typeIdx++] || 'branded_image_feed';
+      const scheduledTime = new Date(start);
+      scheduledTime.setDate(start.getDate() + offset);
+      let localHour = isTwiceDaily ? (slot === 0 ? 9 : 18) : getOptimalHour(postType, scheduledTime, preset);
+      const utcHour = localHour + Math.round(timezoneOffset / 60);
+      scheduledTime.setUTCHours(utcHour, 0, 0, 0);
+      estSecs += TYPE_EST_SECS[postType] || 60;
+      posts.push({ postType, scheduledTime: scheduledTime.toISOString(), icon: TYPE_ICON[postType], label: TYPE_LABEL[postType] });
+    }
+  }
+
+  return { posts, estimatedMinutes: Math.ceil(estSecs / 60), startDate: start.toISOString() };
+}
+
+// POST /api/generate-week/preview — returns planned schedule without creating anything
+router.post('/preview', (req, res) => {
+  try {
+    res.json(buildPlan(req.body));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // POST /api/generate-week
 router.post('/', async (req, res) => {
   try {
