@@ -1460,10 +1460,10 @@ async function previewSchedule() {
       const hour = d.getHours();
       const timeStr = `${hour % 12 || 12}:00 ${hour < 12 ? 'AM' : 'PM'}`;
       const scriptField = p.postType === 'owner_twin_video'
-        ? `<textarea id="gwScript_${i}" placeholder="Leave blank to auto-generate from weekly brief…"
+        ? `<textarea id="gwScript_${i}" placeholder="Generating script…" disabled
              style="width:100%;margin-top:0.4rem;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);
                     border-radius:5px;color:#e2e8f0;font-size:0.72rem;font-family:inherit;padding:0.4rem 0.5rem;
-                    resize:vertical;min-height:52px;box-sizing:border-box" rows="2"></textarea>`
+                    resize:vertical;min-height:68px;box-sizing:border-box;opacity:0.6" rows="3"></textarea>`
         : '';
       return `<div style="padding:0.5rem 0.65rem;background:rgba(255,255,255,0.04);border-radius:6px;font-size:0.78rem">
         <div style="display:flex;align-items:center;gap:0.75rem">
@@ -1479,6 +1479,27 @@ async function previewSchedule() {
     document.getElementById('gwStep1').style.display = 'none';
     document.getElementById('gwStep2').style.display = '';
     document.getElementById('gwModalTitle').textContent = '📋 Review Schedule';
+    document.getElementById('gwStartBtn').disabled = true;
+
+    // Auto-generate scripts for each Owner Twin Video slot in parallel
+    const twinIndices = result.posts.map((p, i) => p.postType === 'owner_twin_video' ? i : null).filter(i => i !== null);
+    await Promise.all(twinIndices.map(async (i, slotNum) => {
+      const ta = document.getElementById(`gwScript_${i}`);
+      try {
+        const s = await api('POST', '/api/generate/script', {
+          restaurantId,
+          topic: slotNum === 0 ? 'welcome' : 'weekly special',
+        });
+        ta.value = s.script;
+        ta.disabled = false;
+        ta.style.opacity = '1';
+      } catch {
+        ta.placeholder = 'Could not generate — type your own script here';
+        ta.disabled = false;
+        ta.style.opacity = '1';
+      }
+    }));
+    document.getElementById('gwStartBtn').disabled = false;
   } catch (e) {
     document.getElementById('gwError').textContent = e.message;
     document.getElementById('gwError').style.display = 'block';
