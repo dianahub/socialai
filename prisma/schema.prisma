@@ -59,6 +59,7 @@ model Lead {
   businessType    String?
   lastContactedAt DateTime?
   notes           String?
+  referredBy      String?
   status          String    @default("lead") // lead | converted
   restaurantId    Int?
   createdAt       DateTime  @default(now())

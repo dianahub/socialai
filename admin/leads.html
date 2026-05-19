@@ -165,6 +165,7 @@
           <th>Business</th>
           <th>Contact</th>
           <th>Last Contacted</th>
+          <th>Referred By</th>
           <th>Status</th>
           <th>Actions</th>
         </tr>
@@ -206,6 +207,7 @@
     <div class="field-group"><label>Email</label><input type="email" id="fEmail" placeholder="e.g. sofia@casamarina.com"></div>
     <div class="field-group"><label>Date Last Contacted</label><input type="date" id="fLastContacted"></div>
     <div class="field-group"><label>Notes</label><textarea id="fNotes" placeholder="e.g. Met at food expo, interested in Instagram automation…"></textarea></div>
+    <div class="field-group"><label>Referred By</label><input type="text" id="fReferredBy" placeholder="e.g. John Smith, Google, Instagram ad"></div>
     <div class="modal-error" id="modalError"></div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
@@ -299,6 +301,7 @@ function renderTable() {
       <td>${l.businessName ? esc(l.businessName) : '<span style="color:var(--text-muted)">—</span>'}${bizType}</td>
       <td class="muted">${l.email ? `<div>${esc(l.email)}</div>` : ''}${l.phone ? `<div>${esc(l.phone)}</div>` : ''}${!l.email && !l.phone ? '—' : ''}</td>
       <td>${dateCell}</td>
+      <td class="muted">${l.referredBy ? esc(l.referredBy) : '—'}</td>
       <td>${badge}</td>
       <td><div class="actions-cell">
         <button class="btn btn-ghost btn-sm" onclick="openEditModal(${l.id})">Edit</button>
@@ -335,6 +338,7 @@ function openEditModal(id) {
   document.getElementById('fEmail').value         = l.email || '';
   document.getElementById('fLastContacted').value = l.lastContactedAt ? l.lastContactedAt.split('T')[0] : '';
   document.getElementById('fNotes').value         = l.notes || '';
+  document.getElementById('fReferredBy').value    = l.referredBy || '';
   document.getElementById('modalError').classList.remove('show');
   document.getElementById('leadModal').classList.add('open');
 }
@@ -352,7 +356,7 @@ function onBizTypeChange() {
 }
 
 function clearForm() {
-  ['fName','fPhone','fBusiness','fEmail','fNotes','fBizTypeOther'].forEach(id => document.getElementById(id).value = '');
+  ['fName','fPhone','fBusiness','fEmail','fNotes','fBizTypeOther','fReferredBy'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('fBizType').value = '';
   document.getElementById('fBizTypeOther').style.display = 'none';
   document.getElementById('fLastContacted').value = '';
@@ -375,6 +379,7 @@ async function saveLead() {
     email:           document.getElementById('fEmail').value.trim()    || null,
     lastContactedAt: document.getElementById('fLastContacted').value   || null,
     notes:           document.getElementById('fNotes').value.trim()    || null,
+    referredBy:      document.getElementById('fReferredBy').value.trim() || null,
   };
 
   const btn = document.getElementById('modalSaveBtn');

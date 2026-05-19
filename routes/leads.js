@@ -14,7 +14,7 @@ router.get('/', async (req, res) => {
 
 // POST /api/leads — create a lead
 router.post('/', async (req, res) => {
-  const { name, email, phone, businessName, businessType, lastContactedAt, notes } = req.body;
+  const { name, email, phone, businessName, businessType, lastContactedAt, notes, referredBy } = req.body;
   if (!name) return res.status(400).json({ error: 'Name is required' });
   try {
     const lead = await db.lead.create({
@@ -26,6 +26,7 @@ router.post('/', async (req, res) => {
         businessType:    businessType    || null,
         lastContactedAt: lastContactedAt ? new Date(lastContactedAt) : null,
         notes:           notes           || null,
+        referredBy:      referredBy      || null,
       },
     });
     res.json(lead);
@@ -35,7 +36,7 @@ router.post('/', async (req, res) => {
 // PATCH /api/leads/:id — update a lead
 router.patch('/:id', async (req, res) => {
   const id = Number(req.params.id);
-  const { name, email, phone, businessName, businessType, lastContactedAt, notes, status } = req.body;
+  const { name, email, phone, businessName, businessType, lastContactedAt, notes, status, referredBy } = req.body;
   const data = {};
   if (name            !== undefined) data.name            = name;
   if (email           !== undefined) data.email           = email || null;
@@ -45,6 +46,7 @@ router.patch('/:id', async (req, res) => {
   if (lastContactedAt !== undefined) data.lastContactedAt = lastContactedAt ? new Date(lastContactedAt) : null;
   if (notes           !== undefined) data.notes           = notes || null;
   if (status          !== undefined) data.status          = status;
+  if (referredBy      !== undefined) data.referredBy      = referredBy || null;
   try {
     const lead = await db.lead.update({ where: { id }, data });
     res.json(lead);
