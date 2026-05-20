@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Sign Up — ModernSocial.app</title>
 <link rel="stylesheet" href="/theme.css">
+<script>(function(){var t=localStorage.getItem('theme')||'light';document.documentElement.setAttribute('data-theme',t==='light'?'light':'');})();</script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -34,7 +35,7 @@
     font-weight: 500; cursor: pointer; transition: border-color 0.2s, background 0.2s;
     text-decoration: none;
   }
-  .btn-google:hover { border-color: var(--gold-border); background: #1e1e2e; }
+  .btn-google:hover { border-color: var(--gold-border); background: var(--bg-surface); }
   .btn-google svg { flex-shrink: 0; }
 
   .divider {
