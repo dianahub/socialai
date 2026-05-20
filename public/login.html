@@ -258,7 +258,7 @@ async function doLogin(e) {
     if (!res.ok) throw new Error(data.error || 'Login failed');
 
     localStorage.setItem('authToken', data.token);
-    window.location.href = '/index.html';
+    window.location.href = '/app.html';
   } catch (err) {
     errEl.textContent = err.message;
     errEl.classList.add('show');

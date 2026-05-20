@@ -25,7 +25,7 @@
       .then(r => r.ok ? r.json() : {})
       .then(cfg => {
         const alreadySetUp = cfg.restaurantName && cfg.restaurantName.trim().length > 0;
-        window.location.replace(alreadySetUp ? '/index.html' : '/onboarding.html');
+        window.location.replace(alreadySetUp ? '/app.html' : '/onboarding.html');
       })
       .catch(() => {
         // On error fall back to onboarding to be safe

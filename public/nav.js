@@ -209,7 +209,7 @@
 
     const token = getAuthToken();
 
-    const publicPages = ['/login.html', '/signup.html', '/auth-callback.html'];
+    const publicPages = ['/login.html', '/signup.html', '/auth-callback.html', '/index.html', '/'];
     if (authEnabled && !token && !publicPages.some(p => window.location.pathname.endsWith(p))) {
       window.location.href = '/login.html';
       return;

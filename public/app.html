@@ -1,0 +1,1174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Asset Manager — ModernSocial.app</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="/nav.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg-deep:    #090910;
+    --bg-card:    #12121c;
+    --bg-surface: #1a1a28;
+    --gold:       #c8a84b;
+    --gold-light: #e5c97a;
+    --gold-dim:   rgba(200, 168, 75, 0.18);
+    --gold-border:rgba(200, 168, 75, 0.14);
+    --text:       #f0ede8;
+    --text-muted: #7a7773;
+    --text-dim:   #3a3835;
+    --green:      #4a9960;
+    --red:        #cc4444;
+    --border:     rgba(255,255,255,0.05);
+  }
+
+  body {
+    background: var(--bg-deep);
+    color: var(--text);
+    font-family: 'Inter', system-ui, sans-serif;
+    font-weight: 400;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  /* ── Top Nav ── */
+  nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 2.5rem;
+    height: 64px;
+    background: rgba(9,9,16,0.95);
+    border-bottom: 1px solid var(--gold-border);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    backdrop-filter: blur(12px);
+  }
+  .nav-brand {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 1.1rem;
+    color: var(--gold-light);
+    letter-spacing: 0.05em;
+  }
+  .nav-links { display: flex; gap: 0; }
+  .nav-links a {
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 0.8rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 0.4rem 1rem;
+    border-bottom: 2px solid transparent;
+    transition: color 0.2s, border-color 0.2s;
+  }
+  .nav-links a:hover { color: var(--text); }
+  .nav-links a.active { color: var(--gold-light); border-bottom-color: var(--gold); }
+
+  /* ── Layout ── */
+  main {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 3rem 2rem 6rem;
+  }
+  .page-header { margin-bottom: 3rem; }
+  .page-header h1 {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 2rem;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 0.4rem;
+  }
+  .page-header p { color: var(--text-muted); font-size: 0.9rem; }
+
+  .section {
+    background: var(--bg-card);
+    border: 1px solid var(--gold-border);
+    border-radius: 12px;
+    padding: 2rem;
+    margin-bottom: 1.5rem;
+  }
+  .section-title {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 1.05rem;
+    color: var(--gold-light);
+    margin-bottom: 0.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--gold-border);
+    margin-left: 0.5rem;
+  }
+  .section-subtitle { color: var(--text-muted); font-size: 0.8rem; margin-bottom: 1.5rem; }
+
+  /* ── Form grid ── */
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+  }
+  .form-grid .span2 { grid-column: 1 / -1; }
+  .biz-other-input { display: none; margin-top: 0.5rem; width: 100%; background: var(--bg-surface); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 0.6rem 0.9rem; color: var(--text); font-family: inherit; font-size: 0.85rem; outline: none; box-sizing: border-box; }
+  .biz-other-input:focus { border-color: rgba(200,168,75,0.4); }
+  .biz-other-input.visible { display: block; }
+  label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 0.4rem;
+  }
+  input[type=text], input[type=password], input[type=email], input[type=date], select, textarea {
+    width: 100%;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-size: 0.9rem;
+    padding: 0.65rem 0.9rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  input[type=text]:focus, input[type=password]:focus, input[type=email]:focus, input[type=date]:focus, select:focus, textarea:focus {
+    border-color: rgba(200, 168, 75, 0.45);
+  }
+  select { appearance: none; cursor: pointer; }
+  select option { background: var(--bg-surface); }
+
+  /* ── Color pickers ── */
+  .colors-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+  }
+  .color-picker-wrap {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.5rem 0.75rem;
+    transition: border-color 0.2s;
+  }
+  .color-picker-wrap:focus-within { border-color: rgba(200, 168, 75, 0.45); }
+  .color-swatch {
+    width: 28px; height: 28px;
+    border-radius: 4px;
+    border: 1px solid rgba(255,255,255,0.1);
+    cursor: pointer;
+    flex-shrink: 0;
+    position: relative;
+    overflow: hidden;
+  }
+  .color-swatch input[type=color] {
+    position: absolute;
+    inset: -4px;
+    width: calc(100% + 8px);
+    height: calc(100% + 8px);
+    opacity: 0;
+    cursor: pointer;
+    border: none;
+    padding: 0;
+  }
+  .color-hex {
+    font-family: 'Courier New', monospace;
+    font-size: 0.8rem;
+    color: var(--text);
+    flex: 1;
+    border: none;
+    background: transparent;
+    outline: none;
+    min-width: 70px;
+    cursor: text;
+  }
+
+  /* ── Platform toggles ── */
+  .platform-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+  .platform-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.55rem 1rem;
+    cursor: pointer;
+    user-select: none;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .platform-toggle input[type=checkbox] { display: none; }
+  .platform-toggle.active {
+    border-color: var(--gold);
+    background: var(--gold-dim);
+  }
+  .platform-icon {
+    width: 18px; height: 18px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 700;
+    color: #fff;
+    flex-shrink: 0;
+  }
+  .pi-ig { background: linear-gradient(135deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888); }
+  .pi-fb { background: #1877f2; }
+  .pi-tt { background: #000; border: 1px solid rgba(255,255,255,0.2); }
+  .pi-x  { background: #000; border: 1px solid rgba(255,255,255,0.2); }
+  .pi-li { background: #0a66c2; }
+  .platform-name { font-size: 0.85rem; font-weight: 500; color: var(--text-muted); }
+  .platform-toggle.active .platform-name { color: var(--text); }
+
+  /* ── Drop zones ── */
+  .drop-zone {
+    border: 2px dashed rgba(200, 168, 75, 0.25);
+    border-radius: 10px;
+    padding: 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    position: relative;
+  }
+  .drop-zone:hover, .drop-zone.drag-over {
+    border-color: var(--gold);
+    background: var(--gold-dim);
+  }
+  .drop-zone input[type=file] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+  .drop-icon { font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.5; }
+  .drop-label { font-size: 0.85rem; color: var(--text-muted); }
+  .drop-hint { font-size: 0.75rem; color: var(--text-dim); margin-top: 0.3rem; }
+  .drop-preview {
+    width: 100%;
+    max-height: 200px;
+    object-fit: contain;
+    border-radius: 6px;
+    display: none;
+    margin-top: 0.5rem;
+  }
+
+  /* ── Photo grid ── */
+  .photo-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.75rem;
+  }
+  .photo-slot {
+    aspect-ratio: 1;
+    border: 2px dashed rgba(200, 168, 75, 0.2);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    overflow: hidden;
+    background: var(--bg-surface);
+  }
+  .photo-slot:hover { border-color: var(--gold); background: var(--gold-dim); }
+  .photo-slot.filled { border-style: solid; border-color: rgba(200,168,75,0.3); }
+  .photo-slot.drag-over { border-color: var(--gold); background: var(--gold-dim); }
+  .photo-slot input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+  .photo-slot img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    border-radius: 6px;
+    display: none;
+  }
+  .photo-slot.filled img { display: block; }
+  .photo-slot .slot-plus {
+    color: rgba(200, 168, 75, 0.4);
+    font-size: 1.8rem;
+    pointer-events: none;
+  }
+  .photo-slot.filled .slot-plus { display: none; }
+  .photo-remove {
+    position: absolute;
+    top: 4px; right: 4px;
+    width: 22px; height: 22px;
+    background: rgba(0,0,0,0.7);
+    border: none;
+    border-radius: 50%;
+    color: #fff;
+    font-size: 0.7rem;
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+  }
+  .photo-slot.filled .photo-remove { display: flex; }
+
+  /* ── Twin options ── */
+  .twin-options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-top: 1.25rem;
+  }
+
+  /* ── Toast ── */
+  #toast {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    background: var(--bg-surface);
+    border: 1px solid var(--gold-border);
+    border-radius: 8px;
+    padding: 0.8rem 1.2rem;
+    color: var(--text);
+    font-size: 0.85rem;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.3s, transform 0.3s;
+    z-index: 200;
+    pointer-events: none;
+    max-width: 320px;
+  }
+  #toast.show { opacity: 1; transform: translateY(0); }
+  #toast.error { border-color: var(--red); color: var(--red); }
+  #toast.success { border-color: var(--green); color: #6dbb88; }
+
+  /* ── Save button ── */
+  .save-bar {
+    position: sticky;
+    bottom: 0;
+    padding: 1rem 0;
+    background: linear-gradient(to top, var(--bg-deep) 80%, transparent);
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    margin-top: 2rem;
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.75rem;
+    border-radius: 6px;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    border: none;
+    transition: opacity 0.2s, transform 0.1s;
+  }
+  .btn:active { transform: scale(0.98); }
+  .btn-primary {
+    background: var(--gold);
+    color: #090910;
+  }
+  .btn-primary:hover { opacity: 0.9; }
+  .btn-ghost {
+    background: transparent;
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+  }
+  .btn-ghost:hover { color: var(--text); border-color: rgba(255,255,255,0.15); }
+
+  @media (max-width: 640px) {
+    .form-grid { grid-template-columns: 1fr; }
+    .form-grid .span2 { grid-column: 1; }
+    .colors-row { grid-template-columns: 1fr; }
+    .photo-grid { grid-template-columns: repeat(2, 1fr); }
+    .twin-options { grid-template-columns: 1fr; }
+    nav { padding: 0 1rem; }
+    main { padding: 2rem 1rem 6rem; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <span class="nav-brand">✦ ModernSocial.app</span>
+  <div class="nav-links">
+    <a href="app.html" class="active">Assets</a>
+    <a href="generate.html">Generate</a>
+    <a href="schedule.html">Schedule</a>
+    <a href="scripts.html">Scripts</a>
+    <a href="approve.html">Approve</a>
+
+  </div>
+</nav>
+
+<main>
+  <div class="page-header">
+    <h1>Asset Manager</h1>
+    <p>Configure your business profile and upload brand assets to power AI content generation.</p>
+  </div>
+
+  <!-- ── Business Info ── -->
+  <div class="section">
+    <div class="section-title">Business Information</div>
+    <div class="section-subtitle">Core details used in every AI-generated caption and visual prompt.</div>
+    <div class="form-grid">
+      <div>
+        <label for="restaurantName">Business Name</label>
+        <input type="text" id="restaurantName" placeholder="Le Bernardin" autocomplete="off">
+      </div>
+      <div>
+        <label for="businessType">Business Type</label>
+        <select id="businessType" onchange="onBizTypeChange()">
+          <option value="restaurant">Restaurant</option>
+          <option value="spa">Spa</option>
+          <option value="salon">Salon</option>
+          <option value="gym">Gym</option>
+          <option value="gallery">Gallery</option>
+          <option value="other">Other…</option>
+        </select>
+        <input type="text" id="businessTypeOther" class="biz-other-input" placeholder="Describe your business type">
+      </div>
+      <div>
+        <label for="cuisineType">Specialty / Style</label>
+        <input type="text" id="cuisineType" placeholder="Italian Fine Dining, Deep Tissue Massage, HIIT Training" autocomplete="off">
+      </div>
+      <div>
+        <label for="ownerName">Owner Name <span style="font-weight:400;opacity:0.6;text-transform:none;letter-spacing:0">(speaks in twin video)</span></label>
+        <input type="text" id="ownerName" placeholder="Jean-Pierre Martin" autocomplete="off">
+      </div>
+      <div>
+        <label for="chefName">Team Member / Title <span style="font-weight:400;opacity:0.6;text-transform:none;letter-spacing:0">(optional)</span></label>
+        <input type="text" id="chefName" placeholder="" autocomplete="off">
+      </div>
+      <div class="span2">
+        <label for="tagline">Business Tagline</label>
+        <input type="text" id="tagline" placeholder="Where the sea meets art" autocomplete="off">
+      </div>
+    </div>
+
+    <!-- Colors -->
+    <div style="margin-top:1.5rem">
+      <label style="margin-bottom:0.75rem">Brand Colors</label>
+      <div class="colors-row">
+        <div>
+          <div style="font-size:0.7rem;color:var(--text-muted);margin-bottom:0.4rem;text-transform:uppercase;letter-spacing:0.06em;">Primary</div>
+          <div class="color-picker-wrap">
+            <div class="color-swatch" id="swatchPrimary">
+              <input type="color" id="colorPrimary" value="#c8a84b">
+            </div>
+            <input class="color-hex" id="hexPrimary" value="#c8a84b" maxlength="7" spellcheck="false" placeholder="#c8a84b">
+          </div>
+        </div>
+        <div>
+          <div style="font-size:0.7rem;color:var(--text-muted);margin-bottom:0.4rem;text-transform:uppercase;letter-spacing:0.06em;">Accent</div>
+          <div class="color-picker-wrap">
+            <div class="color-swatch" id="swatchAccent">
+              <input type="color" id="colorAccent" value="#e5c97a">
+            </div>
+            <input class="color-hex" id="hexAccent" value="#e5c97a" maxlength="7" spellcheck="false" placeholder="#e5c97a">
+          </div>
+        </div>
+        <div>
+          <div style="font-size:0.7rem;color:var(--text-muted);margin-bottom:0.4rem;text-transform:uppercase;letter-spacing:0.06em;">Background</div>
+          <div class="color-picker-wrap">
+            <div class="color-swatch" id="swatchBg">
+              <input type="color" id="colorBg" value="#0a0a14">
+            </div>
+            <input class="color-hex" id="hexBg" value="#0a0a14" maxlength="7" spellcheck="false" placeholder="#0a0a14">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Platforms ── -->
+  <div class="section">
+    <div class="section-title">Target Platforms</div>
+    <div class="section-subtitle">Select the platforms you post to. Content is tailored per platform.</div>
+    <div class="platform-row" id="platformRow">
+      <label class="platform-toggle active" id="toggle-instagram">
+        <input type="checkbox" value="instagram" checked>
+        <div class="platform-icon pi-ig">IG</div>
+        <span class="platform-name">Instagram</span>
+      </label>
+      <label class="platform-toggle active" id="toggle-facebook">
+        <input type="checkbox" value="facebook" checked>
+        <div class="platform-icon pi-fb">f</div>
+        <span class="platform-name">Facebook</span>
+      </label>
+      <label class="platform-toggle" id="toggle-tiktok">
+        <input type="checkbox" value="tiktok">
+        <div class="platform-icon pi-tt">TT</div>
+        <span class="platform-name">TikTok</span>
+      </label>
+      <label class="platform-toggle" id="toggle-x">
+        <input type="checkbox" value="x">
+        <div class="platform-icon pi-x">𝕏</div>
+        <span class="platform-name">X</span>
+      </label>
+      <label class="platform-toggle" id="toggle-linkedin">
+        <input type="checkbox" value="linkedin">
+        <div class="platform-icon pi-li">in</div>
+        <span class="platform-name">LinkedIn</span>
+      </label>
+    </div>
+  </div>
+
+  <!-- ── Logo ── -->
+  <div class="section">
+    <div class="section-title" id="logoSectionTitle">Business Logo</div>
+    <div class="section-subtitle">PNG with transparent background preferred. Used as watermark on all images.</div>
+    <div class="drop-zone" id="logoZone">
+      <input type="file" id="logoInput" accept="image/*">
+      <div class="drop-icon" id="logoIcon">⬆</div>
+      <div class="drop-label" id="logoLabel">Drop logo here or <u>click to browse</u></div>
+      <div class="drop-hint">PNG preferred · Max 10 MB</div>
+      <img class="drop-preview" id="logoPreview" alt="Logo preview">
+    </div>
+  </div>
+
+  <!-- ── Food Photos ── -->
+  <div class="section">
+    <div class="section-title" id="photosSectionTitle">Photos</div>
+    <div class="section-subtitle">Upload up to 6 hero images. Drag and drop or click each slot.</div>
+    <div class="photo-grid" id="photoGrid">
+      <!-- Slots injected by JS -->
+    </div>
+  </div>
+
+  <!-- ── Owner Photo ── -->
+  <div class="section">
+    <div class="section-title">Owner Photo</div>
+    <div class="section-subtitle">Used to generate a digital twin animation via Higgsfield Soul.</div>
+    <div class="drop-zone" id="ownerZone">
+      <input type="file" id="ownerInput" accept="image/*">
+      <div class="drop-icon" id="ownerIcon">👤</div>
+      <div class="drop-label" id="ownerLabel">Drop owner photo here or <u>click to browse</u></div>
+      <div class="drop-hint">Best results: clear face, good lighting · Max 10 MB</div>
+      <img class="drop-preview" id="ownerPreview" alt="Owner preview">
+    </div>
+    <div class="twin-options">
+      <div>
+        <label for="twinStyle">Twin Style</label>
+        <select id="twinStyle">
+          <option value="warm and welcoming">Warm &amp; Welcoming</option>
+          <option value="professional and authoritative">Professional &amp; Authoritative</option>
+          <option value="passionate and expressive">Passionate &amp; Expressive</option>
+          <option value="elegant and refined">Elegant &amp; Refined</option>
+        </select>
+      </div>
+      <div>
+        <label for="twinUsecase">Use Case</label>
+        <select id="twinUsecase">
+          <option value="welcome message">Welcome Message</option>
+          <option value="business introduction">Business Introduction</option>
+          <option value="new offer announcement">New Offer Announcement</option>
+          <option value="thank you message">Thank You Message</option>
+          <option value="behind the scenes story">Behind the Scenes Story</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Login Credentials ── -->
+  <div class="section" style="margin-top:1.5rem">
+    <div class="section-title">Login Credentials
+      <span class="section-subtitle">Email + password the business owner uses to sign in</span>
+    </div>
+    <div class="form-grid" style="grid-template-columns:1fr 1fr;gap:1rem;margin-top:0.75rem">
+      <div class="field-group">
+        <label for="loginEmail">Email Address</label>
+        <input type="email" id="loginEmail" placeholder="owner@yourbusiness.com">
+      </div>
+      <div class="field-group">
+        <label for="loginPassword">Password <span style="font-size:0.7rem;color:var(--text-muted)">(min 8 chars)</span></label>
+        <input type="password" id="loginPassword" placeholder="Set or update password">
+      </div>
+    </div>
+    <p style="font-size:0.75rem;color:var(--text-muted);margin-top:0.75rem">
+      Credentials are account-specific — each owner logs in independently.
+      <button id="credSaveBtn" onclick="saveLoginCredentials()" style="margin-left:1rem;background:rgba(200,168,75,0.15);border:1px solid rgba(200,168,75,0.25);border-radius:6px;padding:0.25rem 0.75rem;color:var(--gold-light);cursor:pointer;font-size:0.78rem;font-family:inherit">Save Credentials</button>
+    </p>
+  </div>
+
+  <!-- ── Instagram Credentials ── -->
+  <div class="section" style="margin-top:1.5rem">
+    <div class="section-title">Instagram Credentials
+      <span class="section-subtitle">Per-account — stored securely in the database</span>
+    </div>
+
+    <!-- OAuth connect button (shown when FB_APP_ID is configured on the server) -->
+    <div id="igOauthRow" style="display:none;margin-bottom:1rem">
+      <a id="igConnectBtn" href="#" onclick="connectInstagram(event)"
+         style="display:inline-flex;align-items:center;gap:0.5rem;background:linear-gradient(135deg,#e1306c,#833ab4);border:none;border-radius:8px;padding:0.5rem 1.1rem;color:#fff;font-family:inherit;font-size:0.85rem;font-weight:600;cursor:pointer;text-decoration:none">
+        Connect with Instagram
+      </a>
+      <button id="igReconnectBtn" onclick="connectInstagram(event)" style="display:none;margin-left:0.5rem;background:none;border:1px solid rgba(255,255,255,0.15);border-radius:6px;padding:0.35rem 0.75rem;color:var(--text-muted);font-family:inherit;font-size:0.78rem;cursor:pointer">
+        Reconnect
+      </button>
+    </div>
+
+    <!-- Token status chip -->
+    <div id="igStatusRow" style="display:none;margin-bottom:0.75rem">
+      <span id="igStatusChip" style="display:inline-flex;align-items:center;gap:0.4rem;padding:0.25rem 0.65rem;border-radius:20px;font-size:0.75rem;font-weight:500"></span>
+    </div>
+
+    <!-- Token expiry warning -->
+    <div id="igExpiryWarn" style="display:none;margin-bottom:0.75rem;padding:0.5rem 0.75rem;background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.25);border-radius:8px">
+      <span id="igExpiryMsg" style="color:#fbbf24;font-size:0.78rem"></span>
+      <button onclick="refreshIgToken()" style="margin-left:0.75rem;background:rgba(251,191,36,0.15);border:1px solid rgba(251,191,36,0.3);border-radius:6px;padding:0.2rem 0.6rem;color:#fbbf24;font-family:inherit;font-size:0.75rem;cursor:pointer">Refresh Now</button>
+    </div>
+
+    <div class="field-group" style="margin-top:0.25rem;margin-bottom:1rem">
+      <label for="igUrl">Instagram Profile URL</label>
+      <input type="text" id="igUrl" placeholder="https://www.instagram.com/yourbusiness"
+             onblur="lookupIgId()" autocomplete="off"
+             style="font-size:1rem;padding:0.85rem 1rem;width:100%;">
+      <span id="igLookupStatus" style="font-size:0.72rem;margin-top:0.25rem;display:none"></span>
+      <p style="font-size:0.72rem;color:var(--text-muted);margin-top:0.3rem">
+        Can't find your account ID? Look it up at
+        <a href="https://commentpicker.com/instagram-user-id.php" target="_blank" rel="noopener"
+           style="color:var(--gold-light)">commentpicker.com/instagram-user-id.php</a>
+      </p>
+    </div>
+    <div class="form-grid" style="grid-template-columns:1fr 1fr;gap:1rem">
+      <div class="field-group">
+        <label for="igAccountId">Instagram Account ID</label>
+        <input type="text" id="igAccountId" placeholder="Auto-filled from URL above">
+      </div>
+      <div class="field-group">
+        <label for="igAccessToken">Access Token</label>
+        <input type="password" id="igAccessToken" placeholder="Long-lived Meta Graph API token">
+      </div>
+    </div>
+    <p style="font-size:0.75rem;color:var(--text-muted);margin-top:0.75rem">
+      Saved per account. Falls back to <code style="font-size:0.7rem;color:var(--gold)">INSTAGRAM_ACCOUNT_ID</code> /
+      <code style="font-size:0.7rem;color:var(--gold)">INSTAGRAM_ACCESS_TOKEN</code> env vars if blank.
+      <button id="igSaveBtn" onclick="saveIgCreds()" style="margin-left:1rem;background:rgba(200,168,75,0.15);border:1px solid rgba(200,168,75,0.25);border-radius:6px;padding:0.25rem 0.75rem;color:var(--gold-light);cursor:pointer;font-size:0.78rem;font-family:inherit">Save Instagram</button>
+    </p>
+  </div>
+
+  <div class="save-bar">
+    <button class="btn btn-ghost" onclick="window.location.href='generate.html'">Go to Generate →</button>
+    <button class="btn btn-primary" id="saveBtn" onclick="saveAndGenerate()">
+      <span id="saveBtnText">Save &amp; Generate</span>
+    </button>
+  </div>
+</main>
+
+<div id="toast"></div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────────
+function authHeaders(extra = {}) {
+  const token = localStorage.getItem('authToken');
+  return token ? { 'Authorization': `Bearer ${token}`, ...extra } : { ...extra };
+}
+
+const photoSlots = Array(6).fill(null); // null | { path, filename }
+let logoUploaded   = null;
+let ownerUploaded  = null;
+
+// ── Toast ──────────────────────────────────────────────────────────────────
+let toastTimer;
+function toast(msg, type = '') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = `show ${type}`;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 3500);
+}
+
+// ── Color pickers ──────────────────────────────────────────────────────────
+function initColorPicker(colorId, hexId, swatchId) {
+  const col = document.getElementById(colorId);
+  const hex = document.getElementById(hexId);
+  const sw  = document.getElementById(swatchId);
+
+  const sync = (value) => {
+    sw.style.background = value;
+  };
+  sync(col.value);
+
+  col.addEventListener('input', () => {
+    hex.value = col.value;
+    sync(col.value);
+  });
+  hex.addEventListener('input', () => {
+    if (/^#[0-9a-fA-F]{6}$/.test(hex.value)) {
+      col.value = hex.value;
+      sync(hex.value);
+    }
+  });
+}
+initColorPicker('colorPrimary', 'hexPrimary', 'swatchPrimary');
+initColorPicker('colorAccent',  'hexAccent',  'swatchAccent');
+initColorPicker('colorBg',      'hexBg',      'swatchBg');
+
+// ── Platform toggles ───────────────────────────────────────────────────────
+document.getElementById('platformRow').addEventListener('change', e => {
+  const label = e.target.closest('.platform-toggle');
+  if (label) label.classList.toggle('active', e.target.checked);
+});
+
+// ── Logo upload ────────────────────────────────────────────────────────────
+setupDropZone('logoZone', 'logoInput', 'logo', async (file) => {
+  await uploadFile('/api/upload/logo', 'file', file, { restaurantId: getRestaurantId() });
+  logoUploaded = file.name;
+  showPreview('logoPreview', 'logoIcon', 'logoLabel', URL.createObjectURL(file));
+  toast('Logo uploaded', 'success');
+});
+
+// ── Owner upload ───────────────────────────────────────────────────────────
+setupDropZone('ownerZone', 'ownerInput', 'owner', async (file) => {
+  await uploadFile('/api/upload/owner', 'file', file, { restaurantId: getRestaurantId() });
+  ownerUploaded = file.name;
+  showPreview('ownerPreview', 'ownerIcon', 'ownerLabel', URL.createObjectURL(file));
+  toast('Owner photo uploaded', 'success');
+});
+
+// ── Photo grid ─────────────────────────────────────────────────────────────
+function buildPhotoGrid() {
+  const grid = document.getElementById('photoGrid');
+  grid.innerHTML = '';
+  for (let i = 0; i < 6; i++) {
+    const slot = document.createElement('div');
+    slot.className = 'photo-slot' + (photoSlots[i] ? ' filled' : '');
+    slot.dataset.idx = i;
+    slot.innerHTML = `
+      <input type="file" accept="image/*" data-idx="${i}">
+      <img src="${photoSlots[i]?.path || ''}" alt="">
+      <span class="slot-plus">+</span>
+      <button class="photo-remove" title="Remove">✕</button>
+    `;
+    slot.querySelector('input').addEventListener('change', e => {
+      if (e.target.files[0]) handlePhotoUpload(i, e.target.files[0]);
+    });
+    slot.querySelector('.photo-remove').addEventListener('click', e => {
+      e.stopPropagation();
+      removePhoto(i, slot);
+    });
+    setupSlotDrag(slot, i);
+    grid.appendChild(slot);
+  }
+}
+
+function setupSlotDrag(slot, idx) {
+  slot.addEventListener('dragover', e => { e.preventDefault(); slot.classList.add('drag-over'); });
+  slot.addEventListener('dragleave', () => slot.classList.remove('drag-over'));
+  slot.addEventListener('drop', e => {
+    e.preventDefault();
+    slot.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith('image/')) handlePhotoUpload(idx, file);
+  });
+}
+
+async function handlePhotoUpload(idx, file) {
+  try {
+    const data = await uploadFile('/api/upload/photos', 'files', file, { restaurantId: getRestaurantId() });
+    if (data.files?.[0]) {
+      photoSlots[idx] = data.files[0];
+      buildPhotoGrid();
+      toast(`Photo ${idx+1} uploaded`, 'success');
+    }
+  } catch (e) {
+    toast('Upload failed: ' + e.message, 'error');
+  }
+}
+
+async function removePhoto(idx, slot) {
+  if (!photoSlots[idx]) return;
+  try {
+    const filename = photoSlots[idx].filename;
+    await fetch(`/api/assets/photos/${encodeURIComponent(filename)}?restaurantId=${getRestaurantId()}`, { method: 'DELETE', headers: authHeaders() });
+    photoSlots[idx] = null;
+    buildPhotoGrid();
+    toast('Photo removed');
+  } catch (e) {
+    toast('Remove failed', 'error');
+  }
+}
+
+// ── Upload helpers ─────────────────────────────────────────────────────────
+async function uploadFile(url, field, file, extras = {}) {
+  const fd = new FormData();
+  fd.append(field, file);
+  Object.entries(extras).forEach(([k, v]) => fd.append(k, v));
+  const res = await fetch(url, { method: 'POST', headers: authHeaders(), body: fd });
+  if (!res.ok) throw new Error('Upload error ' + res.status);
+  return res.json();
+}
+
+function showPreview(imgId, iconId, labelId, src) {
+  const img  = document.getElementById(imgId);
+  const icon = document.getElementById(iconId);
+  const lbl  = document.getElementById(labelId);
+  img.src = src;
+  img.style.display = 'block';
+  icon.style.display = 'none';
+  lbl.style.display  = 'none';
+}
+
+function setupDropZone(zoneId, inputId, type, handler) {
+  const zone  = document.getElementById(zoneId);
+  const input = document.getElementById(inputId);
+
+  input.addEventListener('change', e => {
+    if (e.target.files[0]) handler(e.target.files[0]).catch(err => toast(err.message, 'error'));
+  });
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+  zone.addEventListener('drop', e => {
+    e.preventDefault();
+    zone.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file) handler(file).catch(err => toast(err.message, 'error'));
+  });
+}
+
+// ── Save & Generate ────────────────────────────────────────────────────────
+async function saveAndGenerate() {
+  const name = document.getElementById('restaurantName').value.trim();
+  if (!name) { toast('Please enter a business name', 'error'); return; }
+
+  const platforms = [...document.querySelectorAll('.platform-toggle input:checked')]
+    .map(cb => cb.value);
+
+  const config = {
+    restaurantId:   getRestaurantId(),
+    restaurantName: name,
+    businessType:   getEffectiveBizType(),
+    cuisineType:    document.getElementById('cuisineType').value,
+    ownerName:      document.getElementById('ownerName').value.trim(),
+    chefName:       document.getElementById('chefName').value.trim(),
+    tagline:        document.getElementById('tagline').value.trim(),
+    primaryColor:   document.getElementById('colorPrimary').value,
+    accentColor:    document.getElementById('colorAccent').value,
+    bgColor:        document.getElementById('colorBg').value,
+    platforms,
+    twinStyle:      document.getElementById('twinStyle').value,
+    twinUsecase:    document.getElementById('twinUsecase').value,
+    savedAt:        new Date().toISOString(),
+  };
+
+  const btn = document.getElementById('saveBtn');
+  const txt = document.getElementById('saveBtnText');
+  btn.disabled = true;
+  txt.textContent = 'Saving…';
+
+  try {
+    const res = await fetch('/api/config', {
+      method: 'POST',
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify(config),
+    });
+    if (!res.ok) throw new Error('Save failed');
+    toast('Config saved! Redirecting…', 'success');
+    setTimeout(() => { window.location.href = 'generate.html'; }, 900);
+  } catch (e) {
+    toast(e.message, 'error');
+    btn.disabled = false;
+    txt.textContent = 'Save & Generate';
+  }
+}
+
+// ── Load saved state ───────────────────────────────────────────────────────
+async function loadSavedState() {
+  const rid = getRestaurantId();
+  try {
+    const [assets, config] = await Promise.all([
+      fetch(`/api/assets?restaurantId=${rid}`).then(r => r.json()),
+      fetch(`/api/config?restaurantId=${rid}`, { headers: authHeaders() }).then(r => r.json()),
+    ]);
+
+    // Restore config fields
+    if (config.restaurantName) document.getElementById('restaurantName').value = config.restaurantName;
+    if (config.cuisineType)    document.getElementById('cuisineType').value    = config.cuisineType;
+    if (config.ownerName) document.getElementById('ownerName').value = config.ownerName;
+    if (config.chefName)  document.getElementById('chefName').value  = config.chefName;
+    if (config.tagline)        document.getElementById('tagline').value        = config.tagline;
+
+    if (config.primaryColor) {
+      document.getElementById('colorPrimary').value = config.primaryColor;
+      document.getElementById('hexPrimary').value   = config.primaryColor;
+      document.getElementById('swatchPrimary').style.background = config.primaryColor;
+    }
+    if (config.accentColor) {
+      document.getElementById('colorAccent').value = config.accentColor;
+      document.getElementById('hexAccent').value   = config.accentColor;
+      document.getElementById('swatchAccent').style.background  = config.accentColor;
+    }
+    if (config.bgColor) {
+      document.getElementById('colorBg').value = config.bgColor;
+      document.getElementById('hexBg').value   = config.bgColor;
+      document.getElementById('swatchBg').style.background      = config.bgColor;
+    }
+
+    if (config.platforms) {
+      document.querySelectorAll('.platform-toggle input').forEach(cb => {
+        const active = config.platforms.includes(cb.value);
+        cb.checked = active;
+        cb.closest('.platform-toggle').classList.toggle('active', active);
+      });
+    }
+    if (config.twinStyle)   document.getElementById('twinStyle').value   = config.twinStyle;
+    if (config.twinUsecase) document.getElementById('twinUsecase').value = config.twinUsecase;
+
+    setBizTypeDropdown(config.businessType || 'restaurant');
+
+    // Restore uploads
+    if (assets.logo) {
+      logoUploaded = assets.logo;
+      showPreview('logoPreview', 'logoIcon', 'logoLabel', assets.logo);
+    }
+    if (assets.owner) {
+      ownerUploaded = assets.owner;
+      showPreview('ownerPreview', 'ownerIcon', 'ownerLabel', assets.owner);
+    }
+    if (assets.photos?.length) {
+      assets.photos.forEach((p, i) => {
+        if (i < 6) photoSlots[i] = { path: p, filename: p.split('/').pop() };
+      });
+    }
+
+    buildPhotoGrid();
+
+    // Load Instagram credentials + login email
+    try {
+      const rest = await fetch(`/api/db/restaurants/${rid}`, { headers: authHeaders() }).then(r => r.json());
+      if (rest.instagramUrl)    document.getElementById('igUrl').value = rest.instagramUrl;
+      if (rest.instagramUserId) document.getElementById('igAccountId').value = rest.instagramUserId;
+      if (rest.instagramAccessToken) {
+        document.getElementById('igAccessToken').placeholder = '••••••• (saved — enter new value to update)';
+      }
+      if (rest.loginEmail) document.getElementById('loginEmail').value = rest.loginEmail;
+    } catch {}
+    await loadIgStatus();
+  } catch (e) {
+    console.warn('Could not load saved state:', e.message);
+    buildPhotoGrid();
+  }
+}
+
+// ── Business type helpers ─────────────────────────────────────────────────
+const _PRESET_BIZ = ['restaurant','spa','salon','gym','gallery','other'];
+
+function onBizTypeChange() {
+  const sel     = document.getElementById('businessType');
+  const otherEl = document.getElementById('businessTypeOther');
+  const isOther = sel.value === 'other';
+  otherEl.classList.toggle('visible', isOther);
+  if (isOther) { otherEl.focus(); }
+  else         { otherEl.value = ''; }
+  applyBusinessTypeLabels(getEffectiveBizType());
+}
+
+function getEffectiveBizType() {
+  const sel = document.getElementById('businessType');
+  if (!sel) return 'restaurant';
+  if (sel.value === 'other') {
+    return document.getElementById('businessTypeOther').value.trim() || 'other';
+  }
+  return sel.value || 'restaurant';
+}
+
+function setBizTypeDropdown(businessType) {
+  const sel     = document.getElementById('businessType');
+  const otherEl = document.getElementById('businessTypeOther');
+  if (!sel) return;
+  const isPreset = !businessType || _PRESET_BIZ.includes(businessType);
+  if (isPreset) {
+    sel.value = businessType || 'restaurant';
+    otherEl.classList.remove('visible');
+    otherEl.value = '';
+  } else {
+    sel.value = 'other';
+    otherEl.classList.add('visible');
+    otherEl.value = businessType;
+  }
+  applyBusinessTypeLabels(businessType || 'restaurant');
+}
+
+function applyBusinessTypeLabels(businessType) {
+  const isRestaurant = !businessType || businessType === 'restaurant';
+  const label = isRestaurant ? 'Restaurant'
+    : businessType === 'spa'     ? 'Spa'
+    : businessType === 'salon'   ? 'Salon'
+    : businessType === 'gym'     ? 'Gym'
+    : businessType === 'gallery' ? 'Gallery'
+    : businessType.charAt(0).toUpperCase() + businessType.slice(1);
+
+  const logoTitle   = document.getElementById('logoSectionTitle');
+  const photosTitle = document.getElementById('photosSectionTitle');
+  if (logoTitle)   logoTitle.textContent   = label + ' Logo';
+  if (photosTitle) photosTitle.textContent = 'Photos';
+}
+
+// ── Login credentials ──────────────────────────────────────────────────────
+async function saveLoginCredentials() {
+  const email    = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  if (!email || !password) { toast('Email and password are required', 'error'); return; }
+  if (password.length < 8)  { toast('Password must be at least 8 characters', 'error'); return; }
+  const btn = document.getElementById('credSaveBtn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try {
+    const res = await fetch('/api/auth/set-credentials', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ restaurantId: getRestaurantId(), email, password }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Save failed');
+    toast('Login credentials saved', 'success');
+    document.getElementById('loginPassword').value = '';
+  } catch (e) { toast(e.message, 'error'); }
+  finally { btn.disabled = false; btn.textContent = 'Save Credentials'; }
+}
+
+// ── Instagram credentials ──────────────────────────────────────────────────
+async function saveIgCreds() {
+  const rid   = getRestaurantId();
+  const url   = document.getElementById('igUrl').value.trim();
+  const id    = document.getElementById('igAccountId').value.trim();
+  const token = document.getElementById('igAccessToken').value.trim();
+  const body  = { instagramUrl: url || undefined, instagramUserId: id, instagramAccessToken: token };
+  try {
+    const res = await fetch(`/api/db/restaurants/${rid}`, {
+      method:  'PATCH',
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) throw new Error((await res.json()).error);
+    toast('Instagram credentials saved', 'success');
+    await loadIgStatus();
+  } catch (e) { toast('Save failed: ' + e.message, 'error'); }
+}
+
+async function lookupIgId() {
+  const url = document.getElementById('igUrl').value.trim();
+  if (!url) return;
+
+  // Extract username from URL for display regardless of API result
+  const usernameMatch = url.match(/instagram\.com\/([^/?#]+)/);
+  const username = usernameMatch ? usernameMatch[1].replace(/\/$/, '') : null;
+
+  const statusEl = document.getElementById('igLookupStatus');
+  statusEl.style.display = 'block';
+  statusEl.style.color   = 'var(--text-muted)';
+  statusEl.textContent   = 'Looking up account…';
+  try {
+    const res  = await fetch('/api/instagram/lookup-id', {
+      method:  'POST',
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ instagramUrl: url, restaurantId: getRestaurantId() }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    document.getElementById('igAccountId').value = data.accountId;
+    statusEl.style.color   = '#4ade80';
+    statusEl.textContent   = `✓ Found @${data.username}`;
+  } catch (e) {
+    // Don't show a scary error — the URL is saved and the account ID can be filled in manually
+    statusEl.style.color   = 'var(--text-muted)';
+    statusEl.textContent   = username
+      ? `@${username} saved — account ID can be filled in manually if needed`
+      : 'URL saved — account ID can be filled in manually if needed';
+  }
+}
+
+async function loadIgStatus() {
+  try {
+    const rid  = getRestaurantId();
+    const data = await fetch(`/api/instagram/status?restaurantId=${rid}`, { headers: authHeaders() }).then(r => r.json());
+
+    // OAuth connect button
+    const oauthRow = document.getElementById('igOauthRow');
+    if (data.oauthEnabled) {
+      oauthRow.style.display = 'block';
+      document.getElementById('igConnectBtn').style.display   = data.connected ? 'none'        : 'inline-flex';
+      document.getElementById('igReconnectBtn').style.display = data.connected ? 'inline-block' : 'none';
+    }
+
+    // Status chip
+    const statusRow  = document.getElementById('igStatusRow');
+    const statusChip = document.getElementById('igStatusChip');
+    if (data.connected) {
+      statusRow.style.display = 'block';
+      if (data.expired) {
+        statusChip.textContent = '⚠ Token expired';
+        statusChip.style.cssText = 'display:inline-flex;align-items:center;gap:0.4rem;padding:0.25rem 0.65rem;border-radius:20px;font-size:0.75rem;font-weight:500;background:rgba(204,68,68,0.12);color:#f87171;border:1px solid rgba(204,68,68,0.25)';
+      } else {
+        const label = data.daysLeft !== null ? `Connected · ${data.daysLeft}d left` : 'Connected';
+        statusChip.textContent = '✓ ' + label;
+        statusChip.style.cssText = 'display:inline-flex;align-items:center;gap:0.4rem;padding:0.25rem 0.65rem;border-radius:20px;font-size:0.75rem;font-weight:500;background:rgba(74,153,96,0.12);color:#6dbb88;border:1px solid rgba(74,153,96,0.25)';
+      }
+    } else {
+      statusRow.style.display = 'none';
+    }
+
+    // Expiry warning
+    const warnEl = document.getElementById('igExpiryWarn');
+    const msgEl  = document.getElementById('igExpiryMsg');
+    if (data.expireSoon && !data.expired) {
+      warnEl.style.display = 'block';
+      msgEl.textContent    = `⚠ Your Instagram token expires in ${data.daysLeft} day${data.daysLeft !== 1 ? 's' : ''}. Refresh it to avoid publishing failures.`;
+    } else if (data.expired) {
+      warnEl.style.display = 'block';
+      msgEl.textContent    = '⚠ Your Instagram token has expired. Reconnect to resume publishing.';
+    } else {
+      warnEl.style.display = 'none';
+    }
+  } catch { /* non-fatal */ }
+}
+
+function connectInstagram(e) {
+  e.preventDefault();
+  window.location.href = `/auth/instagram?restaurantId=${getRestaurantId()}`;
+}
+
+async function refreshIgToken() {
+  try {
+    const rid = getRestaurantId();
+    const res = await fetch(`/api/instagram/refresh`, {
+      method:  'POST',
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ restaurantId: rid }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    toast('Token refreshed successfully', 'success');
+    await loadIgStatus();
+  } catch (e) { toast('Refresh failed: ' + e.message, 'error'); }
+}
+
+// Handle OAuth redirect back (ig_connected / ig_error query params)
+(function checkOauthRedirect() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('ig_connected')) toast('Instagram connected successfully!', 'success');
+  if (params.get('ig_error'))     toast('Instagram connect failed: ' + params.get('ig_error'), 'error');
+  if (params.has('ig_connected') || params.has('ig_error')) {
+    history.replaceState({}, '', window.location.pathname);
+  }
+})()
+
+loadSavedState();
+</script>
+</body>
+</html>
