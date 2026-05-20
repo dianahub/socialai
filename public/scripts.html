@@ -4,44 +4,20 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Script Templates — ModernSocial.app</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/theme.css">
 <script src="/nav.js"></script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-:root {
-  --bg-deep:     #090910;
-  --bg-card:     #12121c;
-  --bg-surface:  #1a1a28;
-  --bg-modal:    #0f0f1a;
-  --gold:        #c8a84b;
-  --gold-light:  #e5c97a;
-  --gold-dim:    rgba(200,168,75,0.12);
-  --gold-border: rgba(200,168,75,0.18);
-  --text:        #f0ede8;
-  --text-muted:  #7a7773;
-  --green:       #4a9960;
-  --green-dim:   rgba(74,153,96,0.14);
-  --blue:        #4a7fc1;
-  --blue-dim:    rgba(74,127,193,0.14);
-  --amber:       #d97706;
-  --amber-dim:   rgba(217,119,6,0.14);
-  --red:         #cc4444;
-  --red-dim:     rgba(204,68,68,0.14);
-  --border:      rgba(255,255,255,0.05);
-  --radius:      10px;
-}
 
 body { background: var(--bg-deep); color: var(--text); font-family: 'Inter', system-ui, sans-serif; line-height: 1.6; min-height: 100vh; }
 
 nav {
   display: flex; align-items: center; justify-content: space-between;
   padding: 0 2.5rem; height: 64px;
-  background: rgba(9,9,16,0.96); border-bottom: 1px solid var(--gold-border);
+  background: var(--bg-nav); border-bottom: 1px solid var(--gold-border);
   position: sticky; top: 0; z-index: 200; backdrop-filter: blur(12px);
 }
-.nav-brand { font-family: 'Playfair Display', Georgia, serif; font-size: 1.1rem; color: var(--gold-light); letter-spacing: 0.05em; }
+.nav-brand { font-family: var(--font-display); font-size: 1.1rem; color: var(--gold-light); letter-spacing: 0.05em; }
 .nav-links { display: flex; }
 .nav-links a {
   color: var(--text-muted); text-decoration: none; font-size: 0.8rem;
@@ -73,7 +49,7 @@ nav {
   flex-shrink: 0;
 }
 .sidebar-title {
-  font-family: 'Playfair Display', Georgia, serif;
+  font-family: var(--font-display);
   font-size: 1rem; color: var(--gold-light);
 }
 .sidebar-list { overflow-y: auto; flex: 1; padding: 0.5rem; }
@@ -114,13 +90,13 @@ nav {
   color: var(--text-muted); text-align: center;
 }
 .editor-empty .icon { font-size: 3rem; opacity: 0.2; }
-.editor-empty h2 { font-family: 'Playfair Display', Georgia, serif; font-size: 1.2rem; color: var(--text); }
+.editor-empty h2 { font-family: var(--font-display); font-size: 1.2rem; color: var(--text); }
 .editor-empty p  { font-size: 0.85rem; max-width: 300px; }
 
 .editor-form { max-width: 680px; width: 100%; }
 
 .editor-heading {
-  font-family: 'Playfair Display', Georgia, serif;
+  font-family: var(--font-display);
   font-size: 1.4rem; color: var(--text); margin-bottom: 1.75rem;
 }
 

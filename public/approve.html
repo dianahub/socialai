@@ -4,28 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Approve Content — ModernSocial.app</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/theme.css">
 <script src="/nav.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-  :root {
-    --bg-deep:    #090910;
-    --bg-card:    #12121c;
-    --bg-surface: #1a1a28;
-    --gold:       #c8a84b;
-    --gold-light: #e5c97a;
-    --gold-dim:   rgba(200,168,75,0.14);
-    --gold-border:rgba(200,168,75,0.14);
-    --text:       #f0ede8;
-    --text-muted: #7a7773;
-    --green:      #4a9960;
-    --green-dim:  rgba(74,153,96,0.15);
-    --red:        #cc4444;
-    --red-dim:    rgba(204,68,68,0.12);
-    --border:     rgba(255,255,255,0.05);
-  }
 
   body {
     background: var(--bg-deep);
@@ -38,10 +20,10 @@
   nav {
     display: flex; align-items: center; justify-content: space-between;
     padding: 0 2.5rem; height: 64px;
-    background: rgba(9,9,16,0.95); border-bottom: 1px solid var(--gold-border);
+    background: var(--bg-nav); border-bottom: 1px solid var(--gold-border);
     position: sticky; top: 0; z-index: 100; backdrop-filter: blur(12px);
   }
-  .nav-brand { font-family: 'Playfair Display', Georgia, serif; font-size: 1.1rem; color: var(--gold-light); letter-spacing: 0.05em; }
+  .nav-brand { font-family: var(--font-display); font-size: 1.1rem; color: var(--gold-light); letter-spacing: 0.05em; }
   .nav-links { display: flex; gap: 0; }
   .nav-links a {
     color: var(--text-muted); text-decoration: none; font-size: 0.8rem;
@@ -57,7 +39,7 @@
   /* ── Page header ── */
   .page-header { margin-bottom: 2rem; }
   .page-header h1 {
-    font-family: 'Playfair Display', Georgia, serif;
+    font-family: var(--font-display);
     font-size: 1.8rem; font-weight: 400; color: var(--gold-light);
     margin-bottom: 0.25rem;
   }

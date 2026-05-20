@@ -1,0 +1,72 @@
+/* ── Fonts ─────────────────────────────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Crimson+Pro:ital,wght@0,400;0,500;1,400;1,500&family=Inter:wght@300;400;500;600&display=swap');
+
+/* ── Dark theme (default) ──────────────────────────────────────────────────── */
+:root {
+  --bg-deep:     #090910;
+  --bg-card:     #12121c;
+  --bg-surface:  #1a1a28;
+  --bg-modal:    #0f0f1a;
+  --bg-nav:      rgba(9,9,16,0.95);
+  --gold:        #c8a84b;
+  --gold-light:  #e5c97a;
+  --gold-dim:    rgba(200,168,75,0.12);
+  --gold-border: rgba(200,168,75,0.18);
+  --text:        #f0ede8;
+  --text-muted:  #7a7773;
+  --text-dim:    #3a3835;
+  --border:      rgba(255,255,255,0.05);
+  --border-hover:rgba(255,255,255,0.15);
+  --green:       #4a9960;
+  --green-dim:   rgba(74,153,96,0.14);
+  --red:         #cc4444;
+  --red-dim:     rgba(204,68,68,0.14);
+  --blue:        #4a7fc1;
+  --blue-dim:    rgba(74,127,193,0.14);
+  --amber:       #d97706;
+  --amber-dim:   rgba(217,119,6,0.14);
+  --radius:      10px;
+  --font-display: 'Playfair Display', Georgia, serif;
+}
+
+/* ── Light / cream theme ───────────────────────────────────────────────────── */
+[data-theme="light"] {
+  --bg-deep:     #fdfbf7;
+  --bg-card:     #f9f5f0;
+  --bg-surface:  #f0e9db;
+  --bg-modal:    #fdfbf7;
+  --bg-nav:      rgba(253,251,247,0.95);
+  --gold:        #c9a86a;
+  --gold-light:  #8b7355;
+  --gold-dim:    rgba(201,168,106,0.15);
+  --gold-border: rgba(201,168,106,0.30);
+  --text:        #2d3748;
+  --text-muted:  #6b6b6b;
+  --text-dim:    #a0a0a0;
+  --border:      rgba(0,0,0,0.08);
+  --border-hover:rgba(0,0,0,0.18);
+  --font-display: 'Crimson Pro', Georgia, serif;
+}
+
+/* ── Theme toggle button ───────────────────────────────────────────────────── */
+.theme-toggle {
+  background: none;
+  border: 1px solid var(--gold-border);
+  border-radius: 6px;
+  color: var(--text-muted);
+  font-size: 1rem;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s, background 0.2s;
+  flex-shrink: 0;
+  margin-left: 0.5rem;
+}
+.theme-toggle:hover {
+  color: var(--gold-light);
+  border-color: var(--gold);
+  background: var(--gold-dim);
+}

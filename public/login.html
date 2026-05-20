@@ -4,25 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Login — ModernSocial.app</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/theme.css">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-  :root {
-    --bg-deep:    #090910;
-    --bg-card:    #12121c;
-    --bg-surface: #1a1a28;
-    --gold:       #c8a84b;
-    --gold-light: #e5c97a;
-    --gold-dim:   rgba(200, 168, 75, 0.18);
-    --gold-border:rgba(200, 168, 75, 0.18);
-    --text:       #f0ede8;
-    --text-muted: #7a7773;
-    --border:     rgba(255,255,255,0.06);
-    --red:        #cc4444;
-    --green:      #4a9960;
-  }
 
   body {
     background: var(--bg-deep);
@@ -45,7 +29,7 @@
   }
 
   .login-logo {
-    font-family: 'Playfair Display', Georgia, serif;
+    font-family: var(--font-display);
     font-size: 1.1rem;
     color: var(--gold-light);
     letter-spacing: 0.05em;
@@ -56,7 +40,7 @@
   }
 
   .login-tagline {
-    font-family: 'Playfair Display', Georgia, serif;
+    font-family: var(--font-display);
     font-size: 1.55rem;
     font-weight: 600;
     color: var(--text);

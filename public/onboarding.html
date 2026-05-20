@@ -4,25 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Setup — ModernSocial.app</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/theme.css">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-  :root {
-    --bg-deep:    #090910;
-    --bg-card:    #12121c;
-    --bg-surface: #1a1a28;
-    --gold:       #c8a84b;
-    --gold-light: #e5c97a;
-    --gold-dim:   rgba(200,168,75,0.15);
-    --gold-border:rgba(200,168,75,0.22);
-    --text:       #f0ede8;
-    --text-muted: #7a7773;
-    --border:     rgba(255,255,255,0.07);
-    --green:      #4a9960;
-    --red:        #cc4444;
-  }
 
   body {
     background: var(--bg-deep);
@@ -37,7 +21,7 @@
   }
 
   .brand {
-    font-family: 'Playfair Display', Georgia, serif;
+    font-family: var(--font-display);
     font-size: 1.15rem;
     color: var(--gold-light);
     letter-spacing: 0.06em;
@@ -108,7 +92,7 @@
   .step.active { display: block; }
 
   .step-title {
-    font-family: 'Playfair Display', Georgia, serif;
+    font-family: var(--font-display);
     font-size: 1.4rem;
     color: var(--gold-light);
     margin-bottom: 0.4rem;
@@ -205,7 +189,7 @@
   }
   .preview-text { flex: 1; }
   .preview-name {
-    font-family: 'Playfair Display', serif;
+    font-family: var(--font-display);
     font-size: 0.95rem;
     font-weight: 600;
   }
