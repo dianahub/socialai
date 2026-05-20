@@ -42,6 +42,15 @@ function cleanStuckJobs() {
 cleanStuckJobs();
 
 app.use(express.json());
+
+// Redirect bare domain to www
+app.use((req, res, next) => {
+  if (req.hostname === 'modernsocial.app') {
+    return res.redirect(301, `https://www.modernsocial.app${req.url}`);
+  }
+  next();
+});
+
 app.use(express.static(path.resolve('public')));
 app.use('/assets', express.static(ASSETS_DIR));
 app.use('/output',  express.static(OUTPUT_DIR));
