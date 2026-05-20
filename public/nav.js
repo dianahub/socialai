@@ -53,7 +53,7 @@
           typeof url === 'string' &&
           !url.startsWith('/api/auth/')) {
         localStorage.removeItem('authToken');
-        window.location.href = '/login.html';
+        window.location.href = '/';
       }
       return res;
     });
@@ -61,7 +61,7 @@
 
   // ── Theme ─────────────────────────────────────────────────────────────────
   (function applyTheme() {
-    const saved = localStorage.getItem('theme') || 'dark';
+    const saved = localStorage.getItem('theme') || 'light';
     document.documentElement.setAttribute('data-theme', saved === 'light' ? 'light' : '');
   })();
 
@@ -207,7 +207,7 @@
     const themeBtn = document.createElement('button');
     themeBtn.className = 'theme-toggle';
     themeBtn.setAttribute('aria-label', 'Toggle theme');
-    const currentTheme = localStorage.getItem('theme') || 'dark';
+    const currentTheme = localStorage.getItem('theme') || 'light';
     themeBtn.textContent = currentTheme === 'light' ? '☀️' : '🌙';
     themeBtn.addEventListener('click', function () {
       const next = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
@@ -231,7 +231,7 @@
 
     const publicPages = ['/login.html', '/signup.html', '/auth-callback.html', '/index.html', '/'];
     if (authEnabled && !token && !publicPages.some(p => window.location.pathname.endsWith(p))) {
-      window.location.href = '/login.html';
+      window.location.href = '/';
       return;
     }
 
@@ -262,7 +262,7 @@
     document.getElementById('navLogoutBtn').addEventListener('click', async function () {
       try { await _fetch('/api/auth/logout', { method: 'POST' }); } catch { /* ignore */ }
       localStorage.removeItem('authToken');
-      window.location.href = '/login.html';
+      window.location.href = '/';
     });
 
     // Fetch current restaurant name
