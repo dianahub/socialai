@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Broadcast Email — ModernSocial.app</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg-deep:    #090910;
+    --bg-card:    #12121c;
+    --bg-surface: #1a1a28;
+    --gold:       #c8a84b;
+    --gold-light: #e5c97a;
+    --gold-dim:   rgba(200,168,75,0.14);
+    --gold-border:rgba(200,168,75,0.22);
+    --text:       #f0ede8;
+    --text-muted: #7a7773;
+    --border:     rgba(255,255,255,0.07);
+    --green:      #4a9960;
+    --green-dim:  rgba(74,153,96,0.15);
+    --red:        #cc4444;
+    --red-dim:    rgba(204,68,68,0.12);
+    --blue:       #4a7fcc;
+    --blue-dim:   rgba(74,127,204,0.15);
+  }
+  body { background: var(--bg-deep); color: var(--text); font-family: 'Inter', sans-serif; min-height: 100vh; }
+
+  nav {
+    display: flex; align-items: center; gap: 1rem;
+    padding: 0 2rem; height: 58px;
+    background: rgba(9,9,16,0.92); border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 100; backdrop-filter: blur(12px);
+  }
+  .nav-brand { font-family: 'Playfair Display', serif; font-size: 1rem; color: var(--gold-light); letter-spacing: 0.05em; text-decoration: none; }
+  .nav-badge { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--gold); background: var(--gold-dim); border: 1px solid var(--gold-border); border-radius: 4px; padding: 0.15rem 0.45rem; }
+  .nav-links { display: flex; gap: 0; }
+  .nav-links a { padding: 0 1rem; height: 58px; display: flex; align-items: center; font-size: 0.82rem; font-weight: 500; color: var(--text-muted); text-decoration: none; border-bottom: 2px solid transparent; transition: color 0.2s; }
+  .nav-links a:hover { color: var(--text); }
+  .nav-links a.active { color: var(--gold-light); border-bottom-color: var(--gold); }
+  .nav-right { margin-left: auto; }
+  .nav-logout { background: none; border: 1px solid var(--border); border-radius: 6px; color: var(--text-muted); font-family: 'Inter', sans-serif; font-size: 0.75rem; padding: 0.3rem 0.75rem; cursor: pointer; transition: color 0.2s, border-color 0.2s; }
+  .nav-logout:hover { color: var(--text); border-color: rgba(255,255,255,0.2); }
+
+  main { max-width: 700px; margin: 0 auto; padding: 2.5rem 2rem 4rem; }
+  .page-title { font-family: 'Playfair Display', serif; font-size: 1.6rem; color: var(--gold-light); }
+  .page-sub { font-size: 0.82rem; color: var(--text-muted); margin-top: 0.25rem; margin-bottom: 2rem; }
+
+  .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; margin-bottom: 1.25rem; }
+  .card-body { padding: 1.5rem; display: flex; flex-direction: column; gap: 1.1rem; }
+
+  label { font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); display: block; margin-bottom: 0.4rem; }
+
+  .form-select, .form-input, .form-textarea {
+    width: 100%; background: var(--bg-surface); border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px; color: var(--text); font-family: 'Inter', sans-serif;
+    font-size: 0.87rem; padding: 0.6rem 0.85rem; outline: none;
+    transition: border-color 0.2s;
+  }
+  .form-select:focus, .form-input:focus, .form-textarea:focus { border-color: var(--gold-border); }
+  .form-textarea { resize: vertical; min-height: 180px; line-height: 1.65; }
+
+  .toolbar { display: flex; gap: 0.35rem; flex-wrap: wrap; padding: 0.6rem 1rem; border-bottom: 1px solid rgba(255,255,255,0.07); background: var(--bg-surface); }
+  .tb-btn {
+    background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 5px; color: var(--text-muted); cursor: pointer;
+    font-family: 'Inter', sans-serif; font-size: 0.78rem; font-weight: 600;
+    padding: 3px 9px; line-height: 1.4; transition: background 0.15s, color 0.15s;
+  }
+  .tb-btn:hover { background: rgba(255,255,255,0.1); color: var(--text); }
+  .tb-sep { width: 1px; background: rgba(255,255,255,0.1); margin: 2px 3px; }
+  .editor-wrap { background: var(--bg-surface); }
+  #bodyEditor {
+    min-height: 200px; outline: none; padding: 1rem; color: var(--text);
+    font-family: 'Inter', sans-serif; font-size: 0.87rem; line-height: 1.7;
+    white-space: pre-wrap;
+  }
+  #bodyEditor h1 { font-size: 1.4rem; font-weight: 700; margin: 0.5rem 0 0.25rem; color: var(--gold-light); }
+  #bodyEditor h2 { font-size: 1.15rem; font-weight: 700; margin: 0.5rem 0 0.25rem; color: var(--gold-light); }
+  #bodyEditor b, #bodyEditor strong { color: var(--text); }
+  #bodyEditor ul { padding-left: 1.4rem; margin: 0.25rem 0; list-style: disc; }
+  #bodyEditor ol { padding-left: 1.4rem; margin: 0.25rem 0; list-style: decimal; }
+
+  .actions { display: flex; gap: 0.75rem; flex-wrap: wrap; padding: 1rem 1.5rem; border-top: 1px solid var(--border); }
+  .btn { border: none; border-radius: 8px; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 0.82rem; font-weight: 600; padding: 0.55rem 1.1rem; transition: opacity 0.2s; }
+  .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+  .btn-gold   { background: var(--gold-dim); color: var(--gold-light); border: 1px solid var(--gold-border); }
+  .btn-blue   { background: var(--blue-dim); color: #93c5fd; border: 1px solid rgba(74,127,204,0.4); }
+  .btn-green  { background: var(--green-dim); color: #6dbb88; border: 1px solid rgba(74,153,96,0.3); }
+  .btn-ghost  { background: rgba(255,255,255,0.04); color: var(--text-muted); border: 1px solid var(--border); }
+
+  .notice { border-radius: 9px; padding: 0.9rem 1.1rem; font-size: 0.83rem; }
+  .notice-err   { background: var(--red-dim);   color: #f87171; border: 1px solid rgba(204,68,68,0.3); }
+  .notice-ok    { background: var(--green-dim);  color: #6dbb88; border: 1px solid rgba(74,153,96,0.3); }
+  .notice-info  { background: var(--blue-dim);   color: #93c5fd; border: 1px solid rgba(74,127,204,0.3); }
+
+  .preview-list { max-height: 160px; overflow-y: auto; font-size: 0.78rem; color: var(--text-muted); margin-top: 0.6rem; line-height: 1.8; }
+
+  /* confirm modal */
+  .modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 200; align-items: center; justify-content: center; }
+  .modal-bg.open { display: flex; }
+  .modal-box { background: var(--bg-card); border: 1px solid var(--gold-border); border-radius: 14px; padding: 1.75rem; max-width: 400px; width: 100%; }
+  .modal-title { font-size: 1.1rem; font-weight: 700; color: var(--text); margin-bottom: 0.75rem; }
+  .modal-body  { font-size: 0.85rem; color: var(--text-muted); line-height: 1.6; margin-bottom: 1.25rem; }
+  .modal-body strong { color: var(--text); }
+  .modal-footer { display: flex; gap: 0.75rem; }
+</style>
+</head>
+<body>
+
+<nav>
+  <a class="nav-brand" href="/admin">✦ ModernSocial.app</a>
+  <span class="nav-badge">admin</span>
+  <div class="nav-links">
+    <a href="/admin">Dashboard</a>
+    <a href="/admin/leads">Leads</a>
+    <a href="/admin/users">Users</a>
+    <a href="/admin/broadcast" class="active">Broadcast</a>
+  </div>
+  <div class="nav-right">
+    <button class="nav-logout" onclick="location.href='/admin/logout'">Log out</button>
+  </div>
+</nav>
+
+<main>
+  <div class="page-title">Broadcast Email</div>
+  <div class="page-sub">Send a message to all leads or all registered users.</div>
+
+  <div class="card">
+    <div class="card-body">
+
+      <!-- Audience -->
+      <div>
+        <label>Audience</label>
+        <select class="form-select" id="audience" onchange="resetPreview()">
+          <option value="leads">All Leads (with email)</option>
+          <option value="users">All Users (registered restaurants)</option>
+        </select>
+      </div>
+
+      <!-- Subject -->
+      <div>
+        <label>Subject</label>
+        <input type="text" class="form-input" id="subject" placeholder="Email subject line…">
+      </div>
+
+      <!-- Body -->
+      <div>
+        <label>Body</label>
+      </div>
+    </div>
+
+    <!-- WYSIWYG toolbar + editor -->
+    <div class="toolbar">
+      <button class="tb-btn" onmousedown="fmt(event,'bold')" title="Bold"><b>B</b></button>
+      <button class="tb-btn" onmousedown="fmt(event,'italic')" title="Italic"><i>I</i></button>
+      <button class="tb-btn" onmousedown="fmt(event,'underline')" title="Underline"><u>U</u></button>
+      <button class="tb-btn" onmousedown="fmt(event,'strikeThrough')" title="Strikethrough"><s>S</s></button>
+      <div class="tb-sep"></div>
+      <button class="tb-btn" onmousedown="fmtBlock(event,'h1')">H1</button>
+      <button class="tb-btn" onmousedown="fmtBlock(event,'h2')">H2</button>
+      <button class="tb-btn" onmousedown="fmtBlock(event,'p')">¶</button>
+      <div class="tb-sep"></div>
+      <button class="tb-btn" onmousedown="fmt(event,'insertUnorderedList')">• List</button>
+      <button class="tb-btn" onmousedown="fmt(event,'insertOrderedList')">1. List</button>
+      <div class="tb-sep"></div>
+      <button class="tb-btn" onmousedown="fmt(event,'undo')">↩</button>
+      <button class="tb-btn" onmousedown="fmt(event,'redo')">↪</button>
+    </div>
+    <div class="editor-wrap">
+      <div id="bodyEditor" contenteditable="true" spellcheck="true"></div>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-gold" onclick="handlePreview()">Preview Recipients</button>
+      <button class="btn btn-blue" id="testBtn" onclick="handleTest()">Send Test Email</button>
+      <button class="btn btn-green" id="sendBtn" onclick="openConfirm()">Send to Audience</button>
+    </div>
+  </div>
+
+  <div id="errorBox"   class="notice notice-err"  style="display:none;margin-bottom:1rem"></div>
+  <div id="testBox"    class="notice notice-ok"   style="display:none;margin-bottom:1rem"></div>
+  <div id="resultBox"  class="notice notice-ok"   style="display:none;margin-bottom:1rem"></div>
+  <div id="previewBox" class="card"               style="display:none;margin-bottom:1rem">
+    <div class="card-body">
+      <div id="previewCount" style="font-size:0.85rem;font-weight:600;color:#93c5fd"></div>
+      <div class="preview-list" id="previewList"></div>
+    </div>
+  </div>
+</main>
+
+<!-- Confirm modal -->
+<div class="modal-bg" id="confirmModal">
+  <div class="modal-box">
+    <div class="modal-title">Confirm Broadcast</div>
+    <div class="modal-body" id="confirmBody"></div>
+    <div class="modal-footer">
+      <button class="btn btn-green" style="flex:1" onclick="handleSend()">Yes, Send</button>
+      <button class="btn btn-ghost" style="flex:1" onclick="closeConfirm()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ── helpers ────────────────────────────────────────────────────────────────
+  function fmt(e, cmd)      { e.preventDefault(); document.execCommand(cmd, false, null); }
+  function fmtBlock(e, tag) { e.preventDefault(); document.execCommand('formatBlock', false, tag); }
+  function getHtml()        { return document.getElementById('bodyEditor').innerHTML.trim(); }
+  function isEmpty()        { return !document.getElementById('bodyEditor').textContent.trim(); }
+
+  function show(id, msg, cls) {
+    const el = document.getElementById(id);
+    el.textContent = msg; el.className = 'notice ' + cls; el.style.display = 'block';
+  }
+  function hide(id) { document.getElementById(id).style.display = 'none'; }
+  function resetPreview() { hide('previewBox'); }
+
+  let previewData = null;
+
+  // ── preview ────────────────────────────────────────────────────────────────
+  async function handlePreview() {
+    hide('errorBox'); hide('previewBox');
+    const audience = document.getElementById('audience').value;
+    try {
+      const r = await fetch(`/api/admin/broadcast/preview?audience=${audience}`, { credentials: 'include' });
+      if (r.status === 401) { location.href = '/admin/login'; return; }
+      if (!r.ok) throw new Error(await r.text());
+      previewData = await r.json();
+      document.getElementById('previewCount').textContent =
+        `${previewData.count} recipient${previewData.count !== 1 ? 's' : ''} for "${previewData.label}"`;
+      const list = document.getElementById('previewList');
+      list.innerHTML = previewData.emails.map(e => `<div>${e}</div>`).join('');
+      document.getElementById('previewBox').style.display = 'block';
+    } catch (e) { show('errorBox', e.message, 'notice-err'); }
+  }
+
+  // ── test ───────────────────────────────────────────────────────────────────
+  async function handleTest() {
+    hide('errorBox'); hide('testBox');
+    const subject = document.getElementById('subject').value.trim();
+    if (!subject || isEmpty()) { show('errorBox', 'Subject and body are required.', 'notice-err'); return; }
+    document.getElementById('testBtn').disabled = true;
+    try {
+      const r = await fetch('/api/admin/broadcast/test', {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subject, body: getHtml() }),
+      });
+      if (r.status === 401) { location.href = '/admin/login'; return; }
+      if (!r.ok) throw new Error(await r.text());
+      show('testBox', 'Test email sent to dianahelene@gmail.com', 'notice-ok');
+    } catch (e) { show('errorBox', e.message, 'notice-err'); }
+    finally { document.getElementById('testBtn').disabled = false; }
+  }
+
+  // ── confirm / send ─────────────────────────────────────────────────────────
+  function openConfirm() {
+    const subject = document.getElementById('subject').value.trim();
+    if (!subject || isEmpty()) { show('errorBox', 'Subject and body are required.', 'notice-err'); return; }
+    hide('errorBox');
+    const audience = document.getElementById('audience').value;
+    const label    = document.getElementById('audience').options[document.getElementById('audience').selectedIndex].text;
+    const count    = previewData ? previewData.count : '?';
+    document.getElementById('confirmBody').innerHTML =
+      `You are about to send <strong>${subject}</strong> to <strong>${label}</strong>` +
+      (previewData ? ` — that's <strong>${count} recipient${count !== 1 ? 's' : ''}</strong>.` : '.');
+    document.getElementById('confirmModal').classList.add('open');
+  }
+  function closeConfirm() { document.getElementById('confirmModal').classList.remove('open'); }
+
+  async function handleSend() {
+    closeConfirm();
+    hide('errorBox'); hide('resultBox');
+    const subject  = document.getElementById('subject').value.trim();
+    const audience = document.getElementById('audience').value;
+    document.getElementById('sendBtn').disabled = true;
+    try {
+      const r = await fetch('/api/admin/broadcast', {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ audience, subject, body: getHtml() }),
+      });
+      if (r.status === 401) { location.href = '/admin/login'; return; }
+      if (!r.ok) throw new Error(await r.text());
+      const data = await r.json();
+      let msg = `Sent ${data.sent} / ${data.total} emails.`;
+      if (data.errors && data.errors.length > 0) {
+        msg += ` ${data.errors.length} failed: ` + data.errors.map(e => e.email).join(', ');
+      }
+      show('resultBox', msg, 'notice-ok');
+    } catch (e) { show('errorBox', e.message, 'notice-err'); }
+    finally { document.getElementById('sendBtn').disabled = false; }
+  }
+</script>
+</body>
+</html>

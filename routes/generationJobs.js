@@ -30,14 +30,20 @@ router.get('/:id', async (req, res) => {
 
 // POST /api/db/generation-jobs  — create a new job record
 router.post('/', async (req, res) => {
-  const { restaurantId, jobType, externalJobId, status = 'pending' } = req.body;
+  const { restaurantId, jobType, externalJobId, scheduledPostId, status = 'pending' } = req.body;
   if (!restaurantId) return res.status(400).json({ error: 'restaurantId is required' });
   if (!jobType)      return res.status(400).json({ error: 'jobType is required' });
   if (!VALID_STATUSES.includes(status))
     return res.status(400).json({ error: `status must be one of: ${VALID_STATUSES.join(', ')}` });
   try {
     const row = await db.generationJob.create({
-      data: { restaurantId: Number(restaurantId), jobType, externalJobId: externalJobId || null, status },
+      data: {
+        restaurantId: Number(restaurantId),
+        jobType,
+        externalJobId: externalJobId || null,
+        scheduledPostId: scheduledPostId ? Number(scheduledPostId) : null,
+        status,
+      },
     });
     res.status(201).json(row);
   } catch (e) { res.status(500).json({ error: e.message }); }

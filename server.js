@@ -9,6 +9,7 @@ const db      = require('./lib/db');
 const { isAuthEnabled, createToken, requireAuth } = require('./lib/auth');
 const bcrypt  = require('bcryptjs');
 const cron    = require('node-cron');
+const { Resend } = require('resend');
 
 const app  = express();
 app.set('trust proxy', 1);
@@ -291,9 +292,71 @@ app.get('/admin/logout', (req, res) => {
   res.redirect('/admin/login');
 });
 
-// Admin leads page — served from memory, not from public/
-app.get('/admin/leads', requireAdmin, (req, res) => res.sendFile(path.resolve('admin/leads.html')));
-app.get('/admin/users', requireAdmin, (req, res) => res.sendFile(path.resolve('admin/users.html')));
+// Admin pages
+app.get('/admin/leads',     requireAdmin, (req, res) => res.sendFile(path.resolve('admin/leads.html')));
+app.get('/admin/users',     requireAdmin, (req, res) => res.sendFile(path.resolve('admin/users.html')));
+app.get('/admin/broadcast', requireAdmin, (req, res) => res.sendFile(path.resolve('admin/broadcast.html')));
+
+// ── Broadcast email ────────────────────────────────────────────────────────
+const BROADCAST_FROM = 'ModernSocial <hello@modernsocial.app>';
+const TEST_EMAIL     = 'dianahelene@gmail.com';
+
+async function sendBroadcastEmail(to, subject, htmlBody) {
+  const key = process.env.RESEND_API_KEY;
+  if (!key) throw new Error('RESEND_API_KEY is not set');
+  const resend = new Resend(key);
+  await resend.emails.send({ from: BROADCAST_FROM, to, subject, html: htmlBody });
+}
+
+async function getBroadcastRecipients(audience) {
+  if (audience === 'leads') {
+    const rows = await db.lead.findMany({ where: { email: { not: null } }, select: { email: true, name: true } });
+    return rows.map(r => ({ email: r.email, name: r.name }));
+  }
+  if (audience === 'users') {
+    const rows = await db.restaurant.findMany({ select: { loginEmail: true, name: true } });
+    return rows.map(r => ({ email: r.loginEmail, name: r.name }));
+  }
+  throw new Error('Invalid audience');
+}
+
+const AUDIENCE_LABELS = { leads: 'All Leads', users: 'All Users' };
+
+app.get('/api/admin/broadcast/preview', requireAdmin, async (req, res) => {
+  const { audience = 'leads' } = req.query;
+  try {
+    const recipients = await getBroadcastRecipients(audience);
+    res.json({ audience, label: AUDIENCE_LABELS[audience], count: recipients.length, emails: recipients.map(r => r.email) });
+  } catch (e) { res.status(400).json({ error: e.message }); }
+});
+
+app.post('/api/admin/broadcast/test', requireAdmin, async (req, res) => {
+  const { subject, body } = req.body;
+  if (!subject || !body) return res.status(400).json({ error: 'subject and body are required' });
+  try {
+    await sendBroadcastEmail(TEST_EMAIL, `[TEST] ${subject}`, body);
+    res.json({ sent: true, to: TEST_EMAIL });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/admin/broadcast', requireAdmin, async (req, res) => {
+  const { audience, subject, body } = req.body;
+  if (!subject || !body) return res.status(400).json({ error: 'subject and body are required' });
+  try {
+    const recipients = await getBroadcastRecipients(audience);
+    let sent = 0;
+    const errors = [];
+    for (const r of recipients) {
+      try {
+        await sendBroadcastEmail(r.email, subject, body);
+        sent++;
+      } catch (e) {
+        errors.push({ email: r.email, error: e.message });
+      }
+    }
+    res.json({ sent, total: recipients.length, errors });
+  } catch (e) { res.status(400).json({ error: e.message }); }
+});
 
 // POST /api/admin/impersonate/:id — generate a JWT for any restaurant (admin only)
 app.post('/api/admin/impersonate/:id', requireAdmin, async (req, res) => {

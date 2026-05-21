@@ -1150,14 +1150,19 @@ async function createPost() {
   if (!scheduledTime) { toast('Please pick a time', 'err'); return; }
 
   try {
-    await api('POST', '/api/db/scheduled-posts', {
+    const post = await api('POST', '/api/db/scheduled-posts', {
       restaurantId,
       postType,
       scheduledTime: new Date(scheduledTime).toISOString(),
       caption:       caption || null,
-      status:        'draft',
+      status:        'queued',
     });
-    toast('Post created', 'ok');
+    await api('POST', '/api/db/generation-jobs', {
+      restaurantId,
+      jobType:         postType,
+      scheduledPostId: post.id,
+    });
+    toast('Post queued for generation', 'ok');
     closeNewPostModal({target: null, currentTarget: null});
     document.getElementById('newPostBackdrop').classList.remove('open');
     await loadPosts();
@@ -1438,13 +1443,13 @@ async function previewSchedule() {
       const scriptField = p.postType === 'owner_twin_video'
         ? `<textarea id="gwScript_${i}" placeholder="Generating script…" disabled
              style="width:100%;margin-top:0.4rem;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);
-                    border-radius:5px;color:#e2e8f0;font-size:0.72rem;font-family:inherit;padding:0.4rem 0.5rem;
-                    resize:vertical;min-height:68px;box-sizing:border-box;opacity:0.6" rows="3"></textarea>`
+                    border-radius:5px;color:var(--text);font-size:0.72rem;font-family:inherit;padding:0.4rem 0.5rem;
+                    resize:vertical;min-height:68px;box-sizing:border-box;" rows="3"></textarea>`
         : '';
       return `<div style="padding:0.5rem 0.65rem;background:rgba(255,255,255,0.04);border-radius:6px;font-size:0.78rem">
         <div style="display:flex;align-items:center;gap:0.75rem">
-          <span style="min-width:4.5rem;color:var(--text-muted)">${dateStr}</span>
-          <span style="min-width:4rem;color:var(--text-muted)">${timeStr}</span>
+          <span style="min-width:4.5rem;color:var(--text)">${dateStr}</span>
+          <span style="min-width:4rem;color:var(--text)">${timeStr}</span>
           <span>${p.icon} ${p.label}</span>
         </div>
         ${scriptField}
