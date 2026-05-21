@@ -11,6 +11,7 @@ const bcrypt  = require('bcryptjs');
 const cron    = require('node-cron');
 
 const app  = express();
+app.set('trust proxy', 1);
 const PORT = process.env.PORT || 3000;
 
 // ── Data directories (configurable for Railway volume mount) ──────────────────
