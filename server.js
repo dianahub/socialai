@@ -298,7 +298,7 @@ app.get('/admin/users',     requireAdmin, (req, res) => res.sendFile(path.resolv
 app.get('/admin/broadcast', requireAdmin, (req, res) => res.sendFile(path.resolve('admin/broadcast.html')));
 
 // ── Broadcast email ────────────────────────────────────────────────────────
-const BROADCAST_FROM = 'Diana Castillo <diana.castillo@futurotek.com>';
+const BROADCAST_FROM = 'ModernSocial <diana.castillo@futurotek.com>';
 const TEST_EMAIL     = 'dianahelene@gmail.com';
 
 async function sendBroadcastEmail(to, subject, htmlBody) {
