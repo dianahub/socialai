@@ -441,53 +441,13 @@ async function generateTwinClip(config, jobId, customScript) {
       let character;
       let modelLabel = 'HeyGen Avatar';
 
-      // Resolve owner photo: prefer cloud URL, fall back to local filesystem
-      let ownerLocalPath = null;
-      let ownerIsTmp     = false;
-
-      if (config._ownerUrl) {
-        try {
-          const resp = await fetch(config._ownerUrl, { signal: AbortSignal.timeout(15000) });
-          if (resp.ok) {
-            const os_  = require('os');
-            const tmp  = path.join(os_.tmpdir(), `owner_cloud_${Date.now()}.jpg`);
-            fs.writeFileSync(tmp, Buffer.from(await resp.arrayBuffer()));
-            ownerLocalPath = tmp;
-            ownerIsTmp     = true;
-            console.log('[generateTwinClip] Owner photo downloaded from cloud URL');
-          }
-        } catch (e) {
-          console.warn('[generateTwinClip] Owner cloud download failed:', e.message);
-        }
-      }
-
-      if (!ownerLocalPath) {
-        const ownerDir   = path.join(ASSETS_DIR, 'owner');
-        const ownerFiles = fs.existsSync(ownerDir)
-          ? fs.readdirSync(ownerDir).filter(f => !f.startsWith('.') && /\.(jpg|jpeg|png|webp)$/i.test(f))
-          : [];
-        if (ownerFiles.length) ownerLocalPath = path.join(ownerDir, ownerFiles[0]);
-      }
-
-      if (ownerLocalPath) {
-        try {
-          const talkingPhotoId = await uploadTalkingPhoto(ownerLocalPath);
-          if (ownerIsTmp) fs.unlink(ownerLocalPath, () => {});
-          if (talkingPhotoId) {
-            character  = { type: 'talking_photo', talking_photo_id: talkingPhotoId };
-            modelLabel = 'HeyGen Talking Photo';
-            console.log('[generateTwinClip] Talking photo uploaded:', talkingPhotoId);
-          }
-        } catch (uploadErr) {
-          if (ownerIsTmp) fs.unlink(ownerLocalPath, () => {});
-          console.warn('[generateTwinClip] Talking photo upload failed:', uploadErr.message);
-        }
-      }
-
-      // No owner photo or upload failed — fall back to mock rather than using personal avatar
-      if (!character) {
-        console.log('[generateTwinClip] No owner photo available — falling back to mock');
-        throw new Error('No owner photo — cannot generate twin without using personal avatar');
+      if (config.heygenAvatarId) {
+        // Pre-trained video avatar — no photo upload needed
+        character  = { type: 'avatar', avatar_id: config.heygenAvatarId, avatar_style: 'normal' };
+        modelLabel = 'HeyGen Video Avatar';
+        console.log('[generateTwinClip] Using pre-trained video avatar:', config.heygenAvatarId);
+      } else {
+        throw new Error('No HeyGen avatar ID set. Add your HeyGen Avatar ID in the Assets page to generate twin videos.');
       }
 
       const resp = await heygenPost('/v2/video/generate', {

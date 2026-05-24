@@ -471,7 +471,7 @@
   <!-- ── Step 3: Assets ── -->
   <div class="step" id="step3">
     <div class="step-title">Upload Your Assets</div>
-    <div class="step-subtitle">Logo and owner portrait power the digital twin video. Photos are used in branded posts.</div>
+    <div class="step-subtitle">Upload your logo and food photos, then connect your HeyGen video avatar for the owner twin video.</div>
 
     <div class="upload-grid">
       <div class="upload-zone" id="zonelogo">
@@ -481,13 +481,25 @@
         <div class="upload-sublabel">PNG or SVG preferred</div>
         <div class="upload-status">✓ Uploaded</div>
       </div>
-      <div class="upload-zone" id="zoneowner">
-        <input type="file" accept="image/*" onchange="uploadAsset('owner', this)" />
-        <div class="upload-icon">👤</div>
-        <div class="upload-label">Owner Portrait</div>
-        <div class="upload-sublabel">For digital twin video</div>
-        <div class="upload-status">✓ Uploaded</div>
+    </div>
+
+    <!-- HeyGen Avatar ID -->
+    <div style="margin-top:1.2rem; padding:1.2rem; border-radius:12px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1);">
+      <div style="font-size:0.82rem; font-weight:700; letter-spacing:0.06em; color:var(--gold); margin-bottom:0.6rem;">🎬 HeyGen Video Avatar</div>
+      <div style="font-size:0.78rem; color:var(--text-muted); margin-bottom:1rem; line-height:1.6;">
+        To generate the owner twin video you need a <strong style="color:var(--text)">pre-trained HeyGen video avatar</strong>.<br>
+        <ol style="margin:0.6rem 0 0 1.1rem; padding:0; display:flex; flex-direction:column; gap:0.3rem;">
+          <li>Go to <a href="https://app.heygen.com/avatars" target="_blank" style="color:var(--gold)">app.heygen.com/avatars</a></li>
+          <li>Click <strong>Create Avatar</strong> and upload 2–5 min of yourself speaking</li>
+          <li>Once training is complete, open the avatar and copy its <strong>Avatar ID</strong></li>
+          <li>Paste it below</li>
+        </ol>
       </div>
+      <input type="text" id="heygenAvatarId"
+        placeholder="e.g. 3d801ac11ed04ccc8efba1cdf0f75297"
+        style="width:100%; box-sizing:border-box; padding:0.6rem 0.8rem; border-radius:8px; border:1px solid rgba(255,255,255,0.15); background:rgba(0,0,0,0.3); color:var(--text); font-size:0.82rem; font-family:monospace; outline:none;"
+      />
+      <div id="avatarIdStatus" style="font-size:0.72rem; color:var(--green); margin-top:0.4rem; display:none;">✓ Avatar ID saved</div>
     </div>
 
     <div class="upload-zone-wide" id="zonephotos">
@@ -501,10 +513,10 @@
     <div class="btn-row">
       <button class="btn-secondary" onclick="goStep(2)">← Back</button>
       <button class="btn-skip" onclick="goStep(4)">Skip for now</button>
-      <button class="btn-primary" onclick="goStep(4)">Continue →</button>
+      <button class="btn-primary" onclick="saveStep3()">Continue →</button>
     </div>
     <div class="error-msg" id="err3"></div>
-    <div class="saving-msg" id="saving3">Uploading…</div>
+    <div class="saving-msg" id="saving3">Saving…</div>
   </div>
 
   <!-- ── Step 4: Instagram ── -->
@@ -551,8 +563,8 @@
         <span class="summary-value" id="sumLogo">—</span>
       </div>
       <div class="summary-row">
-        <span class="summary-icon">👤</span>
-        <span class="summary-label">Owner portrait</span>
+        <span class="summary-icon">🎬</span>
+        <span class="summary-label">HeyGen avatar</span>
         <span class="summary-value" id="sumOwner">—</span>
       </div>
       <div class="summary-row">
@@ -768,6 +780,31 @@ async function saveStep2() {
   }
 }
 
+// ── Step 3: Save avatar ID then advance ──
+async function saveStep3() {
+  const avatarId = (document.getElementById('heygenAvatarId')?.value || '').trim();
+  const status   = document.getElementById('avatarIdStatus');
+  const err      = document.getElementById('err3');
+  err.classList.remove('show');
+  if (avatarId) {
+    try {
+      const res = await fetch(`/api/db/restaurants/${state.restaurantId}`, {
+        method:  'PATCH',
+        headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ heygenAvatarId: avatarId }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error || 'Save failed');
+      if (status) { status.style.display = 'block'; }
+      state.heygenAvatarId = avatarId;
+    } catch (e) {
+      err.textContent = e.message;
+      err.classList.add('show');
+      return;
+    }
+  }
+  goStep(4);
+}
+
 // ── Step 3: Asset uploads ──
 async function uploadAsset(type, input) {
   const file = input.files[0];
@@ -856,7 +893,7 @@ function buildSummary() {
   document.getElementById('sumBizLabel').textContent = getBizLabel();
   document.getElementById('sumName').textContent    = state.restaurantName || '—';
   document.getElementById('sumLogo').innerHTML      = state.logoUploaded  ? '<span class="check">✓ Uploaded</span>' : '<span class="skip">Skipped</span>';
-  document.getElementById('sumOwner').innerHTML     = state.ownerUploaded ? '<span class="check">✓ Uploaded</span>' : '<span class="skip">Skipped</span>';
+  document.getElementById('sumOwner').innerHTML     = state.heygenAvatarId ? '<span class="check">✓ Connected</span>' : '<span class="skip">Skipped</span>';
   document.getElementById('sumPhotos').innerHTML    = state.photosCount   ? `<span class="check">✓ ${state.photosCount} photo${state.photosCount > 1 ? 's' : ''}</span>` : '<span class="skip">Skipped</span>';
   document.getElementById('sumIg').innerHTML        = state.igUrl ? `<span class="check">${state.igUrl.replace('https://www.instagram.com/','@').replace('https://instagram.com/','@')}</span>` : state.igConnected ? '<span class="check">✓ Connected</span>' : '<span class="skip">Skipped</span>';
 }

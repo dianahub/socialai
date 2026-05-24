@@ -39,6 +39,7 @@ model Restaurant {
   defaultHashtags      String?
   includeLocation      Boolean  @default(true)
   ownerVoiceId         String?
+  heygenAvatarId       String?
   businessType         String?  @default("restaurant")
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt

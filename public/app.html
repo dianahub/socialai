@@ -534,16 +534,29 @@
     </div>
   </div>
 
-  <!-- ── Owner Photo ── -->
+  <!-- ── HeyGen Video Avatar ── -->
   <div class="section">
-    <div class="section-title">Owner Photo</div>
-    <div class="section-subtitle">Used to generate a digital twin animation via Higgsfield Soul.</div>
-    <div class="drop-zone" id="ownerZone">
-      <input type="file" id="ownerInput" accept="image/*">
-      <div class="drop-icon" id="ownerIcon">👤</div>
-      <div class="drop-label" id="ownerLabel">Drop owner photo here or <u>click to browse</u></div>
-      <div class="drop-hint">Best results: clear face, good lighting · Max 10 MB</div>
-      <img class="drop-preview" id="ownerPreview" alt="Owner preview">
+    <div class="section-title">🎬 HeyGen Video Avatar</div>
+    <div class="section-subtitle">Your pre-trained HeyGen avatar is used to generate the owner twin video. No photo needed.</div>
+
+    <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); border-radius:10px; padding:1rem; margin-bottom:1rem; font-size:0.78rem; color:var(--text-muted); line-height:1.7;">
+      <strong style="color:var(--text);">How to get your Avatar ID:</strong>
+      <ol style="margin:0.4rem 0 0 1.1rem; padding:0;">
+        <li>Go to <a href="https://app.heygen.com/avatars" target="_blank" style="color:var(--gold)">app.heygen.com/avatars</a></li>
+        <li>Create an avatar — upload 2–5 minutes of yourself speaking clearly</li>
+        <li>Once training is complete, open the avatar and copy the <strong>Avatar ID</strong></li>
+        <li>Paste it below and save</li>
+      </ol>
+    </div>
+
+    <label for="heygenAvatarId" style="font-size:0.75rem; font-weight:600; letter-spacing:0.05em; color:var(--text-muted); display:block; margin-bottom:0.4rem;">HEYGEN AVATAR ID</label>
+    <input type="text" id="heygenAvatarId"
+      placeholder="e.g. 3d801ac11ed04ccc8efba1cdf0f75297"
+      style="width:100%; box-sizing:border-box; padding:0.6rem 0.8rem; border-radius:8px; border:1px solid rgba(255,255,255,0.15); background:rgba(0,0,0,0.3); color:var(--text); font-size:0.82rem; font-family:monospace; outline:none;"
+    />
+    <div style="display:flex; gap:0.6rem; align-items:center; margin-top:0.5rem;">
+      <button onclick="saveAvatarId()" style="padding:0.45rem 1rem; border-radius:7px; border:1px solid rgba(255,255,255,0.2); background:rgba(255,255,255,0.07); color:var(--text); font-size:0.78rem; cursor:pointer;">Save Avatar ID</button>
+      <div id="avatarIdMsg" style="font-size:0.72rem; display:none;"></div>
     </div>
     <div class="twin-options">
       <div>
@@ -847,6 +860,7 @@ async function saveAndGenerate() {
     platforms,
     twinStyle:      document.getElementById('twinStyle').value,
     twinUsecase:    document.getElementById('twinUsecase').value,
+    heygenAvatarId: (document.getElementById('heygenAvatarId')?.value || '').trim() || undefined,
     savedAt:        new Date().toISOString(),
   };
 
@@ -920,9 +934,11 @@ async function loadSavedState() {
       logoUploaded = assets.logo;
       showPreview('logoPreview', 'logoIcon', 'logoLabel', assets.logo);
     }
-    if (assets.owner) {
-      ownerUploaded = assets.owner;
-      showPreview('ownerPreview', 'ownerIcon', 'ownerLabel', assets.owner);
+
+    // Restore HeyGen avatar ID
+    if (config.heygenAvatarId) {
+      const el = document.getElementById('heygenAvatarId');
+      if (el) el.value = config.heygenAvatarId;
     }
     if (assets.photos?.length) {
       assets.photos.forEach((p, i) => {
@@ -1004,6 +1020,27 @@ function applyBusinessTypeLabels(businessType) {
 }
 
 // ── Login credentials ──────────────────────────────────────────────────────
+async function saveAvatarId() {
+  const avatarId = (document.getElementById('heygenAvatarId')?.value || '').trim();
+  const msg = document.getElementById('avatarIdMsg');
+  try {
+    const res = await fetch(`/api/db/restaurants/${getRestaurantId()}`, {
+      method:  'PATCH',
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
+      body:    JSON.stringify({ heygenAvatarId: avatarId || null }),
+    });
+    if (!res.ok) throw new Error((await res.json()).error || 'Save failed');
+    msg.style.display = 'block';
+    msg.style.color   = 'var(--green, #4ade80)';
+    msg.textContent   = avatarId ? '✓ Avatar ID saved' : '✓ Cleared';
+    setTimeout(() => { msg.style.display = 'none'; }, 3000);
+  } catch (e) {
+    msg.style.display = 'block';
+    msg.style.color   = '#f87171';
+    msg.textContent   = e.message;
+  }
+}
+
 async function saveLoginCredentials() {
   const email    = document.getElementById('loginEmail').value.trim();
   const password = document.getElementById('loginPassword').value;
