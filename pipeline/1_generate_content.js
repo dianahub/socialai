@@ -760,6 +760,9 @@ async function burnTwinCaptions(videoUrl, captionUrl, script, outPath) {
     fs.mkdirSync(capDir, { recursive: true });
     console.log('[twin captions] Downloading video...');
     await downloadFile(videoUrl, rawPath);
+    const rawSize = fs.statSync(rawPath).size;
+    console.log(`[twin captions] Raw video size: ${(rawSize / 1024 / 1024).toFixed(2)} MB`);
+    if (rawSize < 50000) throw new Error(`Raw video too small (${rawSize} bytes) — HeyGen may have returned empty content`);
 
     const srt = await _getSrtContent(captionUrl, script);
     if (!srt.trim()) return false;
@@ -777,15 +780,20 @@ async function burnTwinCaptions(videoUrl, captionUrl, script, outPath) {
 
     const { spawnSync } = require('child_process');
     const result = spawnSync(ffmpegBin,
-      ['-y', '-i', rawPath, '-vf', vf, '-c:a', 'copy', '-preset', 'fast', outPath],
+      ['-y', '-i', rawPath, '-vf', vf, '-c:v', 'libx264', '-crf', '23', '-c:a', 'copy', '-preset', 'fast', outPath],
       { timeout: 180000, maxBuffer: 50 * 1024 * 1024 }
     );
+    const stderr = (result.stderr || Buffer.alloc(0)).toString();
     if (result.status !== 0) {
-      const stderr = (result.stderr || Buffer.alloc(0)).toString().slice(-2000);
-      console.error('[twin captions] ffmpeg failed:', stderr);
+      console.error('[twin captions] ffmpeg failed:', stderr.slice(-2000));
       return false;
     }
-    console.log(`[twin captions] Captions burned → ${outPath}`);
+    const outSize = fs.existsSync(outPath) ? fs.statSync(outPath).size : 0;
+    if (outSize < 50000) {
+      console.error(`[twin captions] Output too small (${outSize} bytes), stderr:`, stderr.slice(-1000));
+      return false;
+    }
+    console.log(`[twin captions] Captions burned → ${outPath} (${(outSize / 1024 / 1024).toFixed(2)} MB)`);
     return true;
   } catch (e) {
     console.error('[twin captions] Error:', e.message);
