@@ -631,6 +631,7 @@ function restaurantToConfig(r) {
     twinUsecase:    r.twinUsecase   || '',
     ownerScript:    r.ownerScript   || '',
     businessType:   r.businessType  || 'restaurant',
+    heygenAvatarId: r.heygenAvatarId || null,
   };
 }
 
