@@ -493,7 +493,7 @@
         <div class="gen-icon">👤</div>
         <div class="gen-title">Animate Owner Twin</div>
         <div class="gen-desc">The owner speaks directly to your audience. Review what they'll say before generating.</div>
-        <div class="gen-model">HeyGen Talking Photo</div>
+        <div class="gen-model">HeyGen Video Avatar</div>
 
         <div style="border-top:1px solid var(--border);margin-top:0.9rem;padding-top:0.9rem" onclick="event.stopPropagation()">
 
@@ -531,7 +531,7 @@
           </p>
         </div>
 
-        <button class="btn-gen-twin" onclick="event.stopPropagation();generate('twin')" style="margin-top:0.9rem;width:100%;pointer-events:all;position:relative;z-index:2">Generate Owner Twin</button>
+        <button class="btn-gen-twin" id="twinGenBtn" onclick="event.stopPropagation();generate('twin')" style="margin-top:0.9rem;width:100%;pointer-events:all;position:relative;z-index:2">Generate Owner Twin</button>
         <div class="gen-status" id="status-twin" style="display:none"></div>
       </div>
 
@@ -677,6 +677,15 @@ async function loadHeader() {
       img.src = assets.logo;
       img.style.display = 'block';
       document.getElementById('headerLogoFallback').style.display = 'none';
+    }
+    const twinBtn = document.getElementById('twinGenBtn');
+    if (!config.heygenAvatarId) {
+      twinBtn.disabled = true;
+      twinBtn.title    = 'Add your HeyGen Avatar ID in the Assets page first';
+      twinBtn.textContent = 'Set HeyGen Avatar ID to unlock';
+      twinBtn.style.opacity = '0.45';
+      twinBtn.style.cursor  = 'not-allowed';
+      twinBtn.onclick = e => { e.stopPropagation(); window.location.href = 'app.html#heygen'; };
     }
   } catch (e) { console.warn('Header load failed:', e.message); }
 }
