@@ -638,21 +638,22 @@ function restaurantToConfig(r) {
 app.post('/api/config', async (req, res) => {
   const { restaurantId: rId, restaurantName, cuisineType, ownerName, tagline,
           primaryColor, accentColor, bgColor, platforms, twinStyle, twinUsecase, ownerScript,
-          businessType } = req.body;
+          businessType, heygenAvatarId } = req.body;
   const restaurantId = req.restaurantId || Number(rId) || 1;
   const data = {};
-  if (restaurantName !== undefined) data.name                = restaurantName;
-  if (cuisineType    !== undefined) data.cuisineType         = cuisineType;
-  if (ownerName      !== undefined) data.ownerName           = ownerName;
-  if (tagline        !== undefined) data.tagline             = tagline;
-  if (primaryColor   !== undefined) data.brandColorPrimary   = primaryColor;
-  if (accentColor    !== undefined) data.brandColorAccent    = accentColor;
-  if (bgColor        !== undefined) data.brandColorBg        = bgColor;
-  if (platforms      !== undefined) data.platforms           = JSON.stringify(platforms);
-  if (twinStyle      !== undefined) data.twinStyle           = twinStyle;
-  if (twinUsecase    !== undefined) data.twinUsecase         = twinUsecase;
-  if (ownerScript    !== undefined) data.ownerScript         = ownerScript;
-  if (businessType   !== undefined) data.businessType        = businessType;
+  if (restaurantName  !== undefined) data.name                = restaurantName;
+  if (cuisineType     !== undefined) data.cuisineType         = cuisineType;
+  if (ownerName       !== undefined) data.ownerName           = ownerName;
+  if (tagline         !== undefined) data.tagline             = tagline;
+  if (primaryColor    !== undefined) data.brandColorPrimary   = primaryColor;
+  if (accentColor     !== undefined) data.brandColorAccent    = accentColor;
+  if (bgColor         !== undefined) data.brandColorBg        = bgColor;
+  if (platforms       !== undefined) data.platforms           = JSON.stringify(platforms);
+  if (twinStyle       !== undefined) data.twinStyle           = twinStyle;
+  if (twinUsecase     !== undefined) data.twinUsecase         = twinUsecase;
+  if (ownerScript     !== undefined) data.ownerScript         = ownerScript;
+  if (businessType    !== undefined) data.businessType        = businessType;
+  if (heygenAvatarId  !== undefined) data.heygenAvatarId      = heygenAvatarId || null;
   try {
     await db.restaurant.update({ where: { id: restaurantId }, data });
     // Also write file fallback so local dev without DB still works
