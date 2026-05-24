@@ -1333,8 +1333,8 @@ async function init() {
   } catch {}
   const items = await fetch(`/api/output?restaurantId=${getRestaurantId()}`).then(r => r.json()).catch(() => []);
   if (items.length) {
-    // Treat any 'generating' job older than 15 min as stale — don't lock the card
-    const staleMs = 15 * 60 * 1000;
+    // Treat any 'generating' job older than 5 min as stale — don't lock the card
+    const staleMs = 5 * 60 * 1000;
     items.forEach(i => {
       if (i.status === 'generating' && (Date.now() - new Date(i.created).getTime()) > staleMs) {
         i.status = 'error';
