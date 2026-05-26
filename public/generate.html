@@ -1192,6 +1192,10 @@ function renderGallery(items) {
 // ── Video modal ────────────────────────────────────────────────────────────
 async function clearStuckJobs() {
   await fetch('/api/output/clear-stuck', { method: 'POST', headers: authHeaders() }).catch(() => {});
+  // Reset all in-memory state so cards go back to idle
+  activejobs.clear();
+  ['video', 'twin', 'image'].forEach(t => setCardState(t, 'idle'));
+  stopPolling();
   lastOutputHash = '';
   pollOutput();
 }
