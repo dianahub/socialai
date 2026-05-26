@@ -26,22 +26,29 @@ const OUTPUT_DIR = path.join(DATA_DIR, 'output');
 fs.mkdirSync(OUTPUT_DIR, { recursive: true });
 fs.mkdirSync(path.resolve('public'), { recursive: true });
 
-// Mark any jobs left in 'generating' state from a previous run as errored
+// Mark any jobs stuck in 'generating' state as errored (runs on startup + periodically)
 function cleanStuckJobs() {
   if (!fs.existsSync(OUTPUT_DIR)) return;
+  const cutoff = Date.now() - 15 * 60 * 1000; // 15 minutes
   fs.readdirSync(OUTPUT_DIR).filter(f => f.endsWith('_meta.json')).forEach(f => {
     try {
       const p    = path.join(OUTPUT_DIR, f);
       const meta = JSON.parse(fs.readFileSync(p, 'utf8'));
       if (meta.status === 'generating') {
-        meta.status = 'error';
-        meta.error  = 'Server restarted during generation — please try again.';
-        fs.writeFileSync(p, JSON.stringify(meta, null, 2));
+        const age = meta.created ? Date.now() - new Date(meta.created).getTime() : Infinity;
+        if (age > cutoff || !meta.created) {
+          meta.status = 'error';
+          meta.error  = 'Generation timed out — please try again.';
+          fs.writeFileSync(p, JSON.stringify(meta, null, 2));
+          console.log(`[cleanup] Reset stuck job ${meta.id} (${meta.type})`);
+        }
       }
     } catch {}
   });
 }
 cleanStuckJobs();
+// Also clean up stuck jobs every 20 minutes while server is running
+setInterval(cleanStuckJobs, 20 * 60 * 1000);
 
 app.use(express.json());
 
@@ -1076,6 +1083,13 @@ app.get('/api/output', (req, res) => {
     .filter(item => !rid || !item.restaurantId || item.restaurantId === rid)
     .sort((a, b) => new Date(b.created) - new Date(a.created));
   res.json(items);
+});
+
+// ── Clear stuck generating jobs ───────────────────────────────────────────────
+
+app.post('/api/output/clear-stuck', (req, res) => {
+  cleanStuckJobs();
+  res.json({ success: true });
 });
 
 // ── Delete job ────────────────────────────────────────────────────────────────

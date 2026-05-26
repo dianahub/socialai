@@ -550,6 +550,7 @@
   <div class="gallery-section">
     <div class="gallery-header-actions">
       <h3 style="margin-bottom:0;flex:1">Generated Output</h3>
+      <button onclick="clearStuckJobs()" style="font-size:0.72rem;padding:0.3rem 0.7rem;border-radius:6px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.05);color:var(--text-muted);cursor:pointer" title="Reset any jobs stuck on 'Generating'">Clear stuck</button>
       <div class="poll-indicator" id="pollIndicator" style="display:none">
         <span class="spinner"></span> Checking for new content…
       </div>
@@ -1189,6 +1190,12 @@ function renderGallery(items) {
 }
 
 // ── Video modal ────────────────────────────────────────────────────────────
+async function clearStuckJobs() {
+  await fetch('/api/output/clear-stuck', { method: 'POST', headers: authHeaders() }).catch(() => {});
+  lastOutputHash = '';
+  pollOutput();
+}
+
 function openVideoModal(src, isTwin) {
   const player = document.getElementById('videoPlayer');
   player.src = src;
