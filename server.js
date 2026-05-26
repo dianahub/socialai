@@ -699,6 +699,7 @@ app.post('/api/config', async (req, res) => {
   if (ownerScript     !== undefined) data.ownerScript         = ownerScript;
   if (businessType    !== undefined) data.businessType        = businessType;
   if (heygenAvatarId    !== undefined) data.heygenAvatarId      = heygenAvatarId    || null;
+  console.log(`[config POST] saving heygenAvatarId="${heygenAvatarId}" → ${data.heygenAvatarId}`);
   if (heygenAvatarStyle !== undefined) data.heygenAvatarStyle   = heygenAvatarStyle || 'normal';
   if (twinBackgroundUrl !== undefined) data.twinBackgroundUrl   = twinBackgroundUrl || null;
   if (ownerVoiceId      !== undefined) data.ownerVoiceId        = ownerVoiceId      || null;
@@ -721,7 +722,10 @@ app.get('/api/config', async (req, res) => {
   const restaurantId = req.restaurantId || Number(req.query.restaurantId) || 1;
   try {
     const r = await db.restaurant.findUnique({ where: { id: restaurantId } });
-    if (r) return res.json(restaurantToConfig(r));
+    if (r) {
+      console.log(`[config GET] restaurantId=${restaurantId} heygenAvatarId=${r.heygenAvatarId}`);
+      return res.json(restaurantToConfig(r));
+    }
   } catch { /* fall through to file */ }
   // File fallback
   if (fs.existsSync(CONFIG_PATH)) {
