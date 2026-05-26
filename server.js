@@ -1088,7 +1088,21 @@ app.get('/api/output', (req, res) => {
 // ── Clear stuck generating jobs ───────────────────────────────────────────────
 
 app.post('/api/output/clear-stuck', (req, res) => {
-  cleanStuckJobs();
+  // Force-clear ALL stuck generating jobs immediately (no age cutoff)
+  if (fs.existsSync(OUTPUT_DIR)) {
+    fs.readdirSync(OUTPUT_DIR).filter(f => f.endsWith('_meta.json')).forEach(f => {
+      try {
+        const p    = path.join(OUTPUT_DIR, f);
+        const meta = JSON.parse(fs.readFileSync(p, 'utf8'));
+        if (meta.status === 'generating') {
+          meta.status = 'error';
+          meta.error  = 'Cleared manually — please generate again.';
+          fs.writeFileSync(p, JSON.stringify(meta, null, 2));
+          console.log(`[clear-stuck] Reset job ${meta.id} (${meta.type})`);
+        }
+      } catch {}
+    });
+  }
   res.json({ success: true });
 });
 
