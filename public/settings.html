@@ -174,10 +174,15 @@
 
       <div style="margin-top:1.25rem">
         <label style="font-size:0.75rem;font-weight:600;letter-spacing:0.05em;color:var(--text-muted);display:block;margin-bottom:0.4rem">TWIN BACKGROUND</label>
-        <input type="text" id="twinBackgroundUrl"
-          placeholder="Paste a direct .jpg, .png, or .mp4 URL — leave blank for dark background"
-          style="width:100%;box-sizing:border-box;background:var(--bg-surface);border:1px solid var(--border);border-radius:8px;padding:0.55rem 0.8rem;color:var(--text);font-family:'Inter',sans-serif;font-size:0.82rem;outline:none" />
-        <p style="font-size:0.7rem;color:var(--text-muted);margin-top:0.3rem">Image or video shown behind the avatar. Use a Cloudinary or any public direct URL.</p>
+        <div style="display:flex;gap:0.5rem;align-items:center">
+          <input type="text" id="twinBackgroundUrl"
+            placeholder="Paste a direct .jpg, .png, or .mp4 URL — or upload below"
+            style="flex:1;box-sizing:border-box;background:var(--bg-surface);border:1px solid var(--border);border-radius:8px;padding:0.55rem 0.8rem;color:var(--text);font-family:'Inter',sans-serif;font-size:0.82rem;outline:none" />
+          <button class="btn btn-ghost btn-sm" onclick="document.getElementById('twinBgFileInput').click()" id="twinBgUploadBtn">Upload</button>
+          <input type="file" id="twinBgFileInput" accept="image/*,video/mp4,video/webm,video/quicktime" style="display:none" onchange="uploadTwinBackground(this)">
+        </div>
+        <div id="twinBgPreview" style="margin-top:0.6rem;display:none"></div>
+        <p style="font-size:0.7rem;color:var(--text-muted);margin-top:0.3rem">Image or short video shown behind the avatar. Upload a file or paste a direct URL.</p>
       </div>
     </div>
 
@@ -478,7 +483,10 @@ async function loadAll() {
       selectedVoiceId = r.ownerVoiceId;
       document.getElementById('voiceSelected').textContent = `Selected voice ID: ${r.ownerVoiceId} — click Load Voices to change`;
     }
-    if (r.twinBackgroundUrl) document.getElementById('twinBackgroundUrl').value = r.twinBackgroundUrl;
+    if (r.twinBackgroundUrl) {
+      document.getElementById('twinBackgroundUrl').value = r.twinBackgroundUrl;
+      showTwinBgPreview(r.twinBackgroundUrl, /\.(mp4|mov|webm)/i.test(r.twinBackgroundUrl));
+    }
 
     // Account tab
     if (r.name)      document.getElementById('restName').value      = r.name;
@@ -606,6 +614,40 @@ async function saveLoginCreds() {
     toast('Login credentials updated', 'ok');
     document.getElementById('loginPassword').value = '';
   } catch (e) { toast('Save failed: ' + e.message, 'err'); }
+}
+
+// ── Twin background upload ────────────────────────────────────────────────
+async function uploadTwinBackground(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const btn = document.getElementById('twinBgUploadBtn');
+  btn.textContent = 'Uploading…';
+  btn.disabled = true;
+  try {
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('restaurantId', restaurantId);
+    const res  = await fetch('/api/upload/twin-background', { method: 'POST', body: fd });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    document.getElementById('twinBackgroundUrl').value = data.url;
+    showTwinBgPreview(data.url, file.type.startsWith('video/'));
+    toast('Background uploaded', 'ok');
+  } catch (e) {
+    toast('Upload failed: ' + e.message, 'err');
+  } finally {
+    btn.textContent = 'Upload';
+    btn.disabled = false;
+    input.value = '';
+  }
+}
+
+function showTwinBgPreview(url, isVideo) {
+  const el = document.getElementById('twinBgPreview');
+  el.style.display = 'block';
+  el.innerHTML = isVideo
+    ? `<video src="${url}" muted loop autoplay playsinline style="max-height:120px;border-radius:6px;border:1px solid var(--border)"></video>`
+    : `<img src="${url}" style="max-height:120px;border-radius:6px;border:1px solid var(--border)">`;
 }
 
 // ── Handle OAuth redirect back ────────────────────────────────────────────

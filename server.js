@@ -531,6 +531,38 @@ app.post('/api/upload/owner', uploadOwner.single('file'), async (req, res) => {
   res.json({ success: true, filename, path: `/assets/owner/${filename}` });
 });
 
+const uploadTwinBg = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
+
+app.post('/api/upload/twin-background', uploadTwinBg.single('file'), async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No file received' });
+  const restaurantId = req.restaurantId || Number(req.body.restaurantId) || 1;
+  const ext          = path.extname(req.file.originalname).toLowerCase();
+  const isVideo      = ['.mp4', '.mov', '.webm'].includes(ext);
+
+  if (cld.isConfigured()) {
+    try {
+      const result = await cld.uploadBuffer(req.file.buffer, {
+        public_id:     `restaurant-social-ai/${restaurantId}/twin-background`,
+        overwrite:     true,
+        resource_type: isVideo ? 'video' : 'image',
+        quality:       'auto',
+      });
+      await db.restaurant.update({ where: { id: restaurantId }, data: { twinBackgroundUrl: result.url } }).catch(() => {});
+      return res.json({ success: true, url: result.url });
+    } catch (e) {
+      console.error('[twin-bg] Cloudinary upload failed:', e.message);
+      return res.status(500).json({ error: 'Upload failed: ' + e.message });
+    }
+  }
+
+  // Local fallback
+  const filename = `twin-background${ext || '.jpg'}`;
+  saveLocalAsset('twin-background', filename, req.file.buffer);
+  const localUrl = `/assets/twin-background/${filename}`;
+  await db.restaurant.update({ where: { id: restaurantId }, data: { twinBackgroundUrl: localUrl } }).catch(() => {});
+  res.json({ success: true, url: localUrl });
+});
+
 // ── Asset management ──────────────────────────────────────────────────────────
 
 app.get('/api/assets', async (req, res) => {
