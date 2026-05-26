@@ -158,34 +158,6 @@
       </p>
     </div>
 
-    <div class="card">
-      <div class="card-title">Owner Video Voice</div>
-      <p style="font-size:0.78rem;color:var(--text-muted);margin-bottom:0.5rem">
-        Your HeyGen Digital Twin already has your voice cloned. Click <strong style="color:var(--text)">Load Voices</strong>, then look at the top of the list — your cloned voice will appear there with a <span style="background:rgba(200,168,75,0.2);color:var(--gold-light);font-size:0.68rem;padding:0.1rem 0.35rem;border-radius:4px;font-weight:600">CLONE</span> badge. Select it and save.
-      </p>
-      <div style="display:flex;gap:0.5rem;margin-bottom:0.5rem">
-        <input type="text" id="voiceSearch" placeholder="Filter by name, language, or accent…"
-          style="flex:1;background:var(--bg-surface);border:1px solid var(--border);border-radius:8px;padding:0.5rem 0.8rem;color:var(--text);font-family:'Inter',sans-serif;font-size:0.82rem;outline:none"
-          oninput="filterVoices()" />
-        <button class="btn btn-ghost btn-sm" onclick="filterClonesOnly()" id="clonesFilterBtn">My Clones</button>
-        <button class="btn btn-ghost btn-sm" onclick="loadVoices()" id="voiceLoadBtn">Load Voices</button>
-      </div>
-      <div id="voiceList" style="display:none;max-height:260px;overflow-y:auto;display:flex;flex-direction:column;gap:0.3rem;margin-bottom:0.5rem"></div>
-      <div id="voiceSelected" style="font-size:0.78rem;color:var(--text-muted);margin-top:0.4rem"></div>
-
-      <div style="margin-top:1.25rem">
-        <label style="font-size:0.75rem;font-weight:600;letter-spacing:0.05em;color:var(--text-muted);display:block;margin-bottom:0.4rem">TWIN BACKGROUND</label>
-        <div style="display:flex;gap:0.5rem;align-items:center">
-          <input type="text" id="twinBackgroundUrl"
-            placeholder="Paste a direct .jpg, .png, or .mp4 URL — or upload below"
-            style="flex:1;box-sizing:border-box;background:var(--bg-surface);border:1px solid var(--border);border-radius:8px;padding:0.55rem 0.8rem;color:var(--text);font-family:'Inter',sans-serif;font-size:0.82rem;outline:none" />
-          <button class="btn btn-ghost btn-sm" onclick="document.getElementById('twinBgFileInput').click()" id="twinBgUploadBtn">Upload</button>
-          <input type="file" id="twinBgFileInput" accept="image/*,video/mp4,video/webm,video/quicktime" style="display:none" onchange="uploadTwinBackground(this)">
-        </div>
-        <div id="twinBgPreview" style="margin-top:0.6rem;display:none"></div>
-        <p style="font-size:0.7rem;color:var(--text-muted);margin-top:0.3rem">Image or short video shown behind the avatar. Upload a file or paste a direct URL.</p>
-      </div>
-    </div>
 
     <div class="card">
       <div class="card-title">Default Hashtags</div>
@@ -357,8 +329,6 @@ const restaurantId = window.getRestaurantId ? getRestaurantId() : 1;
 
 let defaultHashtags = [];
 let presets = [];
-let allVoices = [];
-let selectedVoiceId = null;
 
 // ── Toast ─────────────────────────────────────────────────────────────────
 let toastTimer;
@@ -480,15 +450,6 @@ async function loadAll() {
     document.getElementById('includeLocation').value = String(r.includeLocation !== false);
     try { defaultHashtags = r.defaultHashtags ? JSON.parse(r.defaultHashtags) : []; } catch { defaultHashtags = []; }
     renderDefaultHashtags();
-    if (r.ownerVoiceId) {
-      selectedVoiceId = r.ownerVoiceId;
-      document.getElementById('voiceSelected').textContent = `Selected voice ID: ${r.ownerVoiceId} — click Load Voices to change`;
-    }
-    if (r.twinBackgroundUrl) {
-      document.getElementById('twinBackgroundUrl').value = r.twinBackgroundUrl;
-      showTwinBgPreview(r.twinBackgroundUrl, /\.(mp4|mov|webm)/i.test(r.twinBackgroundUrl));
-    }
-
     // Account tab
     if (r.name)      document.getElementById('restName').value      = r.name;
     if (r.cuisineType) document.getElementById('restCuisine').value = r.cuisineType;
@@ -573,11 +534,9 @@ async function saveIgCredsSettings() {
 async function saveCaptionPrefs() {
   try {
     await api('PATCH', `/api/db/restaurants/${restaurantId}`, {
-      voiceTone:          document.getElementById('voiceTone').value,
-      includeLocation:    document.getElementById('includeLocation').value === 'true',
-      defaultHashtags:    JSON.stringify(defaultHashtags),
-      ownerVoiceId:       selectedVoiceId || null,
-      twinBackgroundUrl:  document.getElementById('twinBackgroundUrl').value.trim() || null,
+      voiceTone:       document.getElementById('voiceTone').value,
+      includeLocation: document.getElementById('includeLocation').value === 'true',
+      defaultHashtags: JSON.stringify(defaultHashtags),
     });
     toast('Caption settings saved', 'ok');
   } catch (e) { toast('Save failed: ' + e.message, 'err'); }
@@ -617,40 +576,6 @@ async function saveLoginCreds() {
   } catch (e) { toast('Save failed: ' + e.message, 'err'); }
 }
 
-// ── Twin background upload ────────────────────────────────────────────────
-async function uploadTwinBackground(input) {
-  const file = input.files[0];
-  if (!file) return;
-  const btn = document.getElementById('twinBgUploadBtn');
-  btn.textContent = 'Uploading…';
-  btn.disabled = true;
-  try {
-    const fd = new FormData();
-    fd.append('file', file);
-    fd.append('restaurantId', restaurantId);
-    const res  = await fetch('/api/upload/twin-background', { method: 'POST', body: fd });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error);
-    document.getElementById('twinBackgroundUrl').value = data.url;
-    showTwinBgPreview(data.url, file.type.startsWith('video/'));
-    toast('Background uploaded', 'ok');
-  } catch (e) {
-    toast('Upload failed: ' + e.message, 'err');
-  } finally {
-    btn.textContent = 'Upload';
-    btn.disabled = false;
-    input.value = '';
-  }
-}
-
-function showTwinBgPreview(url, isVideo) {
-  const el = document.getElementById('twinBgPreview');
-  el.style.display = 'block';
-  el.innerHTML = isVideo
-    ? `<video src="${url}" muted loop autoplay playsinline style="max-height:120px;border-radius:6px;border:1px solid var(--border)"></video>`
-    : `<img src="${url}" style="max-height:120px;border-radius:6px;border:1px solid var(--border)">`;
-}
-
 // ── Handle OAuth redirect back ────────────────────────────────────────────
 (function () {
   const params = new URLSearchParams(window.location.search);
@@ -660,82 +585,6 @@ function showTwinBgPreview(url, isVideo) {
 })();
 
 document.addEventListener('DOMContentLoaded', loadAll);
-
-// ── HeyGen voice picker ───────────────────────────────────────────────────
-async function loadVoices() {
-  const btn  = document.getElementById('voiceLoadBtn');
-  const list = document.getElementById('voiceList');
-  btn.textContent = 'Loading…';
-  btn.disabled = true;
-  try {
-    const token = localStorage.getItem('authToken');
-    const r = await fetch('/api/heygen/voices', { headers: { Authorization: `Bearer ${token}` } });
-    if (!r.ok) throw new Error((await r.json()).error || 'Failed to load voices');
-    allVoices = await r.json();
-    list.style.display = 'flex';
-    renderVoices(allVoices);
-    btn.textContent = 'Reload';
-  } catch (e) {
-    toast('Could not load voices: ' + e.message, 'err');
-    btn.textContent = 'Load Voices';
-  }
-  btn.disabled = false;
-}
-
-function filterVoices() {
-  const q = document.getElementById('voiceSearch').value.toLowerCase();
-  const filtered = allVoices.filter(v =>
-    !q || v.name?.toLowerCase().includes(q) || v.language?.toLowerCase().includes(q) || v.type?.toLowerCase().includes(q)
-  );
-  renderVoices(filtered);
-}
-
-function filterClonesOnly() {
-  document.getElementById('voiceSearch').value = '';
-  const clones = allVoices.filter(v => (v.type || '').toLowerCase().includes('clone'));
-  if (!clones.length && allVoices.length) {
-    toast('No cloned voices found — your twin voice may be listed under a different name', 'ok');
-    renderVoices(allVoices);
-  } else {
-    renderVoices(clones);
-  }
-}
-
-function renderVoices(voices) {
-  const list = document.getElementById('voiceList');
-  list.style.display = 'flex';
-  if (!voices.length) { list.innerHTML = '<div style="font-size:0.78rem;color:var(--text-muted);padding:0.5rem">No voices match your filter.</div>'; return; }
-  list.innerHTML = voices.map(v => {
-    const isClone    = (v.type || '').toLowerCase().includes('clone');
-    const isSelected = selectedVoiceId === v.voice_id;
-    const cloneBadge = isClone ? `<span style="background:rgba(200,168,75,0.2);color:var(--gold-light);font-size:0.68rem;padding:0.1rem 0.4rem;border-radius:4px;font-weight:600;white-space:nowrap">CLONE</span>` : '';
-    return `
-    <div onclick="selectVoice('${v.voice_id}', '${(v.name||'').replace(/'/g,"\\'")}', '${v.language||''}')"
-      style="display:flex;align-items:center;gap:0.75rem;padding:0.5rem 0.75rem;border-radius:7px;cursor:pointer;
-             background:${isSelected ? 'rgba(200,168,75,0.12)' : isClone ? 'rgba(200,168,75,0.04)' : 'var(--bg-surface)'};
-             border:1px solid ${isSelected ? 'rgba(200,168,75,0.3)' : isClone ? 'rgba(200,168,75,0.15)' : 'var(--border)'};
-             transition:background 0.15s">
-      <div style="flex:1;min-width:0">
-        <div style="display:flex;align-items:center;gap:0.4rem">
-          <span style="font-size:0.82rem;font-weight:500;color:${isSelected ? 'var(--gold-light)' : 'var(--text)'}">${v.name || v.voice_id}</span>
-          ${cloneBadge}
-        </div>
-        <div style="font-size:0.7rem;color:var(--text-muted)">${v.language || ''} · ${v.gender || ''}</div>
-      </div>
-      ${v.preview_audio ? `<audio controls preload="none" style="height:24px;width:120px" src="${v.preview_audio}"></audio>` : ''}
-      ${isSelected ? '<span style="color:var(--gold);font-size:0.8rem">✓</span>' : ''}
-    </div>`;
-  }).join('');
-}
-
-function selectVoice(id, name, lang) {
-  selectedVoiceId = id;
-  document.getElementById('voiceSelected').textContent = `Selected: ${name} (${lang})`;
-  renderVoices(allVoices.filter(v => {
-    const q = document.getElementById('voiceSearch').value.toLowerCase();
-    return !q || v.name?.toLowerCase().includes(q) || v.language?.toLowerCase().includes(q);
-  }));
-}
 </script>
 </body>
 </html>

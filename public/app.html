@@ -567,11 +567,19 @@
     </select>
 
     <label style="font-size:0.75rem; font-weight:600; letter-spacing:0.05em; color:var(--text-muted); display:block; margin-bottom:0.4rem; margin-top:1rem;">TWIN BACKGROUND</label>
-    <input type="text" id="twinBackgroundUrl"
-      placeholder="Image or video URL — leave blank for dark background"
-      style="width:100%; box-sizing:border-box; padding:0.6rem 0.8rem; border-radius:8px; border:1px solid rgba(255,255,255,0.15); background:rgba(0,0,0,0.3); color:var(--text); font-size:0.82rem; outline:none;"
-    />
-    <p style="font-size:0.7rem; color:var(--text-muted); margin-top:0.3rem;">Paste a direct .jpg/.png or .mp4 URL. Used as the background behind the avatar.</p>
+    <div style="display:flex; gap:0.5rem; align-items:center;">
+      <input type="text" id="twinBackgroundUrl"
+        placeholder="Paste a URL or upload a file →"
+        style="flex:1; box-sizing:border-box; padding:0.6rem 0.8rem; border-radius:8px; border:1px solid rgba(255,255,255,0.15); background:rgba(0,0,0,0.3); color:var(--text); font-size:0.82rem; outline:none;"
+      />
+      <button id="twinBgUploadBtn" onclick="document.getElementById('twinBgFileInput').click()"
+        style="padding:0.45rem 1rem; border-radius:7px; border:1px solid rgba(255,255,255,0.2); background:rgba(255,255,255,0.07); color:var(--text); font-size:0.78rem; cursor:pointer; white-space:nowrap;">
+        Upload
+      </button>
+      <input type="file" id="twinBgFileInput" accept="image/*,video/mp4,video/webm,video/quicktime" style="display:none" onchange="uploadTwinBackground(this)">
+    </div>
+    <div id="twinBgPreview" style="margin-top:0.6rem;display:none"></div>
+    <p style="font-size:0.7rem; color:var(--text-muted); margin-top:0.3rem;">Image or short video shown behind the avatar. Upload a file or paste a direct URL.</p>
 
     <div class="twin-options">
       <div>
@@ -810,6 +818,40 @@ async function removePhoto(idx, slot) {
 }
 
 // ── Upload helpers ─────────────────────────────────────────────────────────
+// ── Twin background upload ─────────────────────────────────────────────────
+async function uploadTwinBackground(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const btn = document.getElementById('twinBgUploadBtn');
+  btn.textContent = 'Uploading…';
+  btn.disabled = true;
+  try {
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('restaurantId', getRestaurantId());
+    const res  = await fetch('/api/upload/twin-background', { method: 'POST', headers: authHeaders(), body: fd });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    document.getElementById('twinBackgroundUrl').value = data.url;
+    showTwinBgPreview(data.url, file.type.startsWith('video/'));
+    toast('Background uploaded', 'success');
+  } catch (e) {
+    toast('Upload failed: ' + e.message, 'error');
+  } finally {
+    btn.textContent = 'Upload';
+    btn.disabled = false;
+    input.value = '';
+  }
+}
+
+function showTwinBgPreview(url, isVideo) {
+  const el = document.getElementById('twinBgPreview');
+  el.style.display = 'block';
+  el.innerHTML = isVideo
+    ? `<video src="${url}" muted loop autoplay playsinline style="max-height:120px;border-radius:6px;border:1px solid rgba(255,255,255,0.15)"></video>`
+    : `<img src="${url}" style="max-height:120px;border-radius:6px;border:1px solid rgba(255,255,255,0.15)">`;
+}
+
 async function uploadFile(url, field, file, extras = {}) {
   const fd = new FormData();
   fd.append(field, file);
@@ -937,7 +979,10 @@ async function loadSavedState() {
     if (config.twinStyle)         document.getElementById('twinStyle').value         = config.twinStyle;
     if (config.twinUsecase)       document.getElementById('twinUsecase').value       = config.twinUsecase;
     if (config.heygenAvatarStyle) document.getElementById('heygenAvatarStyle').value = config.heygenAvatarStyle;
-    if (config.twinBackgroundUrl) document.getElementById('twinBackgroundUrl').value = config.twinBackgroundUrl;
+    if (config.twinBackgroundUrl) {
+      document.getElementById('twinBackgroundUrl').value = config.twinBackgroundUrl;
+      showTwinBgPreview(config.twinBackgroundUrl, /\.(mp4|mov|webm)/i.test(config.twinBackgroundUrl));
+    }
 
     setBizTypeDropdown(config.businessType || 'restaurant');
 
