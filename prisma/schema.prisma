@@ -40,6 +40,8 @@ model Restaurant {
   includeLocation      Boolean  @default(true)
   ownerVoiceId         String?
   heygenAvatarId       String?
+  heygenAvatarStyle    String?  @default("normal")
+  twinBackgroundUrl    String?
   businessType         String?  @default("restaurant")
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt

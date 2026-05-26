@@ -442,19 +442,29 @@ async function generateTwinClip(config, jobId, customScript) {
       let modelLabel = 'HeyGen Avatar';
 
       if (config.heygenAvatarId) {
-        // Pre-trained video avatar — no photo upload needed
-        character  = { type: 'avatar', avatar_id: config.heygenAvatarId, avatar_style: 'normal' };
-        modelLabel = 'HeyGen Video Avatar';
-        console.log('[generateTwinClip] Using pre-trained video avatar:', config.heygenAvatarId);
+        const avatarStyle = config.heygenAvatarStyle || 'normal';
+        character  = { type: 'avatar', avatar_id: config.heygenAvatarId, avatar_style: avatarStyle };
+        modelLabel = avatarStyle === 'expressive' ? 'HeyGen Digital Twin Avatar V' : 'HeyGen Video Avatar';
+        console.log(`[generateTwinClip] Using avatar ${config.heygenAvatarId} style=${avatarStyle}`);
       } else {
         throw new Error('No HeyGen avatar ID set. Add your HeyGen Avatar ID in the Assets page to generate twin videos.');
+      }
+
+      // Background: image/video URL takes priority over default dark color
+      let background;
+      const bgUrl = (config.twinBackgroundUrl || '').trim();
+      if (bgUrl) {
+        const isVideo = /\.(mp4|mov|webm)(\?|$)/i.test(bgUrl);
+        background = { type: isVideo ? 'video' : 'image', url: bgUrl };
+      } else {
+        background = { type: 'color', value: '#0a0a14' };
       }
 
       const resp = await heygenPost('/v2/video/generate', {
         video_inputs: [{
           character,
           voice: voiceInput,
-          background: { type: 'color', value: '#0a0a14' },
+          background,
         }],
         dimension:    { width: 720, height: 1280 },
         aspect_ratio: '9:16',

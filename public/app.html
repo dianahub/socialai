@@ -558,6 +558,21 @@
       <button onclick="saveAvatarId()" style="padding:0.45rem 1rem; border-radius:7px; border:1px solid rgba(255,255,255,0.2); background:rgba(255,255,255,0.07); color:var(--text); font-size:0.78rem; cursor:pointer;">Save Avatar ID</button>
       <div id="avatarIdMsg" style="font-size:0.72rem; display:none;"></div>
     </div>
+
+    <label style="font-size:0.75rem; font-weight:600; letter-spacing:0.05em; color:var(--text-muted); display:block; margin-bottom:0.4rem; margin-top:1rem;">AVATAR STYLE</label>
+    <select id="heygenAvatarStyle"
+      style="width:100%; box-sizing:border-box; padding:0.6rem 0.8rem; border-radius:8px; border:1px solid rgba(255,255,255,0.15); background:rgba(0,0,0,0.3); color:var(--text); font-size:0.82rem; outline:none;">
+      <option value="normal">Normal</option>
+      <option value="expressive">Expressive (Digital Twin Avatar V)</option>
+    </select>
+
+    <label style="font-size:0.75rem; font-weight:600; letter-spacing:0.05em; color:var(--text-muted); display:block; margin-bottom:0.4rem; margin-top:1rem;">TWIN BACKGROUND</label>
+    <input type="text" id="twinBackgroundUrl"
+      placeholder="Image or video URL — leave blank for dark background"
+      style="width:100%; box-sizing:border-box; padding:0.6rem 0.8rem; border-radius:8px; border:1px solid rgba(255,255,255,0.15); background:rgba(0,0,0,0.3); color:var(--text); font-size:0.82rem; outline:none;"
+    />
+    <p style="font-size:0.7rem; color:var(--text-muted); margin-top:0.3rem;">Paste a direct .jpg/.png or .mp4 URL. Used as the background behind the avatar.</p>
+
     <div class="twin-options">
       <div>
         <label for="twinStyle">Twin Style</label>
@@ -853,8 +868,10 @@ async function saveAndGenerate() {
     platforms,
     twinStyle:      document.getElementById('twinStyle').value,
     twinUsecase:    document.getElementById('twinUsecase').value,
-    heygenAvatarId: (document.getElementById('heygenAvatarId')?.value || '').trim() || undefined,
-    savedAt:        new Date().toISOString(),
+    heygenAvatarId:    (document.getElementById('heygenAvatarId')?.value    || '').trim() || undefined,
+    heygenAvatarStyle: (document.getElementById('heygenAvatarStyle')?.value || 'normal'),
+    twinBackgroundUrl: (document.getElementById('twinBackgroundUrl')?.value  || '').trim() || undefined,
+    savedAt:           new Date().toISOString(),
   };
 
   const btn = document.getElementById('saveBtn');
@@ -917,8 +934,10 @@ async function loadSavedState() {
         cb.closest('.platform-toggle').classList.toggle('active', active);
       });
     }
-    if (config.twinStyle)   document.getElementById('twinStyle').value   = config.twinStyle;
-    if (config.twinUsecase) document.getElementById('twinUsecase').value = config.twinUsecase;
+    if (config.twinStyle)         document.getElementById('twinStyle').value         = config.twinStyle;
+    if (config.twinUsecase)       document.getElementById('twinUsecase').value       = config.twinUsecase;
+    if (config.heygenAvatarStyle) document.getElementById('heygenAvatarStyle').value = config.heygenAvatarStyle;
+    if (config.twinBackgroundUrl) document.getElementById('twinBackgroundUrl').value = config.twinBackgroundUrl;
 
     setBizTypeDropdown(config.businessType || 'restaurant');
 

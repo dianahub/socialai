@@ -631,14 +631,16 @@ function restaurantToConfig(r) {
     twinUsecase:    r.twinUsecase   || '',
     ownerScript:    r.ownerScript   || '',
     businessType:   r.businessType  || 'restaurant',
-    heygenAvatarId: r.heygenAvatarId || null,
+    heygenAvatarId:    r.heygenAvatarId    || null,
+    heygenAvatarStyle: r.heygenAvatarStyle || 'normal',
+    twinBackgroundUrl: r.twinBackgroundUrl || '',
   };
 }
 
 app.post('/api/config', async (req, res) => {
   const { restaurantId: rId, restaurantName, cuisineType, ownerName, tagline,
           primaryColor, accentColor, bgColor, platforms, twinStyle, twinUsecase, ownerScript,
-          businessType, heygenAvatarId } = req.body;
+          businessType, heygenAvatarId, heygenAvatarStyle, twinBackgroundUrl } = req.body;
   const restaurantId = req.restaurantId || Number(rId) || 1;
   const data = {};
   if (restaurantName  !== undefined) data.name                = restaurantName;
@@ -653,7 +655,9 @@ app.post('/api/config', async (req, res) => {
   if (twinUsecase     !== undefined) data.twinUsecase         = twinUsecase;
   if (ownerScript     !== undefined) data.ownerScript         = ownerScript;
   if (businessType    !== undefined) data.businessType        = businessType;
-  if (heygenAvatarId  !== undefined) data.heygenAvatarId      = heygenAvatarId || null;
+  if (heygenAvatarId    !== undefined) data.heygenAvatarId      = heygenAvatarId    || null;
+  if (heygenAvatarStyle !== undefined) data.heygenAvatarStyle   = heygenAvatarStyle || 'normal';
+  if (twinBackgroundUrl !== undefined) data.twinBackgroundUrl   = twinBackgroundUrl || null;
   try {
     await db.restaurant.update({ where: { id: restaurantId }, data });
     // Also write file fallback so local dev without DB still works
