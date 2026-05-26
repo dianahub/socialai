@@ -826,7 +826,7 @@ async function burnTwinCaptions(videoUrl, captionUrl, script, outPath) {
     if (!drawtextFilters) { console.log('[twin captions] No cues — skipping'); return false; }
 
     // Dark panel over bottom 28% of 1280px frame + captions (matches ai-trading-research)
-    const vf       = 'drawbox=x=0:y=922:w=iw:h=358:color=black@0.82:t=fill,' + drawtextFilters;
+    const vf       = drawtextFilters;
     const cueCount = (drawtextFilters.match(/drawtext=/g) || []).length;
     console.log(`[twin captions] Burning ${cueCount} cues...`);
 
