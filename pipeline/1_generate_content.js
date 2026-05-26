@@ -155,12 +155,17 @@ async function getDefaultVoiceId(preferredVoiceId) {
     const voices = resp.data?.voices || [];
     if (preferredVoiceId) {
       const match = voices.find(v => v.voice_id === preferredVoiceId);
-      if (match) return match.voice_id;
+      if (match) {
+        console.log(`[heygen] Using saved voice: ${match.name || match.voice_id} (${match.gender || '?'})`);
+        return match.voice_id;
+      }
+      console.warn(`[heygen] Saved voice ID "${preferredVoiceId}" not found in /v2/voices — falling back`);
     }
-    // Prefer English
-    const en = voices.find(v => v.language?.startsWith('en') && v.gender === 'male')
+    // Prefer English female, then any English
+    const en = voices.find(v => v.language?.startsWith('en') && v.gender === 'female')
             || voices.find(v => v.language?.startsWith('en'))
             || voices[0];
+    console.log(`[heygen] Fallback voice: ${en?.name || en?.voice_id} (${en?.gender || '?'})`);
     return en?.voice_id || null;
   } catch {
     return null;

@@ -171,6 +171,14 @@
       </div>
       <div id="voiceList" style="display:none;max-height:260px;overflow-y:auto;display:flex;flex-direction:column;gap:0.3rem;margin-bottom:0.5rem"></div>
       <div id="voiceSelected" style="font-size:0.78rem;color:var(--text-muted);margin-top:0.4rem"></div>
+
+      <div style="margin-top:1.25rem">
+        <label style="font-size:0.75rem;font-weight:600;letter-spacing:0.05em;color:var(--text-muted);display:block;margin-bottom:0.4rem">TWIN BACKGROUND</label>
+        <input type="text" id="twinBackgroundUrl"
+          placeholder="Paste a direct .jpg, .png, or .mp4 URL — leave blank for dark background"
+          style="width:100%;box-sizing:border-box;background:var(--bg-surface);border:1px solid var(--border);border-radius:8px;padding:0.55rem 0.8rem;color:var(--text);font-family:'Inter',sans-serif;font-size:0.82rem;outline:none" />
+        <p style="font-size:0.7rem;color:var(--text-muted);margin-top:0.3rem">Image or video shown behind the avatar. Use a Cloudinary or any public direct URL.</p>
+      </div>
     </div>
 
     <div class="card">
@@ -470,6 +478,7 @@ async function loadAll() {
       selectedVoiceId = r.ownerVoiceId;
       document.getElementById('voiceSelected').textContent = `Selected voice ID: ${r.ownerVoiceId} — click Load Voices to change`;
     }
+    if (r.twinBackgroundUrl) document.getElementById('twinBackgroundUrl').value = r.twinBackgroundUrl;
 
     // Account tab
     if (r.name)      document.getElementById('restName').value      = r.name;
@@ -555,10 +564,11 @@ async function saveIgCredsSettings() {
 async function saveCaptionPrefs() {
   try {
     await api('PATCH', `/api/db/restaurants/${restaurantId}`, {
-      voiceTone:       document.getElementById('voiceTone').value,
-      includeLocation: document.getElementById('includeLocation').value === 'true',
-      defaultHashtags: JSON.stringify(defaultHashtags),
-      ownerVoiceId:    selectedVoiceId || null,
+      voiceTone:          document.getElementById('voiceTone').value,
+      includeLocation:    document.getElementById('includeLocation').value === 'true',
+      defaultHashtags:    JSON.stringify(defaultHashtags),
+      ownerVoiceId:       selectedVoiceId || null,
+      twinBackgroundUrl:  document.getElementById('twinBackgroundUrl').value.trim() || null,
     });
     toast('Caption settings saved', 'ok');
   } catch (e) { toast('Save failed: ' + e.message, 'err'); }
