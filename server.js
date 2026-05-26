@@ -634,13 +634,16 @@ function restaurantToConfig(r) {
     heygenAvatarId:    r.heygenAvatarId    || null,
     heygenAvatarStyle: r.heygenAvatarStyle || 'normal',
     twinBackgroundUrl: r.twinBackgroundUrl || '',
+    ownerVoiceId:      r.ownerVoiceId      || null,
+    voiceTone:         r.voiceTone         || '',
   };
 }
 
 app.post('/api/config', async (req, res) => {
   const { restaurantId: rId, restaurantName, cuisineType, ownerName, tagline,
           primaryColor, accentColor, bgColor, platforms, twinStyle, twinUsecase, ownerScript,
-          businessType, heygenAvatarId, heygenAvatarStyle, twinBackgroundUrl } = req.body;
+          businessType, heygenAvatarId, heygenAvatarStyle, twinBackgroundUrl,
+          ownerVoiceId, voiceTone } = req.body;
   const restaurantId = req.restaurantId || Number(rId) || 1;
   const data = {};
   if (restaurantName  !== undefined) data.name                = restaurantName;
@@ -658,6 +661,8 @@ app.post('/api/config', async (req, res) => {
   if (heygenAvatarId    !== undefined) data.heygenAvatarId      = heygenAvatarId    || null;
   if (heygenAvatarStyle !== undefined) data.heygenAvatarStyle   = heygenAvatarStyle || 'normal';
   if (twinBackgroundUrl !== undefined) data.twinBackgroundUrl   = twinBackgroundUrl || null;
+  if (ownerVoiceId      !== undefined) data.ownerVoiceId        = ownerVoiceId      || null;
+  if (voiceTone         !== undefined) data.voiceTone           = voiceTone         || null;
   try {
     await db.restaurant.update({ where: { id: restaurantId }, data });
     // Also write file fallback so local dev without DB still works
