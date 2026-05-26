@@ -160,13 +160,14 @@
 
     <div class="card">
       <div class="card-title">Owner Video Voice</div>
-      <p style="font-size:0.78rem;color:var(--text-muted);margin-bottom:0.9rem">
-        The voice used when generating owner twin and cinematic videos. Filter by language or accent to find the right fit.
+      <p style="font-size:0.78rem;color:var(--text-muted);margin-bottom:0.5rem">
+        Your HeyGen Digital Twin already has your voice cloned. Click <strong style="color:var(--text)">Load Voices</strong>, then look at the top of the list — your cloned voice will appear there with a <span style="background:rgba(200,168,75,0.2);color:var(--gold-light);font-size:0.68rem;padding:0.1rem 0.35rem;border-radius:4px;font-weight:600">CLONE</span> badge. Select it and save.
       </p>
-      <div style="display:flex;gap:0.5rem;margin-bottom:0.75rem">
+      <div style="display:flex;gap:0.5rem;margin-bottom:0.5rem">
         <input type="text" id="voiceSearch" placeholder="Filter by name, language, or accent…"
           style="flex:1;background:var(--bg-surface);border:1px solid var(--border);border-radius:8px;padding:0.5rem 0.8rem;color:var(--text);font-family:'Inter',sans-serif;font-size:0.82rem;outline:none"
           oninput="filterVoices()" />
+        <button class="btn btn-ghost btn-sm" onclick="filterClonesOnly()" id="clonesFilterBtn">My Clones</button>
         <button class="btn btn-ghost btn-sm" onclick="loadVoices()" id="voiceLoadBtn">Load Voices</button>
       </div>
       <div id="voiceList" style="display:none;max-height:260px;overflow-y:auto;display:flex;flex-direction:column;gap:0.3rem;margin-bottom:0.5rem"></div>
@@ -684,29 +685,47 @@ async function loadVoices() {
 function filterVoices() {
   const q = document.getElementById('voiceSearch').value.toLowerCase();
   const filtered = allVoices.filter(v =>
-    !q || v.name?.toLowerCase().includes(q) || v.language?.toLowerCase().includes(q)
+    !q || v.name?.toLowerCase().includes(q) || v.language?.toLowerCase().includes(q) || v.type?.toLowerCase().includes(q)
   );
   renderVoices(filtered);
+}
+
+function filterClonesOnly() {
+  document.getElementById('voiceSearch').value = '';
+  const clones = allVoices.filter(v => (v.type || '').toLowerCase().includes('clone'));
+  if (!clones.length && allVoices.length) {
+    toast('No cloned voices found — your twin voice may be listed under a different name', 'ok');
+    renderVoices(allVoices);
+  } else {
+    renderVoices(clones);
+  }
 }
 
 function renderVoices(voices) {
   const list = document.getElementById('voiceList');
   list.style.display = 'flex';
   if (!voices.length) { list.innerHTML = '<div style="font-size:0.78rem;color:var(--text-muted);padding:0.5rem">No voices match your filter.</div>'; return; }
-  list.innerHTML = voices.map(v => `
+  list.innerHTML = voices.map(v => {
+    const isClone    = (v.type || '').toLowerCase().includes('clone');
+    const isSelected = selectedVoiceId === v.voice_id;
+    const cloneBadge = isClone ? `<span style="background:rgba(200,168,75,0.2);color:var(--gold-light);font-size:0.68rem;padding:0.1rem 0.4rem;border-radius:4px;font-weight:600;white-space:nowrap">CLONE</span>` : '';
+    return `
     <div onclick="selectVoice('${v.voice_id}', '${(v.name||'').replace(/'/g,"\\'")}', '${v.language||''}')"
       style="display:flex;align-items:center;gap:0.75rem;padding:0.5rem 0.75rem;border-radius:7px;cursor:pointer;
-             background:${selectedVoiceId === v.voice_id ? 'rgba(200,168,75,0.12)' : 'var(--bg-surface)'};
-             border:1px solid ${selectedVoiceId === v.voice_id ? 'rgba(200,168,75,0.3)' : 'var(--border)'};
+             background:${isSelected ? 'rgba(200,168,75,0.12)' : isClone ? 'rgba(200,168,75,0.04)' : 'var(--bg-surface)'};
+             border:1px solid ${isSelected ? 'rgba(200,168,75,0.3)' : isClone ? 'rgba(200,168,75,0.15)' : 'var(--border)'};
              transition:background 0.15s">
       <div style="flex:1;min-width:0">
-        <div style="font-size:0.82rem;font-weight:500;color:${selectedVoiceId === v.voice_id ? 'var(--gold-light)' : 'var(--text)'}">${v.name || v.voice_id}</div>
+        <div style="display:flex;align-items:center;gap:0.4rem">
+          <span style="font-size:0.82rem;font-weight:500;color:${isSelected ? 'var(--gold-light)' : 'var(--text)'}">${v.name || v.voice_id}</span>
+          ${cloneBadge}
+        </div>
         <div style="font-size:0.7rem;color:var(--text-muted)">${v.language || ''} · ${v.gender || ''}</div>
       </div>
       ${v.preview_audio ? `<audio controls preload="none" style="height:24px;width:120px" src="${v.preview_audio}"></audio>` : ''}
-      ${selectedVoiceId === v.voice_id ? '<span style="color:var(--gold);font-size:0.8rem">✓</span>' : ''}
-    </div>
-  `).join('');
+      ${isSelected ? '<span style="color:var(--gold);font-size:0.8rem">✓</span>' : ''}
+    </div>`;
+  }).join('');
 }
 
 function selectVoice(id, name, lang) {

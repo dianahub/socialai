@@ -1338,12 +1338,19 @@ app.get('/api/heygen/voices', async (req, res) => {
     if (!r.ok) throw new Error(`HeyGen ${r.status}`);
     const data = await r.json();
     const voices = (data.data?.voices || []).map(v => ({
-      voice_id:  v.voice_id,
-      name:      v.name,
-      language:  v.language,
-      gender:    v.gender,
+      voice_id:      v.voice_id,
+      name:          v.name,
+      language:      v.language,
+      gender:        v.gender,
+      type:          v.type || null,
       preview_audio: v.preview_audio || null,
     }));
+    // Put cloned voices first so users can find their twin's voice easily
+    voices.sort((a, b) => {
+      const aClone = (a.type || '').toLowerCase().includes('clone') ? 0 : 1;
+      const bClone = (b.type || '').toLowerCase().includes('clone') ? 0 : 1;
+      return aClone - bClone;
+    });
     res.json(voices);
   } catch (e) {
     res.status(500).json({ error: e.message });
