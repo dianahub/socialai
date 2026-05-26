@@ -613,10 +613,10 @@
   </div>
 </div>
 
-<div id="videoModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:1000;align-items:center;justify-content:center" onclick="closeVideoModal()">
-  <div id="videoModalInner" style="position:relative" onclick="event.stopPropagation()">
-    <video id="videoPlayer" controls autoplay playsinline style="display:block;border-radius:8px;max-width:90vw;max-height:90vh"></video>
-    <button onclick="closeVideoModal()" style="position:absolute;top:-14px;right:-14px;width:32px;height:32px;border-radius:50%;background:#1a1a28;border:1px solid rgba(200,168,75,0.3);color:#e5c97a;font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center">✕</button>
+<div id="videoModal" style="display:none;position:fixed;inset:0;background:#000;z-index:1000;align-items:center;justify-content:center" onclick="closeVideoModal()">
+  <div id="videoModalInner" style="position:relative;width:100%;height:100%;display:flex;align-items:center;justify-content:center" onclick="event.stopPropagation()">
+    <video id="videoPlayer" controls autoplay playsinline style="display:block;width:100%;height:100%;object-fit:contain"></video>
+    <button onclick="closeVideoModal()" style="position:absolute;top:16px;right:16px;width:36px;height:36px;border-radius:50%;background:rgba(0,0,0,0.6);border:1px solid rgba(255,255,255,0.2);color:#fff;font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:10">✕</button>
   </div>
 </div>
 
@@ -1199,18 +1199,6 @@ async function clearStuckJobs() {
 function openVideoModal(src, isTwin) {
   const player = document.getElementById('videoPlayer');
   player.src = src;
-  if (isTwin) {
-    // Portrait 9:16 — constrain by height so it fills the screen without letterbox bars
-    player.style.height = '90vh';
-    player.style.width  = 'auto';
-    player.style.maxWidth  = '90vw';
-    player.style.maxHeight = '90vh';
-  } else {
-    player.style.height = '';
-    player.style.width  = '';
-    player.style.maxWidth  = '90vw';
-    player.style.maxHeight = '90vh';
-  }
   document.getElementById('videoModal').style.display = 'flex';
 }
 
