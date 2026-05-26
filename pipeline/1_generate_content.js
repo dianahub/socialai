@@ -460,10 +460,13 @@ async function generateTwinClip(config, jobId, customScript) {
         throw new Error('No HeyGen avatar ID set. Add your HeyGen Avatar ID in the Assets page to generate twin videos.');
       }
 
-      const avatarStyle = config.heygenAvatarStyle || 'normal';
-      character  = { type: 'avatar', avatar_id: config.heygenAvatarId, avatar_style: avatarStyle };
-      modelLabel = avatarStyle === 'expressive' ? 'HeyGen Digital Twin Avatar V' : 'HeyGen Video Avatar';
-      console.log(`[generateTwinClip] Using avatar ${config.heygenAvatarId} style=${avatarStyle}`);
+      const uiStyle    = config.heygenAvatarStyle || 'normal';
+      // HeyGen API only accepts: normal, circle, closeUp, full, voiceOnly
+      // 'expressive' is our UI label for Avatar V — maps to 'normal' on the API
+      const apiStyle   = ['circle','closeUp','full','normal','voiceOnly'].includes(uiStyle) ? uiStyle : 'normal';
+      character  = { type: 'avatar', avatar_id: config.heygenAvatarId, avatar_style: apiStyle };
+      modelLabel = uiStyle === 'expressive' ? 'HeyGen Digital Twin Avatar V' : 'HeyGen Video Avatar';
+      console.log(`[generateTwinClip] Using avatar ${config.heygenAvatarId} style=${apiStyle} (ui=${uiStyle})`);
 
       // Use avatar's own cloned voice; fall back to manually selected voice, then generic default
       const avatarVoiceId = await getAvatarVoiceId(config.heygenAvatarId);
