@@ -684,6 +684,7 @@ app.post('/api/config', async (req, res) => {
           businessType, heygenAvatarId, heygenAvatarStyle, twinBackgroundUrl,
           ownerVoiceId, voiceTone } = req.body;
   const restaurantId = req.restaurantId || Number(rId) || 1;
+  console.log(`[config POST] restaurantId=${restaurantId} heygenAvatarId=${heygenAvatarId ?? '(not sent)'}`);
   const data = {};
   if (restaurantName  !== undefined) data.name                = restaurantName;
   if (cuisineType     !== undefined) data.cuisineType         = cuisineType;
@@ -704,10 +705,12 @@ app.post('/api/config', async (req, res) => {
   if (voiceTone         !== undefined) data.voiceTone           = voiceTone         || null;
   try {
     await db.restaurant.update({ where: { id: restaurantId }, data });
+    console.log(`[config POST] DB update OK for restaurant ${restaurantId}`);
     // Also write file fallback so local dev without DB still works
     fs.writeFileSync(CONFIG_PATH, JSON.stringify({ ...req.body }, null, 2));
     res.json({ success: true });
   } catch (e) {
+    console.error(`[config POST] DB update FAILED for restaurant ${restaurantId}:`, e.message);
     // DB update failed (e.g. restaurant not found) — fall back to file only
     fs.writeFileSync(CONFIG_PATH, JSON.stringify({ ...req.body }, null, 2));
     res.json({ success: true });
