@@ -566,20 +566,7 @@
       <option value="expressive">Expressive (Digital Twin Avatar V)</option>
     </select>
 
-    <label style="font-size:0.75rem; font-weight:600; letter-spacing:0.05em; color:var(--text-muted); display:block; margin-bottom:0.4rem; margin-top:1rem;">TWIN BACKGROUND</label>
-    <div style="display:flex; gap:0.5rem; align-items:center;">
-      <input type="text" id="twinBackgroundUrl"
-        placeholder="Paste a URL or upload a file →"
-        style="flex:1; box-sizing:border-box; padding:0.6rem 0.8rem; border-radius:8px; border:1px solid rgba(255,255,255,0.15); background:rgba(0,0,0,0.3); color:var(--text); font-size:0.82rem; outline:none;"
-      />
-      <button id="twinBgUploadBtn" onclick="document.getElementById('twinBgFileInput').click()"
-        style="padding:0.45rem 1rem; border-radius:7px; border:1px solid rgba(255,255,255,0.2); background:rgba(255,255,255,0.07); color:var(--text); font-size:0.78rem; cursor:pointer; white-space:nowrap;">
-        Upload
-      </button>
-      <input type="file" id="twinBgFileInput" accept="image/*,video/mp4,video/webm,video/quicktime" style="display:none" onchange="uploadTwinBackground(this)">
-    </div>
-    <div id="twinBgPreview" style="margin-top:0.6rem;display:none"></div>
-    <p style="font-size:0.7rem; color:var(--text-muted); margin-top:0.3rem;">Image or short video shown behind the avatar. Upload a file or paste a direct URL.</p>
+    <input type="hidden" id="twinBackgroundUrl">
 
     <div class="twin-options">
       <div>
