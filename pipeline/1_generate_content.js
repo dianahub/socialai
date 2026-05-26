@@ -149,15 +149,32 @@ async function getDefaultAvatarId() {
   return avatars[0].avatar_id;
 }
 
-// Return the voice ID baked into a specific avatar (Digital Twin carries its own cloned voice)
-async function getAvatarVoiceId(avatarId) {
+// Return the voice ID for an avatar. For Avatar Looks (not in /v2/avatars list),
+// falls back to searching /v2/voices by owner name so cloned voices are auto-matched.
+async function getAvatarVoiceId(avatarId, ownerName) {
   try {
     const resp    = await heygenGet('/v2/avatars');
     const avatars = resp.data?.avatars || [];
     const avatar  = avatars.find(a => a.avatar_id === avatarId);
     const voiceId = avatar?.default_voice_id || avatar?.voice_id || null;
-    if (voiceId) console.log(`[heygen] Avatar ${avatarId} has built-in voice: ${voiceId}`);
-    return voiceId;
+    if (voiceId) {
+      console.log(`[heygen] Avatar ${avatarId} has built-in voice: ${voiceId}`);
+      return voiceId;
+    }
+    // Avatar Look IDs won't appear in /v2/avatars — search cloned voices by owner name
+    if (ownerName) {
+      const vresp  = await heygenGet('/v2/voices');
+      const voices = vresp.data?.voices || [];
+      const nameLower = ownerName.toLowerCase();
+      // Prefer exact name match, then partial match; skip generic stock names
+      const match = voices.find(v => v.name?.toLowerCase() === nameLower)
+                 || voices.find(v => v.name?.toLowerCase().includes(nameLower.split(' ')[0].toLowerCase()));
+      if (match) {
+        console.log(`[heygen] Found cloned voice by owner name "${ownerName}": ${match.name} (${match.voice_id})`);
+        return match.voice_id;
+      }
+    }
+    return null;
   } catch {
     return null;
   }
@@ -468,8 +485,8 @@ async function generateTwinClip(config, jobId, customScript) {
       modelLabel = uiStyle === 'expressive' ? 'HeyGen Digital Twin Avatar V' : 'HeyGen Video Avatar';
       console.log(`[generateTwinClip] Using avatar ${config.heygenAvatarId} style=${apiStyle} (ui=${uiStyle})`);
 
-      // Use avatar's own cloned voice; fall back to manually selected voice, then generic default
-      const avatarVoiceId = await getAvatarVoiceId(config.heygenAvatarId);
+      // Use avatar's own cloned voice; for Avatar Looks, match by owner name; then fallback
+      const avatarVoiceId = await getAvatarVoiceId(config.heygenAvatarId, config.ownerName);
       const resolvedVoiceId = avatarVoiceId || config.ownerVoiceId || await getDefaultVoiceId(null);
       const voiceInput = { type: 'text', input_text: script, speed: 1.0 };
       if (resolvedVoiceId) voiceInput.voice_id = resolvedVoiceId;
