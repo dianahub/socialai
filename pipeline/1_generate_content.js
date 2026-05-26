@@ -149,6 +149,20 @@ async function getDefaultAvatarId() {
   return avatars[0].avatar_id;
 }
 
+// Return the voice ID baked into a specific avatar (Digital Twin carries its own cloned voice)
+async function getAvatarVoiceId(avatarId) {
+  try {
+    const resp    = await heygenGet('/v2/avatars');
+    const avatars = resp.data?.avatars || [];
+    const avatar  = avatars.find(a => a.avatar_id === avatarId);
+    const voiceId = avatar?.default_voice_id || avatar?.voice_id || null;
+    if (voiceId) console.log(`[heygen] Avatar ${avatarId} has built-in voice: ${voiceId}`);
+    return voiceId;
+  } catch {
+    return null;
+  }
+}
+
 async function getDefaultVoiceId(preferredVoiceId) {
   try {
     const resp   = await heygenGet('/v2/voices');
@@ -439,21 +453,24 @@ async function generateTwinClip(config, jobId, customScript) {
 
   if (API_KEY) {
     try {
-      const voiceId = await getDefaultVoiceId(config.ownerVoiceId);
-      const voiceInput = { type: 'text', input_text: script, speed: 1.0 };
-      if (voiceId) voiceInput.voice_id = voiceId;
-
       let character;
       let modelLabel = 'HeyGen Avatar';
 
-      if (config.heygenAvatarId) {
-        const avatarStyle = config.heygenAvatarStyle || 'normal';
-        character  = { type: 'avatar', avatar_id: config.heygenAvatarId, avatar_style: avatarStyle };
-        modelLabel = avatarStyle === 'expressive' ? 'HeyGen Digital Twin Avatar V' : 'HeyGen Video Avatar';
-        console.log(`[generateTwinClip] Using avatar ${config.heygenAvatarId} style=${avatarStyle}`);
-      } else {
+      if (!config.heygenAvatarId) {
         throw new Error('No HeyGen avatar ID set. Add your HeyGen Avatar ID in the Assets page to generate twin videos.');
       }
+
+      const avatarStyle = config.heygenAvatarStyle || 'normal';
+      character  = { type: 'avatar', avatar_id: config.heygenAvatarId, avatar_style: avatarStyle };
+      modelLabel = avatarStyle === 'expressive' ? 'HeyGen Digital Twin Avatar V' : 'HeyGen Video Avatar';
+      console.log(`[generateTwinClip] Using avatar ${config.heygenAvatarId} style=${avatarStyle}`);
+
+      // Use avatar's own cloned voice; fall back to manually selected voice, then generic default
+      const avatarVoiceId = await getAvatarVoiceId(config.heygenAvatarId);
+      const resolvedVoiceId = avatarVoiceId || config.ownerVoiceId || await getDefaultVoiceId(null);
+      const voiceInput = { type: 'text', input_text: script, speed: 1.0 };
+      if (resolvedVoiceId) voiceInput.voice_id = resolvedVoiceId;
+      console.log(`[generateTwinClip] Voice: ${resolvedVoiceId || 'none'} (source: ${avatarVoiceId ? 'avatar' : config.ownerVoiceId ? 'saved' : 'fallback'})`);
 
       // Background: image/video URL takes priority over default dark color
       let background;
