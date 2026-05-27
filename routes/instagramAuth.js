@@ -20,25 +20,25 @@ function oauthEnabled() {
   return !!(process.env.FB_APP_ID && process.env.FB_APP_SECRET && process.env.APP_URL);
 }
 
-// GET /auth/instagram?restaurantId=X — redirect to Facebook OAuth
+// GET /auth/instagram?businessId=X — redirect to Facebook OAuth
 router.get('/', (req, res) => {
   if (!oauthEnabled()) {
     return res.status(400).send('Facebook OAuth not configured (FB_APP_ID / FB_APP_SECRET missing).');
   }
-  const restaurantId = req.query.restaurantId || 1;
+  const businessId = req.query.businessId || req.query.restaurantId || 1;
   const redirectUri  = `${process.env.APP_URL}/auth/instagram/callback`;
   const scopes       = 'instagram_basic,instagram_content_publish,pages_show_list,pages_read_engagement';
   const url = `https://www.facebook.com/v19.0/dialog/oauth?` +
     `client_id=${process.env.FB_APP_ID}` +
     `&redirect_uri=${encodeURIComponent(redirectUri)}` +
     `&scope=${encodeURIComponent(scopes)}` +
-    `&state=${encodeURIComponent(restaurantId)}`;
+    `&state=${encodeURIComponent(businessId)}`;
   res.redirect(url);
 });
 
 // GET /auth/instagram/callback — exchange code for long-lived token, save to DB
 router.get('/callback', async (req, res) => {
-  const { code, state: restaurantId, error } = req.query;
+  const { code, state: businessId, error } = req.query;
 
   if (error) {
     console.error('[ig-oauth] denied:', error);
@@ -93,8 +93,8 @@ router.get('/callback', async (req, res) => {
     }
 
     // 4. Save to DB
-    await db.restaurant.update({
-      where: { id: Number(restaurantId) },
+    await db.business.update({
+      where: { id: Number(businessId) },
       data: {
         instagramAccessToken: longToken,
         instagramUserId:      igUserId || undefined,
@@ -102,7 +102,7 @@ router.get('/callback', async (req, res) => {
       },
     });
 
-    console.log(`[ig-oauth] Restaurant ${restaurantId} connected. IG user: ${igUserId}, expires: ${expiresAt.toISOString()}`);
+    console.log(`[ig-oauth] Business ${businessId} connected. IG user: ${igUserId}, expires: ${expiresAt.toISOString()}`);
     res.redirect('/index.html?ig_connected=true');
   } catch (err) {
     console.error('[ig-oauth] callback error:', err.message);
@@ -110,11 +110,11 @@ router.get('/callback', async (req, res) => {
   }
 });
 
-// POST /api/instagram/refresh — manually refresh a restaurant's long-lived token
+// POST /api/instagram/refresh — manually refresh a business's long-lived token
 router.post('/refresh', async (req, res) => {
-  const restaurantId = req.restaurantId || Number(req.body.restaurantId) || 1;
+  const businessId = req.businessId || Number(req.body.businessId) || 1;
   try {
-    const r = await db.restaurant.findUnique({ where: { id: restaurantId } });
+    const r = await db.business.findUnique({ where: { id: businessId } });
     if (!r?.instagramAccessToken) return res.status(400).json({ error: 'No Instagram token to refresh' });
 
     const refreshRes  = await fetch(`${GRAPH}/refresh_access_token?grant_type=ig_refresh_token&access_token=${r.instagramAccessToken}`);
@@ -125,8 +125,8 @@ router.post('/refresh', async (req, res) => {
     const expiresInSec = refreshData.expires_in || 5184000;
     const expiresAt    = new Date(Date.now() + expiresInSec * 1000);
 
-    await db.restaurant.update({
-      where: { id: restaurantId },
+    await db.business.update({
+      where: { id: businessId },
       data:  { instagramAccessToken: refreshData.access_token, tokenExpiresAt: expiresAt },
     });
 
@@ -136,12 +136,12 @@ router.post('/refresh', async (req, res) => {
   }
 });
 
-// GET /api/instagram/status — token status for the current restaurant
+// GET /api/instagram/status — token status for the current business
 router.get('/status', async (req, res) => {
-  const restaurantId = req.restaurantId || Number(req.query.restaurantId) || 1;
+  const businessId = req.businessId || Number(req.query.businessId) || 1;
   try {
-    const r = await db.restaurant.findUnique({
-      where:  { id: restaurantId },
+    const r = await db.business.findUnique({
+      where:  { id: businessId },
       select: { instagramUserId: true, instagramAccessToken: true, tokenExpiresAt: true },
     });
     if (!r) return res.status(404).json({ error: 'Not found' });
@@ -170,8 +170,8 @@ router.get('/status', async (req, res) => {
 // Strategy 1: walk the restaurant's own saved token through their FB pages.
 // Strategy 2: use the system INSTAGRAM_ACCESS_TOKEN + Business Discovery API.
 router.post('/lookup-id', async (req, res) => {
-  const { instagramUrl, restaurantId } = req.body;
-  const rid = restaurantId || req.restaurantId;
+  const { instagramUrl, businessId } = req.body;
+  const rid = businessId || req.businessId;
 
   let username = (instagramUrl || '').trim();
   const match = username.match(/instagram\.com\/([^/?#]+)/);
@@ -179,8 +179,8 @@ router.post('/lookup-id', async (req, res) => {
   if (!username) return res.status(400).json({ error: 'No Instagram username found in URL' });
 
   try {
-    // Strategy 1: restaurant's own saved token → walk their FB pages
-    const r = await db.restaurant.findUnique({
+    // Strategy 1: business's own saved token → walk their FB pages
+    const r = await db.business.findUnique({
       where:  { id: Number(rid) },
       select: { instagramAccessToken: true },
     });
@@ -223,25 +223,25 @@ async function refreshExpiringTokens() {
   if (!oauthEnabled()) return;
   const soon = new Date(Date.now() + 7 * 86400000);
   try {
-    const restaurants = await db.restaurant.findMany({
+    const businesses = await db.business.findMany({
       where: {
         instagramAccessToken: { not: null },
         tokenExpiresAt:       { lte: soon },
       },
     });
-    for (const r of restaurants) {
+    for (const r of businesses) {
       try {
         const refreshRes  = await fetch(`${GRAPH}/refresh_access_token?grant_type=ig_refresh_token&access_token=${r.instagramAccessToken}`);
         const refreshData = await refreshRes.json();
         if (!refreshData.access_token) throw new Error(refreshData.error?.message || 'Refresh failed');
         const expiresAt = new Date(Date.now() + (refreshData.expires_in || 5184000) * 1000);
-        await db.restaurant.update({
+        await db.business.update({
           where: { id: r.id },
           data:  { instagramAccessToken: refreshData.access_token, tokenExpiresAt: expiresAt },
         });
-        console.log(`[ig-token] Refreshed token for restaurant ${r.id}, new expiry: ${expiresAt.toISOString()}`);
+        console.log(`[ig-token] Refreshed token for business ${r.id}, new expiry: ${expiresAt.toISOString()}`);
       } catch (err) {
-        console.error(`[ig-token] Failed to refresh token for restaurant ${r.id}: ${err.message}`);
+        console.error(`[ig-token] Failed to refresh token for business ${r.id}: ${err.message}`);
       }
     }
   } catch (err) {

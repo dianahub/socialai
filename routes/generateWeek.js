@@ -127,7 +127,7 @@ router.post('/preview', (req, res) => {
 router.post('/', async (req, res) => {
   try {
     const {
-      restaurantId    = 1,
+      businessId      = 1,
       startDate,
       days            = 7,
       postFrequency   = '3x_week',
@@ -172,7 +172,7 @@ router.post('/', async (req, res) => {
     windowEnd.setDate(start.getDate() + Number(days));
     const existingPosts = await db.scheduledPost.findMany({
       where: {
-        restaurantId:  Number(restaurantId),
+        businessId:    Number(businessId),
         scheduledTime: { gte: start, lt: windowEnd },
       },
       select: { id: true },
@@ -200,7 +200,7 @@ router.post('/', async (req, res) => {
 
     // Load active script templates sorted by lastUsedAt ASC (never used first → true round-robin)
     const templates = await db.scriptTemplate.findMany({
-      where:   { restaurantId: Number(restaurantId), isActive: true },
+      where:   { businessId: Number(businessId), isActive: true },
       orderBy: [{ lastUsedAt: 'asc' }, { id: 'asc' }],
     });
 
@@ -241,10 +241,10 @@ router.post('/', async (req, res) => {
 
         const post = await db.scheduledPost.create({
           data: {
-            restaurantId:    Number(restaurantId),
+            businessId:       Number(businessId),
             postType,
             scheduledTime,
-            status:          'draft',
+            status:           'draft',
             scriptTemplateId: customScript ? null : scriptTemplateId,
             customScript,
           },
@@ -253,7 +253,7 @@ router.post('/', async (req, res) => {
 
         const job = await db.generationJob.create({
           data: {
-            restaurantId:    Number(restaurantId),
+            businessId:      Number(businessId),
             jobType:         postType,
             status:          'pending',
             scheduledPostId: post.id,

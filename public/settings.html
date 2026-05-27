@@ -342,7 +342,8 @@
 <div id="toast"></div>
 
 <script>
-const restaurantId = window.getRestaurantId ? getRestaurantId() : 1;
+const businessId = window.getBusinessId ? getBusinessId() : 1;
+const restaurantId = businessId; // backward-compat alias
 
 let defaultHashtags = [];
 let presets = [];
@@ -395,7 +396,7 @@ async function suggestHashtagsWithAI() {
   btn.disabled  = true;
   btn.textContent = '…';
   try {
-    const res  = await api('POST', '/api/suggest-hashtags', { restaurantId });
+    const res  = await api('POST', '/api/suggest-hashtags', { businessId });
     aiSuggestions = (res.hashtags || []).filter(t => !defaultHashtags.includes(t));
     renderSuggestions();
     wrap.style.display = aiSuggestions.length ? 'block' : 'none';
@@ -515,7 +516,7 @@ async function loadAll() {
 
   // Load restaurant data
   try {
-    const r = await api('GET', `/api/db/restaurants/${restaurantId}`);
+    const r = await api('GET', `/api/db/businesses/${businessId}`);
 
     // Captions tab
     if (r.voiceTone) document.getElementById('voiceTone').value = r.voiceTone;
@@ -543,7 +544,7 @@ async function loadAll() {
 // ── Instagram status ──────────────────────────────────────────────────────
 async function loadIgStatus() {
   try {
-    const data = await fetch(`/api/instagram/status?restaurantId=${restaurantId}`).then(r => r.json());
+    const data = await fetch(`/api/instagram/status?businessId=${businessId}`).then(r => r.json());
     const display = document.getElementById('igStatusDisplay');
     const chip = data.connected
       ? (data.expired
@@ -571,12 +572,12 @@ async function loadIgStatus() {
 
 function connectInstagramSettings(e) {
   e.preventDefault();
-  window.location.href = `/auth/instagram?restaurantId=${restaurantId}`;
+  window.location.href = `/auth/instagram?businessId=${businessId}`;
 }
 
 async function refreshIgTokenSettings() {
   try {
-    const res = await api('POST', '/api/instagram/refresh', { restaurantId });
+    const res = await api('POST', '/api/instagram/refresh', { businessId });
     toast('Token refreshed', 'ok');
     await loadIgStatus();
   } catch (e) { toast('Refresh failed: ' + e.message, 'err'); }
@@ -584,7 +585,7 @@ async function refreshIgTokenSettings() {
 
 async function toggleAutoPublishSettings(enabled) {
   try {
-    await api('PATCH', `/api/db/restaurants/${restaurantId}`, { autoPublishEnabled: enabled });
+    await api('PATCH', `/api/db/businesses/${businessId}`, { autoPublishEnabled: enabled });
     toast(enabled ? 'Auto-publish enabled' : 'Auto-publish disabled', 'ok');
   } catch (e) {
     toast('Failed: ' + e.message, 'err');
@@ -596,7 +597,7 @@ async function saveIgCredsSettings() {
   const id    = document.getElementById('igAccountIdSettings').value.trim();
   const token = document.getElementById('igAccessTokenSettings').value.trim();
   try {
-    await api('PATCH', `/api/db/restaurants/${restaurantId}`, { instagramUserId: id, instagramAccessToken: token || undefined });
+    await api('PATCH', `/api/db/businesses/${businessId}`, { instagramUserId: id, instagramAccessToken: token || undefined });
     toast('Instagram credentials saved', 'ok');
     await loadIgStatus();
   } catch (e) { toast('Save failed: ' + e.message, 'err'); }
@@ -605,7 +606,7 @@ async function saveIgCredsSettings() {
 // ── Save functions ────────────────────────────────────────────────────────
 async function saveCaptionPrefs() {
   try {
-    await api('PATCH', `/api/db/restaurants/${restaurantId}`, {
+    await api('PATCH', `/api/db/businesses/${businessId}`, {
       voiceTone:       document.getElementById('voiceTone').value,
       includeLocation: document.getElementById('includeLocation').value === 'true',
       defaultHashtags: JSON.stringify(defaultHashtags),
@@ -620,7 +621,7 @@ async function saveSchedulingPrefs() {
 
 async function saveProfile() {
   try {
-    await api('PATCH', `/api/db/restaurants/${restaurantId}`, {
+    await api('PATCH', `/api/db/businesses/${businessId}`, {
       name:       document.getElementById('restName').value.trim(),
       cuisineType:document.getElementById('restCuisine').value.trim(),
       location:   document.getElementById('restLocation').value.trim(),
@@ -639,7 +640,7 @@ async function saveLoginCreds() {
   try {
     const res = await fetch('/api/auth/set-credentials', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ restaurantId, email, password: password || undefined }),
+      body: JSON.stringify({ businessId, email, password: password || undefined }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error);

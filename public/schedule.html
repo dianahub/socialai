@@ -754,7 +754,8 @@ let weekStart    = getThisMonday();
 let allPosts     = [];
 let filteredPosts= [];
 let activeFilter = 'all';
-let restaurantId = getRestaurantId();
+let businessId = getBusinessId();
+let restaurantId = businessId; // backward-compat alias
 let activeModalPostId = null;
 let igTargetJobId     = null;   // for old filesystem-based jobs
 let igTargetPostId    = null;   // for DB scheduled posts
@@ -821,7 +822,7 @@ async function loadPosts() {
   const from = weekStart.toISOString();
   const to   = addDays(weekStart, 7).toISOString();
   try {
-    allPosts = await api('GET', `/api/db/scheduled-posts?restaurantId=${restaurantId}&from=${from}&to=${to}`);
+    allPosts = await api('GET', `/api/db/scheduled-posts?businessId=${businessId}&from=${from}&to=${to}`);
   } catch (e) {
     console.error('Failed to load posts:', e.message);
     allPosts = [];
@@ -833,7 +834,7 @@ let restVoiceTone = 'elegant';
 
 async function loadRestaurant() {
   try {
-    const r = await api('GET', `/api/db/restaurants/${restaurantId}`);
+    const r = await api('GET', `/api/db/businesses/${businessId}`);
     document.getElementById('pageTitle').textContent = `${r.name} — Content Calendar`;
     document.getElementById('autoPublish').checked = r.autoPublishEnabled;
     if (r.voiceTone) {
@@ -1018,11 +1019,11 @@ async function autoFillCaption(post) {
   try {
     const [capData, tagData] = await Promise.all([
       api('POST', '/api/generate-caption', {
-        restaurantId,
+        businessId,
         postType: post.postType,
       }),
       api('POST', '/api/generate-hashtags', {
-        restaurantId,
+        businessId,
       }),
     ]);
     const text = (capData.caption || '') +
@@ -1151,14 +1152,14 @@ async function createPost() {
 
   try {
     const post = await api('POST', '/api/db/scheduled-posts', {
-      restaurantId,
+      businessId,
       postType,
       scheduledTime: new Date(scheduledTime).toISOString(),
       caption:       caption || null,
       status:        'queued',
     });
     await api('POST', '/api/db/generation-jobs', {
-      restaurantId,
+      businessId,
       jobType:         postType,
       scheduledPostId: post.id,
     });
@@ -1215,7 +1216,7 @@ async function igSuggestHashtags() {
   const btn = document.getElementById('igHashtagSuggestBtn');
   btn.disabled = true; btn.textContent = '…loading';
   try {
-    const data = await api('POST', '/api/generate-hashtags', { restaurantId });
+    const data = await api('POST', '/api/generate-hashtags', { businessId });
     if (data.hashtags?.length) {
       igHashtags = [...new Set([...igHashtags, ...data.hashtags])].slice(0, 15);
       igRenderHashtags();
@@ -1245,7 +1246,7 @@ async function igGenerateCaption() {
       const post = igTargetPostId ? allPosts.find(p => p.id === igTargetPostId) : null;
       const tone = document.getElementById('igVoiceTone')?.value || 'elegant';
       const data = await api('POST', '/api/generate-caption', {
-        restaurantId, postType: post?.postType || 'branded_image_feed', voiceTone: tone,
+        businessId, postType: post?.postType || 'branded_image_feed', voiceTone: tone,
       });
       caption = data.caption;
     }
@@ -1285,7 +1286,7 @@ async function submitIgPost() {
   try {
     // If we have a filesystem job, use the existing Instagram route
     if (igTargetJobId) {
-      await api('POST', `/api/output/${igTargetJobId}/post-instagram`, { caption, restaurantId });
+      await api('POST', `/api/output/${igTargetJobId}/post-instagram`, { caption, businessId });
       toast('Posting to Instagram — check back shortly', 'ok');
     }
     // If we only have a DB post, mark it scheduled/published
@@ -1308,7 +1309,7 @@ async function submitIgPost() {
 // ── Auto-publish toggle ────────────────────────────────────────────────────
 async function toggleAutoPublish(enabled) {
   try {
-    await api('PATCH', `/api/db/restaurants/${restaurantId}`, { autoPublishEnabled: enabled });
+    await api('PATCH', `/api/db/businesses/${businessId}`, { autoPublishEnabled: enabled });
     toast(enabled ? 'Auto-publish enabled' : 'Auto-publish disabled', 'ok');
   } catch (e) {
     toast('Failed to update setting', 'err');
@@ -1419,7 +1420,7 @@ async function previewSchedule() {
   document.getElementById('gwError').style.display = 'none';
   try {
     const result = await api('POST', '/api/generate-week/preview', {
-      restaurantId,
+      businessId,
       startDate:      document.getElementById('gwStartDate').value,
       days:           7,
       postFrequency:  document.getElementById('gwFrequency').value,
@@ -1468,7 +1469,7 @@ async function previewSchedule() {
       const ta = document.getElementById(`gwScript_${i}`);
       try {
         const s = await api('POST', '/api/generate/script', {
-          restaurantId,
+          businessId,
           topic: slotNum === 0 ? 'welcome' : 'weekly special',
         });
         ta.value = s.script;
@@ -1515,7 +1516,7 @@ async function startGenerateWeek(force = false) {
 
   try {
     const result = await api('POST', '/api/generate-week', {
-      restaurantId,
+      businessId,
       startDate,
       days:           7,
       postFrequency:  freq,
@@ -1578,7 +1579,7 @@ async function pollProgress() {
 
   // Fetch all generation jobs for this restaurant (re-filter by our batch IDs)
   try {
-    const allJobs = await api('GET', `/api/db/generation-jobs?restaurantId=${restaurantId}`);
+    const allJobs = await api('GET', `/api/db/generation-jobs?businessId=${businessId}`);
     const batchIds = new Set(batchJobs.map(j => j.id));
     const fresh = allJobs.filter(j => batchIds.has(j.id));
     if (fresh.length) {

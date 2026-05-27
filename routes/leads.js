@@ -70,8 +70,8 @@ router.post('/:id/convert', async (req, res) => {
     if (!lead) return res.status(404).json({ error: 'Lead not found' });
     if (lead.status === 'converted') return res.status(400).json({ error: 'Already converted' });
 
-    // Create the restaurant record
-    const restaurant = await db.restaurant.create({
+    // Create the business record
+    const restaurant = await db.business.create({
       data: {
         name:         lead.businessName || lead.name,
         loginEmail:   lead.email ? lead.email.toLowerCase() : null,
@@ -82,7 +82,7 @@ router.post('/:id/convert', async (req, res) => {
     // Mark lead as converted and link it
     const updated = await db.lead.update({
       where: { id },
-      data:  { status: 'converted', restaurantId: restaurant.id },
+      data:  { status: 'converted', businessId: restaurant.id },
     });
 
     // Generate a login token for the new restaurant so the owner can be sent a link

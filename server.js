@@ -81,13 +81,13 @@ app.post('/api/auth/login', async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
   try {
-    const r = await db.restaurant.findFirst({ where: { loginEmail: email.toLowerCase() } });
+    const r = await db.business.findFirst({ where: { loginEmail: email.toLowerCase() } });
     if (!r?.loginPasswordHash)
       return res.status(401).json({ error: 'Invalid email or password' });
     const ok = await bcrypt.compare(password, r.loginPasswordHash);
     if (!ok) return res.status(401).json({ error: 'Invalid email or password' });
     const token = createToken(r.id);
-    res.json({ token, restaurantId: r.id, restaurantName: r.name });
+    res.json({ token, businessId: r.id, businessName: r.name });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -97,8 +97,8 @@ app.post('/api/auth/logout', (req, res) => res.json({ success: true }));
 // Who am I? (requires token)
 app.get('/api/auth/me', requireAuth, async (req, res) => {
   try {
-    const r = await db.restaurant.findUnique({
-      where: { id: req.restaurantId || 1 },
+    const r = await db.business.findUnique({
+      where: { id: req.businessId || 1 },
       select: { id: true, name: true, loginEmail: true },
     });
     if (!r) return res.status(404).json({ error: 'Not found' });
@@ -107,20 +107,21 @@ app.get('/api/auth/me', requireAuth, async (req, res) => {
 });
 
 
-// Sign up: create new restaurant + credentials → JWT
+// Sign up: create new business + credentials → JWT
 app.post('/api/auth/signup', async (req, res) => {
-  const { restaurantName, email, password } = req.body;
-  if (!restaurantName || !email || !password)
-    return res.status(400).json({ error: 'Restaurant name, email, and password are required' });
+  const { restaurantName, businessName, email, password } = req.body;
+  const name = businessName || restaurantName;
+  if (!name || !email || !password)
+    return res.status(400).json({ error: 'Business name, email, and password are required' });
   if (password.length < 8)
     return res.status(400).json({ error: 'Password must be at least 8 characters' });
   try {
     const hash       = await bcrypt.hash(password, 12);
-    const restaurant = await db.restaurant.create({
-      data: { name: restaurantName, loginEmail: email.toLowerCase(), loginPasswordHash: hash },
+    const restaurant = await db.business.create({
+      data: { name, loginEmail: email.toLowerCase(), loginPasswordHash: hash },
     });
     const token = createToken(restaurant.id);
-    res.json({ token, restaurantId: restaurant.id, restaurantName: restaurant.name });
+    res.json({ token, businessId: restaurant.id, businessName: restaurant.name });
   } catch (e) {
     if (e.code === 'P2002') return res.status(409).json({ error: 'That email is already registered' });
     res.status(500).json({ error: e.message });
@@ -218,16 +219,16 @@ app.get('/auth/google/callback', async (req, res) => {
     const { id: googleId, email, name } = userRes.data;
     if (!email || !googleId) return res.redirect(failUrl);
 
-    // Find or create restaurant linked to this Google account
-    let restaurant = await db.restaurant.findFirst({ where: { googleId } });
+    // Find or create business linked to this Google account
+    let restaurant = await db.business.findFirst({ where: { googleId } });
     if (!restaurant) {
       // Try to link to existing account with same email
-      restaurant = await db.restaurant.findFirst({ where: { loginEmail: email.toLowerCase() } });
+      restaurant = await db.business.findFirst({ where: { loginEmail: email.toLowerCase() } });
       if (restaurant) {
-        restaurant = await db.restaurant.update({ where: { id: restaurant.id }, data: { googleId } });
+        restaurant = await db.business.update({ where: { id: restaurant.id }, data: { googleId } });
       } else {
-        // New restaurant — use their name as a placeholder; they'll fill in details on Assets page
-        restaurant = await db.restaurant.create({
+        // New business — use their name as a placeholder; they'll fill in details on Assets page
+        restaurant = await db.business.create({
           data: { name: name || email.split('@')[0], loginEmail: email.toLowerCase(), googleId },
         });
       }
@@ -347,7 +348,7 @@ async function getBroadcastRecipients(audience) {
     return rows.map(r => ({ email: r.email, name: r.name }));
   }
   if (audience === 'users') {
-    const rows = await db.restaurant.findMany({ select: { loginEmail: true, name: true } });
+    const rows = await db.business.findMany({ select: { loginEmail: true, name: true } });
     return rows.map(r => ({ email: r.loginEmail, name: r.name }));
   }
   throw new Error('Invalid audience');
@@ -391,14 +392,14 @@ app.post('/api/admin/broadcast', requireAdmin, async (req, res) => {
   } catch (e) { res.status(400).json({ error: e.message }); }
 });
 
-// POST /api/admin/impersonate/:id — generate a JWT for any restaurant (admin only)
+// POST /api/admin/impersonate/:id — generate a JWT for any business (admin only)
 app.post('/api/admin/impersonate/:id', requireAdmin, async (req, res) => {
   const id = Number(req.params.id);
   try {
-    const r = await db.restaurant.findUnique({ where: { id }, select: { id: true, name: true } });
-    if (!r) return res.status(404).json({ error: 'Restaurant not found' });
+    const r = await db.business.findUnique({ where: { id }, select: { id: true, name: true } });
+    if (!r) return res.status(404).json({ error: 'Business not found' });
     const token = createToken(r.id);
-    res.json({ token, restaurantId: r.id, restaurantName: r.name });
+    res.json({ token, businessId: r.id, businessName: r.name });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -420,8 +421,8 @@ app.use((req, res, next) => {
 });
 
 // Set/update login credentials — protected by global middleware (JWT or admin secret).
-// When auth is disabled: no check, open; restaurantId from body.
-// When auth enabled: req.restaurantId set by JWT (own restaurant) or admin secret (any).
+// When auth is disabled: no check, open; businessId from body.
+// When auth enabled: req.businessId set by JWT (own business) or admin secret (any).
 app.post('/api/auth/set-credentials', async (req, res) => {
   // This route is under /api/auth/ so it bypasses the global middleware.
   // We verify auth manually here.
@@ -435,22 +436,22 @@ app.post('/api/auth/set-credentials', async (req, res) => {
       const { verifyToken } = require('./lib/auth');
       const payload = verifyToken(header.slice(7));
       if (!payload) return res.status(403).json({ error: 'Invalid token' });
-      req.restaurantId = payload.restaurantId; // lock to own restaurant
+      req.businessId = payload.businessId || payload.restaurantId; // lock to own business
     }
   }
   const { email, password } = req.body;
-  const restaurantId = req.restaurantId || Number(req.body.restaurantId) || 1;
+  const businessId = req.businessId || Number(req.body.businessId) || 1;
   if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
   if (password.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters' });
   try {
     const hash = await bcrypt.hash(password, 12);
-    await db.restaurant.update({
-      where: { id: restaurantId },
+    await db.business.update({
+      where: { id: businessId },
       data:  { loginEmail: email.toLowerCase(), loginPasswordHash: hash },
     });
     res.json({ success: true });
   } catch (e) {
-    if (e.code === 'P2002') return res.status(409).json({ error: 'That email is already used by another restaurant' });
+    if (e.code === 'P2002') return res.status(409).json({ error: 'That email is already used by another business' });
     res.status(500).json({ error: e.message });
   }
 });
@@ -474,7 +475,7 @@ function saveLocalAsset(subdir, filename, buffer) {
 
 app.post('/api/upload/logo', uploadLogo.single('file'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file received' });
-  const restaurantId = req.restaurantId || Number(req.body.restaurantId) || 1;
+  const businessId = req.businessId || Number(req.body.businessId) || 1;
 
   let buffer = req.file.buffer;
   const ext  = path.extname(req.file.originalname).toLowerCase();
@@ -488,12 +489,12 @@ app.post('/api/upload/logo', uploadLogo.single('file'), async (req, res) => {
   if (cld.isConfigured()) {
     try {
       const result = await cld.uploadBuffer(buffer, {
-        public_id:    `restaurant-social-ai/${restaurantId}/logo`,
+        public_id:    `restaurant-social-ai/${businessId}/logo`,
         overwrite:    true,
         quality:      'auto',
         fetch_format: 'auto',
       });
-      await db.restaurant.update({ where: { id: restaurantId }, data: { logoUrl: result.url } }).catch(() => {});
+      await db.business.update({ where: { id: businessId }, data: { logoUrl: result.url } }).catch(() => {});
       return res.json({ success: true, url: result.url, path: result.url });
     } catch (e) {
       console.error('[logo] Cloudinary upload failed:', e.message);
@@ -509,14 +510,14 @@ app.post('/api/upload/logo', uploadLogo.single('file'), async (req, res) => {
 
 app.post('/api/upload/photos', uploadPhotos.array('files', 6), async (req, res) => {
   if (!req.files?.length) return res.status(400).json({ error: 'No files received' });
-  const restaurantId = req.restaurantId || Number(req.body.restaurantId) || 1;
+  const businessId = req.businessId || Number(req.body.businessId) || 1;
 
   if (cld.isConfigured()) {
     try {
       const uploads = await Promise.all(req.files.map(f => {
         const ts = Date.now();
         return cld.uploadBuffer(f.buffer, {
-          public_id:    `restaurant-social-ai/${restaurantId}/photos/photo_${ts}_${Math.random().toString(36).slice(2, 7)}`,
+          public_id:    `restaurant-social-ai/${businessId}/photos/photo_${ts}_${Math.random().toString(36).slice(2, 7)}`,
           overwrite:    false,
           quality:      'auto',
           fetch_format: 'auto',
@@ -543,17 +544,17 @@ app.post('/api/upload/photos', uploadPhotos.array('files', 6), async (req, res) 
 
 app.post('/api/upload/owner', uploadOwner.single('file'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file received' });
-  const restaurantId = req.restaurantId || Number(req.body.restaurantId) || 1;
+  const businessId = req.businessId || Number(req.body.businessId) || 1;
 
   if (cld.isConfigured()) {
     try {
       const result = await cld.uploadBuffer(req.file.buffer, {
-        public_id:    `restaurant-social-ai/${restaurantId}/owner`,
+        public_id:    `restaurant-social-ai/${businessId}/owner`,
         overwrite:    true,
         quality:      'auto',
         fetch_format: 'auto',
       });
-      await db.restaurant.update({ where: { id: restaurantId }, data: { ownerPortraitUrl: result.url } }).catch(() => {});
+      await db.business.update({ where: { id: businessId }, data: { ownerPortraitUrl: result.url } }).catch(() => {});
       return res.json({ success: true, url: result.url, path: result.url });
     } catch (e) {
       console.error('[owner] Cloudinary upload failed:', e.message);
@@ -572,19 +573,19 @@ const uploadTwinBg = multer({ storage: multer.memoryStorage(), limits: { fileSiz
 
 app.post('/api/upload/twin-background', uploadTwinBg.single('file'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file received' });
-  const restaurantId = req.restaurantId || Number(req.body.restaurantId) || 1;
-  const ext          = path.extname(req.file.originalname).toLowerCase();
-  const isVideo      = ['.mp4', '.mov', '.webm'].includes(ext);
+  const businessId = req.businessId || Number(req.body.businessId) || 1;
+  const ext        = path.extname(req.file.originalname).toLowerCase();
+  const isVideo    = ['.mp4', '.mov', '.webm'].includes(ext);
 
   if (cld.isConfigured()) {
     try {
       const result = await cld.uploadBuffer(req.file.buffer, {
-        public_id:     `restaurant-social-ai/${restaurantId}/twin-background`,
+        public_id:     `restaurant-social-ai/${businessId}/twin-background`,
         overwrite:     true,
         resource_type: isVideo ? 'video' : 'image',
         quality:       'auto',
       });
-      await db.restaurant.update({ where: { id: restaurantId }, data: { twinBackgroundUrl: result.url } }).catch(() => {});
+      await db.business.update({ where: { id: businessId }, data: { twinBackgroundUrl: result.url } }).catch(() => {});
       return res.json({ success: true, url: result.url });
     } catch (e) {
       console.error('[twin-bg] Cloudinary upload failed:', e.message);
@@ -596,7 +597,7 @@ app.post('/api/upload/twin-background', uploadTwinBg.single('file'), async (req,
   const filename = `twin-background${ext || '.jpg'}`;
   saveLocalAsset('twin-background', filename, req.file.buffer);
   const localUrl = `/assets/twin-background/${filename}`;
-  await db.restaurant.update({ where: { id: restaurantId }, data: { twinBackgroundUrl: localUrl } }).catch(() => {});
+  await db.business.update({ where: { id: businessId }, data: { twinBackgroundUrl: localUrl } }).catch(() => {});
   res.json({ success: true, url: localUrl });
 });
 
@@ -604,18 +605,18 @@ const uploadOwnerVideo = multer({ storage: multer.memoryStorage(), limits: { fil
 
 app.post('/api/upload/owner-video', uploadOwnerVideo.single('file'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file received' });
-  const restaurantId = req.restaurantId || Number(req.body.restaurantId) || 1;
-  const ext          = path.extname(req.file.originalname).toLowerCase();
+  const businessId = req.businessId || Number(req.body.businessId) || 1;
+  const ext        = path.extname(req.file.originalname).toLowerCase();
 
   if (cld.isConfigured()) {
     try {
       const result = await cld.uploadBuffer(req.file.buffer, {
-        public_id:     `restaurant-social-ai/${restaurantId}/owner-video`,
+        public_id:     `restaurant-social-ai/${businessId}/owner-video`,
         overwrite:     true,
         resource_type: 'video',
         quality:       'auto',
       });
-      await db.restaurant.update({ where: { id: restaurantId }, data: { ownerVideoUrl: result.url } }).catch(() => {});
+      await db.business.update({ where: { id: businessId }, data: { ownerVideoUrl: result.url } }).catch(() => {});
       return res.json({ success: true, url: result.url });
     } catch (e) {
       console.error('[owner-video] Cloudinary upload failed:', e.message);
@@ -627,33 +628,33 @@ app.post('/api/upload/owner-video', uploadOwnerVideo.single('file'), async (req,
   const filename = `owner-video${ext || '.mp4'}`;
   saveLocalAsset('owner-video', filename, req.file.buffer);
   const localUrl = `/assets/owner-video/${filename}`;
-  await db.restaurant.update({ where: { id: restaurantId }, data: { ownerVideoUrl: localUrl } }).catch(() => {});
+  await db.business.update({ where: { id: businessId }, data: { ownerVideoUrl: localUrl } }).catch(() => {});
   res.json({ success: true, url: localUrl });
 });
 
 // ── Asset management ──────────────────────────────────────────────────────────
 
 app.get('/api/assets', async (req, res) => {
-  const restaurantId = req.restaurantId || Number(req.query.restaurantId) || 1;
+  const businessId = req.businessId || Number(req.query.businessId) || 1;
 
   if (cld.isConfigured()) {
     try {
       const result = { logo: null, photos: [], owner: null };
 
-      // Get logo and owner from Restaurant DB record; fall back to Cloudinary path
-      const restaurant = await db.restaurant.findUnique({ where: { id: restaurantId } }).catch(() => null);
-      result.logo  = restaurant?.logoUrl  || null;
-      result.owner = restaurant?.ownerPortraitUrl || null;
+      // Get logo and owner from Business DB record; fall back to Cloudinary path
+      const business = await db.business.findUnique({ where: { id: businessId } }).catch(() => null);
+      result.logo  = business?.logoUrl  || null;
+      result.owner = business?.ownerPortraitUrl || null;
 
-      // Cloudinary fallback lookups (supports restaurant 1 with old-style paths)
+      // Cloudinary fallback lookups (supports business 1 with old-style paths)
       const [logo, owner, photosNew, photosOld] = await Promise.all([
-        result.logo  ? Promise.resolve(null) : cld.getAssetUrl(`restaurant-social-ai/${restaurantId}/logo`),
-        result.owner ? Promise.resolve(null) : cld.getAssetUrl(`restaurant-social-ai/${restaurantId}/owner`),
-        cld.listFolder(`restaurant-social-ai/${restaurantId}/photos/`),
-        restaurantId === 1 ? cld.listFolder('restaurant-social-ai/photos/') : Promise.resolve([]),
+        result.logo  ? Promise.resolve(null) : cld.getAssetUrl(`restaurant-social-ai/${businessId}/logo`),
+        result.owner ? Promise.resolve(null) : cld.getAssetUrl(`restaurant-social-ai/${businessId}/owner`),
+        cld.listFolder(`restaurant-social-ai/${businessId}/photos/`),
+        businessId === 1 ? cld.listFolder('restaurant-social-ai/photos/') : Promise.resolve([]),
       ]);
-      if (!result.logo)  result.logo  = logo  || (restaurantId === 1 ? await cld.getAssetUrl('restaurant-social-ai/logo')  : null);
-      if (!result.owner) result.owner = owner || (restaurantId === 1 ? await cld.getAssetUrl('restaurant-social-ai/owner') : null);
+      if (!result.logo)  result.logo  = logo  || (businessId === 1 ? await cld.getAssetUrl('restaurant-social-ai/logo')  : null);
+      if (!result.owner) result.owner = owner || (businessId === 1 ? await cld.getAssetUrl('restaurant-social-ai/owner') : null);
       result.photos = [...photosNew, ...photosOld].map(p => p.url);
 
       return res.json(result);
@@ -678,25 +679,25 @@ app.get('/api/assets', async (req, res) => {
 
 app.delete('/api/assets/:type/:filename', async (req, res) => {
   const { type, filename } = req.params;
-  const restaurantId = req.restaurantId || Number(req.query.restaurantId) || 1;
+  const businessId = req.businessId || Number(req.query.businessId) || 1;
   if (!['logo', 'photos', 'owner'].includes(type))
     return res.status(400).json({ error: 'Invalid type' });
 
   if (cld.isConfigured()) {
     try {
       const base = path.basename(filename, path.extname(filename));
-      // Try per-restaurant path first; also clean up restaurant 1 old-style paths
+      // Try per-business path first; also clean up business 1 old-style paths
       if (type === 'logo') {
-        await cld.deleteAsset(`restaurant-social-ai/${restaurantId}/logo`);
-        if (restaurantId === 1) await cld.deleteAsset('restaurant-social-ai/logo').catch(() => {});
-        await db.restaurant.update({ where: { id: restaurantId }, data: { logoUrl: null } }).catch(() => {});
+        await cld.deleteAsset(`restaurant-social-ai/${businessId}/logo`);
+        if (businessId === 1) await cld.deleteAsset('restaurant-social-ai/logo').catch(() => {});
+        await db.business.update({ where: { id: businessId }, data: { logoUrl: null } }).catch(() => {});
       } else if (type === 'owner') {
-        await cld.deleteAsset(`restaurant-social-ai/${restaurantId}/owner`);
-        if (restaurantId === 1) await cld.deleteAsset('restaurant-social-ai/owner').catch(() => {});
-        await db.restaurant.update({ where: { id: restaurantId }, data: { ownerPortraitUrl: null } }).catch(() => {});
+        await cld.deleteAsset(`restaurant-social-ai/${businessId}/owner`);
+        if (businessId === 1) await cld.deleteAsset('restaurant-social-ai/owner').catch(() => {});
+        await db.business.update({ where: { id: businessId }, data: { ownerPortraitUrl: null } }).catch(() => {});
       } else {
-        await cld.deleteAsset(`restaurant-social-ai/${restaurantId}/photos/${base}`);
-        if (restaurantId === 1) await cld.deleteAsset(`restaurant-social-ai/photos/${base}`).catch(() => {});
+        await cld.deleteAsset(`restaurant-social-ai/${businessId}/photos/${base}`);
+        if (businessId === 1) await cld.deleteAsset(`restaurant-social-ai/photos/${base}`).catch(() => {});
       }
       return res.json({ success: true });
     } catch (e) {
@@ -718,7 +719,8 @@ const CONFIG_PATH = path.join(ASSETS_DIR, 'config.json');
 
 function restaurantToConfig(r) {
   return {
-    restaurantName: r.name,
+    businessName:   r.name,
+    restaurantName: r.name,  // backward compat for any code still reading restaurantName
     cuisineType:    r.cuisineType    || '',
     ownerName:      r.ownerName      || '',
     chefName:       r.chefName       || '',
@@ -741,14 +743,15 @@ function restaurantToConfig(r) {
 }
 
 app.post('/api/config', async (req, res) => {
-  const { restaurantId: rId, restaurantName, cuisineType, ownerName, tagline,
+  const { businessId: bId, restaurantName, businessName, cuisineType, ownerName, tagline,
           primaryColor, accentColor, bgColor, platforms, twinStyle, twinUsecase, ownerScript,
           businessType, heygenAvatarId, heygenAvatarStyle, twinBackgroundUrl,
           ownerVoiceId, voiceTone } = req.body;
-  const restaurantId = req.restaurantId || Number(rId) || 1;
-  console.log(`[config POST] restaurantId=${restaurantId} heygenAvatarId=${heygenAvatarId ?? '(not sent)'}`);
+  const businessId = req.businessId || Number(bId) || 1;
+  const nameVal = businessName || restaurantName;
+  console.log(`[config POST] businessId=${businessId} heygenAvatarId=${heygenAvatarId ?? '(not sent)'}`);
   const data = {};
-  if (restaurantName  !== undefined) data.name                = restaurantName;
+  if (nameVal          !== undefined) data.name                = nameVal;
   if (cuisineType     !== undefined) data.cuisineType         = cuisineType;
   if (ownerName       !== undefined) data.ownerName           = ownerName;
   if (tagline         !== undefined) data.tagline             = tagline;
@@ -760,32 +763,32 @@ app.post('/api/config', async (req, res) => {
   if (twinUsecase     !== undefined) data.twinUsecase         = twinUsecase;
   if (ownerScript     !== undefined) data.ownerScript         = ownerScript;
   if (businessType    !== undefined) data.businessType        = businessType;
-  if (heygenAvatarId    !== undefined) data.heygenAvatarId      = heygenAvatarId    || null;
+  if (heygenAvatarId !== undefined) data.heygenAvatarId = heygenAvatarId || null;
   console.log(`[config POST] saving heygenAvatarId="${heygenAvatarId}" → ${data.heygenAvatarId}`);
   if (heygenAvatarStyle !== undefined) data.heygenAvatarStyle   = heygenAvatarStyle || 'normal';
   if (twinBackgroundUrl !== undefined) data.twinBackgroundUrl   = twinBackgroundUrl || null;
   if (ownerVoiceId      !== undefined) data.ownerVoiceId        = ownerVoiceId      || null;
   if (voiceTone         !== undefined) data.voiceTone           = voiceTone         || null;
   try {
-    await db.restaurant.update({ where: { id: restaurantId }, data });
-    console.log(`[config POST] DB update OK for restaurant ${restaurantId}`);
+    await db.business.update({ where: { id: businessId }, data });
+    console.log(`[config POST] DB update OK for business ${businessId}`);
     // Also write file fallback so local dev without DB still works
     fs.writeFileSync(CONFIG_PATH, JSON.stringify({ ...req.body }, null, 2));
     res.json({ success: true });
   } catch (e) {
-    console.error(`[config POST] DB update FAILED for restaurant ${restaurantId}:`, e.message);
-    // DB update failed (e.g. restaurant not found) — fall back to file only
+    console.error(`[config POST] DB update FAILED for business ${businessId}:`, e.message);
+    // DB update failed (e.g. business not found) — fall back to file only
     fs.writeFileSync(CONFIG_PATH, JSON.stringify({ ...req.body }, null, 2));
     res.json({ success: true });
   }
 });
 
 app.get('/api/config', async (req, res) => {
-  const restaurantId = req.restaurantId || Number(req.query.restaurantId) || 1;
+  const businessId = req.businessId || Number(req.query.businessId) || 1;
   try {
-    const r = await db.restaurant.findUnique({ where: { id: restaurantId } });
+    const r = await db.business.findUnique({ where: { id: businessId } });
     if (r) {
-      console.log(`[config GET] restaurantId=${restaurantId} heygenAvatarId=${r.heygenAvatarId}`);
+      console.log(`[config GET] businessId=${businessId} heygenAvatarId=${r.heygenAvatarId}`);
       return res.json(restaurantToConfig(r));
     }
   } catch { /* fall through to file */ }
@@ -807,23 +810,23 @@ function getMondayOfWeek(date = new Date()) {
 }
 
 app.get('/api/weekly-brief', async (req, res) => {
-  const restaurantId = req.restaurantId || Number(req.query.restaurantId) || 1;
-  const weekOf       = getMondayOfWeek();
+  const businessId = req.businessId || Number(req.query.businessId) || 1;
+  const weekOf     = getMondayOfWeek();
   try {
-    const row = await db.weeklyBrief.findUnique({ where: { restaurantId_weekOf: { restaurantId, weekOf } } });
-    res.json(row || { restaurantId, weekOf });
+    const row = await db.weeklyBrief.findUnique({ where: { businessId_weekOf: { businessId, weekOf } } });
+    res.json(row || { businessId, weekOf });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.post('/api/weekly-brief', async (req, res) => {
-  const restaurantId = req.restaurantId || Number(req.body.restaurantId) || 1;
-  const weekOf       = getMondayOfWeek();
+  const businessId = req.businessId || Number(req.body.businessId) || 1;
+  const weekOf     = getMondayOfWeek();
   const { featuredDish, event, promotion, notes } = req.body;
   try {
     const row = await db.weeklyBrief.upsert({
-      where:  { restaurantId_weekOf: { restaurantId, weekOf } },
+      where:  { businessId_weekOf: { businessId, weekOf } },
       update: { featuredDish, event, promotion, notes },
-      create: { restaurantId, weekOf, featuredDish, event, promotion, notes },
+      create: { businessId, weekOf, featuredDish, event, promotion, notes },
     });
     res.json(row);
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -832,14 +835,14 @@ app.post('/api/weekly-brief', async (req, res) => {
 // ── AI Script generation ──────────────────────────────────────────────────────
 
 app.post('/api/generate/script', async (req, res) => {
-  const { topic, details, ownerName, restaurantName, cuisineType } = req.body;
-  const restaurantId = req.restaurantId || Number(req.body.restaurantId) || 1;
+  const { topic, details, ownerName, restaurantName, businessName, cuisineType } = req.body;
+  const businessId = req.businessId || Number(req.body.businessId) || 1;
 
   // Fetch this week's brief for extra context
   let brief = {};
   try {
     brief = await db.weeklyBrief.findUnique({
-      where: { restaurantId_weekOf: { restaurantId, weekOf: getMondayOfWeek() } }
+      where: { businessId_weekOf: { businessId, weekOf: getMondayOfWeek() } }
     }) || {};
   } catch {}
 
@@ -852,7 +855,7 @@ app.post('/api/generate/script', async (req, res) => {
 
   if (!process.env.ANTHROPIC_API_KEY) {
     const owner = ownerName || 'the chef';
-    const name  = restaurantName || 'our restaurant';
+    const name  = businessName || restaurantName || 'our restaurant';
     const extra = briefContext || (details ? `I'm excited to share: ${details}.` : '');
     return res.json({
       script: `Hello, I'm ${owner} from ${name}. ${extra} We pour our heart into every experience here, and I'd love to welcome you to our table soon.`,
@@ -891,13 +894,13 @@ Requirements: first person, warm and personal, specific to the topic and any wee
 
 // POST /api/generate/previews — generate all three content pieces from the weekly brief
 app.post('/api/generate/previews', async (req, res) => {
-  const restaurantId = req.restaurantId || Number(req.body.restaurantId) || 1;
+  const businessId = req.businessId || Number(req.body.businessId) || 1;
 
   let restaurant = {}, brief = {};
   try {
     [restaurant, brief] = await Promise.all([
-      db.restaurant.findUnique({ where: { id: restaurantId } }).catch(() => ({})),
-      db.weeklyBrief.findUnique({ where: { restaurantId_weekOf: { restaurantId, weekOf: getMondayOfWeek() } } }).catch(() => ({})),
+      db.business.findUnique({ where: { id: businessId } }).catch(() => ({})),
+      db.weeklyBrief.findUnique({ where: { businessId_weekOf: { businessId, weekOf: getMondayOfWeek() } } }).catch(() => ({})),
     ]);
     restaurant = restaurant || {};
     brief      = brief      || {};
@@ -966,16 +969,16 @@ app.post('/api/generate/previews', async (req, res) => {
 // ── Generate ──────────────────────────────────────────────────────────────────
 
 app.post('/api/generate', async (req, res) => {
-  const { type, customScript, restaurantId: rId } = req.body;
-  const restaurantId = req.restaurantId || Number(rId) || 1;
+  const { type, customScript, businessId: bId } = req.body;
+  const businessId = req.businessId || Number(bId) || 1;
   if (!['video', 'twin', 'image'].includes(type))
     return res.status(400).json({ error: 'Invalid type. Use: video, twin, image' });
 
   let config = {};
   try {
     const [r, brief] = await Promise.all([
-      db.restaurant.findUnique({ where: { id: restaurantId } }),
-      db.weeklyBrief.findUnique({ where: { restaurantId_weekOf: { restaurantId, weekOf: getMondayOfWeek() } } }).catch(() => null),
+      db.business.findUnique({ where: { id: businessId } }),
+      db.weeklyBrief.findUnique({ where: { businessId_weekOf: { businessId, weekOf: getMondayOfWeek() } } }).catch(() => null),
     ]);
     if (r) {
       config = restaurantToConfig(r);
@@ -984,32 +987,32 @@ app.post('/api/generate', async (req, res) => {
       config._weeklyBrief  = brief || {};
     }
   } catch { /* fall through */ }
-  if (!config.restaurantName) {
+  if (!config.businessName) {
     try {
       if (fs.existsSync(CONFIG_PATH)) config = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
     } catch { }
   }
 
   const jobId = uuidv4();
-  const job   = { id: jobId, type, status: 'generating', created: new Date().toISOString(), restaurantId: Number(restaurantId) || 1 };
+  const job   = { id: jobId, type, status: 'generating', created: new Date().toISOString(), businessId: Number(businessId) || 1 };
   fs.writeFileSync(path.join(OUTPUT_DIR, `${jobId}_meta.json`), JSON.stringify(job, null, 2));
 
   res.json({ success: true, jobId, status: 'generating' });
 
-  runGeneration(jobId, type, config, customScript, restaurantId);
+  runGeneration(jobId, type, config, customScript, businessId);
 });
 
 // ── Auto-generate weekly content ──────────────────────────────────────────────
 
-async function kickOffGeneration(restaurantId, config) {
+async function kickOffGeneration(businessId, config) {
   for (const type of ['video', 'twin', 'image']) {
     const jobId = uuidv4();
     fs.writeFileSync(
       path.join(OUTPUT_DIR, `${jobId}_meta.json`),
-      JSON.stringify({ id: jobId, type, status: 'generating', created: new Date().toISOString(), auto: true, restaurantId: Number(restaurantId) || 1 }, null, 2)
+      JSON.stringify({ id: jobId, type, status: 'generating', created: new Date().toISOString(), auto: true, businessId: Number(businessId) || 1 }, null, 2)
     );
     const customScript = type === 'twin' ? (config.ownerScript || null) : null;
-    runGeneration(jobId, type, { ...config }, customScript, restaurantId);
+    runGeneration(jobId, type, { ...config }, customScript, businessId);
   }
 }
 
@@ -1019,22 +1022,22 @@ async function runAutoGenerate() {
     const day  = now.getDay();  // 0=Sun,1=Mon,...,6=Sat
     const hour = now.getHours();
 
-    const restaurants = await db.restaurant.findMany({
+    const businesses = await db.business.findMany({
       where: { autoGenerateEnabled: true, autoGenerateDay: day, autoGenerateHour: hour },
     });
-    if (!restaurants.length) return;
+    if (!businesses.length) return;
 
-    console.log(`[autogenerate] Kicking off generation for ${restaurants.length} restaurant(s)`);
-    for (const r of restaurants) {
+    console.log(`[autogenerate] Kicking off generation for ${businesses.length} business(es)`);
+    for (const r of businesses) {
       const brief = await db.weeklyBrief
-        .findUnique({ where: { restaurantId_weekOf: { restaurantId: r.id, weekOf: getMondayOfWeek() } } })
+        .findUnique({ where: { businessId_weekOf: { businessId: r.id, weekOf: getMondayOfWeek() } } })
         .catch(() => null);
       const config         = restaurantToConfig(r);
       config._logoUrl      = r.logoUrl;
       config._ownerUrl     = r.ownerPortraitUrl;
       config._weeklyBrief  = brief || {};
       await kickOffGeneration(r.id, config);
-      console.log(`[autogenerate] Queued video+twin+image for restaurant ${r.id}`);
+      console.log(`[autogenerate] Queued video+twin+image for business ${r.id}`);
     }
   } catch (err) {
     console.error('[autogenerate] Error:', err.message);
@@ -1043,25 +1046,25 @@ async function runAutoGenerate() {
 
 // Also expose as an API endpoint so the UI "Generate All" button can trigger it manually
 app.post('/api/generate-all', async (req, res) => {
-  const restaurantId = req.restaurantId || 1;
+  const businessId = req.businessId || 1;
   try {
     const [r, brief] = await Promise.all([
-      db.restaurant.findUnique({ where: { id: restaurantId } }),
-      db.weeklyBrief.findUnique({ where: { restaurantId_weekOf: { restaurantId, weekOf: getMondayOfWeek() } } }).catch(() => null),
+      db.business.findUnique({ where: { id: businessId } }),
+      db.weeklyBrief.findUnique({ where: { businessId_weekOf: { businessId, weekOf: getMondayOfWeek() } } }).catch(() => null),
     ]);
-    if (!r) return res.status(404).json({ error: 'Restaurant not found' });
+    if (!r) return res.status(404).json({ error: 'Business not found' });
     const config         = restaurantToConfig(r);
     config._logoUrl      = r.logoUrl;
     config._ownerUrl     = r.ownerPortraitUrl;
     config._weeklyBrief  = brief || {};
-    await kickOffGeneration(restaurantId, config);
+    await kickOffGeneration(businessId, config);
     res.json({ success: true, message: 'Generation queued for video, twin, and image' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-async function runGeneration(jobId, type, config, customScript, restaurantId = 1) {
+async function runGeneration(jobId, type, config, customScript, businessId = 1) {
   try {
     const { generateVideo, generateTwinClip, generateImagePost } = require('./pipeline/1_generate_content');
     const { brandOverlay } = require('./pipeline/2_brand_overlay');
@@ -1069,11 +1072,11 @@ async function runGeneration(jobId, type, config, customScript, restaurantId = 1
     // Inject cloud asset URLs (already set from DB if available; otherwise look up Cloudinary)
     if (cld.isConfigured() && (!config._logoUrl || !config._ownerUrl)) {
       const [logoNew, ownerNew] = await Promise.all([
-        config._logoUrl  ? null : cld.getAssetUrl(`restaurant-social-ai/${restaurantId}/logo`),
-        config._ownerUrl ? null : cld.getAssetUrl(`restaurant-social-ai/${restaurantId}/owner`),
+        config._logoUrl  ? null : cld.getAssetUrl(`restaurant-social-ai/${businessId}/logo`),
+        config._ownerUrl ? null : cld.getAssetUrl(`restaurant-social-ai/${businessId}/owner`),
       ]);
-      // For restaurant 1, also fall back to legacy paths
-      const [logoOld, ownerOld] = restaurantId === 1 ? await Promise.all([
+      // For business 1, also fall back to legacy paths
+      const [logoOld, ownerOld] = businessId === 1 ? await Promise.all([
         logoNew  || config._logoUrl  ? null : cld.getAssetUrl('restaurant-social-ai/logo'),
         ownerNew || config._ownerUrl ? null : cld.getAssetUrl('restaurant-social-ai/owner'),
       ]) : [null, null];
@@ -1087,11 +1090,11 @@ async function runGeneration(jobId, type, config, customScript, restaurantId = 1
       if (cld.isConfigured()) {
         try {
           const [newPhotos, oldPhotos] = await Promise.all([
-            cld.listFolder(`restaurant-social-ai/${restaurantId}/photos/`),
-            restaurantId === 1 ? cld.listFolder('restaurant-social-ai/photos/') : Promise.resolve([]),
+            cld.listFolder(`restaurant-social-ai/${businessId}/photos/`),
+            businessId === 1 ? cld.listFolder('restaurant-social-ai/photos/') : Promise.resolve([]),
           ]);
           photoUrls = [...newPhotos, ...oldPhotos].map(p => p.url).filter(Boolean);
-          console.log(`[image] Found ${photoUrls.length} photos in Cloudinary for restaurant ${restaurantId}`);
+          console.log(`[image] Found ${photoUrls.length} photos in Cloudinary for business ${businessId}`);
         } catch (e) {
           console.warn('[image] Cloudinary photo fetch failed:', e.message);
         }
@@ -1127,12 +1130,12 @@ async function runGeneration(jobId, type, config, customScript, restaurantId = 1
       }
     }
 
-    const meta = { ...result, id: jobId, type, status: 'ready', created: new Date().toISOString(), restaurantId: Number(restaurantId) || 1 };
+    const meta = { ...result, id: jobId, type, status: 'ready', created: new Date().toISOString(), businessId: Number(businessId) || 1 };
     fs.writeFileSync(path.join(OUTPUT_DIR, `${jobId}_meta.json`), JSON.stringify(meta, null, 2));
     console.log(`[generate] Job ${jobId} (${type}) complete`);
   } catch (err) {
     console.error(`[generate] Job ${jobId} failed:`, err.message);
-    const meta = { id: jobId, type, status: 'error', error: err.message, created: new Date().toISOString(), restaurantId: Number(restaurantId) || 1 };
+    const meta = { id: jobId, type, status: 'error', error: err.message, created: new Date().toISOString(), businessId: Number(businessId) || 1 };
     fs.writeFileSync(path.join(OUTPUT_DIR, `${jobId}_meta.json`), JSON.stringify(meta, null, 2));
   }
 }
@@ -1141,7 +1144,7 @@ async function runGeneration(jobId, type, config, customScript, restaurantId = 1
 
 app.get('/api/output', (req, res) => {
   if (!fs.existsSync(OUTPUT_DIR)) return res.json([]);
-  const rid = req.restaurantId || Number(req.query.restaurantId) || null;
+  const bid = req.businessId || Number(req.query.businessId) || null;
   const items = fs.readdirSync(OUTPUT_DIR)
     .filter(f => f.endsWith('_meta.json'))
     .map(f => {
@@ -1149,7 +1152,7 @@ app.get('/api/output', (req, res) => {
       catch { return null; }
     })
     .filter(Boolean)
-    .filter(item => !rid || !item.restaurantId || item.restaurantId === rid)
+    .filter(item => !bid || !item.businessId || item.businessId === bid)
     .sort((a, b) => new Date(b.created) - new Date(a.created));
   res.json(items);
 });
@@ -1290,11 +1293,11 @@ app.post('/api/output/:jobId/post-instagram', async (req, res) => {
 
   res.json({ success: true, status: 'posting', message: 'Posting to Instagram in background...' });
 
-  // Load per-restaurant IG credentials (fall back to env vars in pipeline)
+  // Load per-business IG credentials (fall back to env vars in pipeline)
   let igCreds = {};
   try {
-    const restaurantId = req.restaurantId || Number(req.body.restaurantId) || 1;
-    const r = await db.restaurant.findUnique({ where: { id: restaurantId } });
+    const businessId = req.businessId || Number(req.body.businessId) || 1;
+    const r = await db.business.findUnique({ where: { id: businessId } });
     if (r?.instagramUserId && r?.instagramAccessToken) {
       igCreds = { accountId: r.instagramUserId, accessToken: r.instagramAccessToken };
     }
@@ -1324,14 +1327,14 @@ app.post('/api/output/:jobId/post-instagram', async (req, res) => {
 app.post('/api/generate-caption', async (req, res) => {
   try {
     const {
-      restaurantId,
-      postType         = 'branded_image',
+      businessId,
+      postType           = 'branded_image',
       contentDescription = '',
-      occasion         = 'general',
+      occasion           = 'general',
     } = req.body;
 
-    const rid = req.restaurantId || Number(restaurantId) || 1;
-    const r   = await db.restaurant.findUnique({ where: { id: rid } });
+    const bid = req.businessId || Number(businessId) || 1;
+    const r   = await db.business.findUnique({ where: { id: bid } });
     const name      = r?.name         || 'our restaurant';
     const cuisine   = r?.cuisineType  || '';
     const location  = r?.location     || '';
@@ -1368,9 +1371,9 @@ Return ONLY the caption text, nothing else.`;
 
 app.post('/api/generate-hashtags', async (req, res) => {
   try {
-    const { restaurantId, dishType = '', occasion = 'general' } = req.body;
-    const rid = req.restaurantId || Number(restaurantId) || 1;
-    const r   = await db.restaurant.findUnique({ where: { id: rid } });
+    const { businessId, dishType = '', occasion = 'general' } = req.body;
+    const bid = req.businessId || Number(businessId) || 1;
+    const r   = await db.business.findUnique({ where: { id: bid } });
 
     const name     = (r?.name         || '').replace(/\s+/g, '').replace(/[^a-zA-Z0-9]/g, '');
     const cuisine  = (r?.cuisineType  || '').replace(/\s+/g, '');
@@ -1411,9 +1414,9 @@ app.post('/api/generate-hashtags', async (req, res) => {
 });
 
 app.post('/api/suggest-hashtags', async (req, res) => {
-  const rid = req.restaurantId || Number(req.body.restaurantId) || 1;
+  const bid = req.businessId || Number(req.body.businessId) || 1;
   try {
-    const r = await db.restaurant.findUnique({ where: { id: rid } });
+    const r = await db.business.findUnique({ where: { id: bid } });
     const name        = r?.name        || '';
     const bizType     = r?.businessType || 'restaurant';
     const specialty   = r?.cuisineType  || '';
@@ -1496,7 +1499,9 @@ app.get('/api/heygen/voices', async (req, res) => {
 
 // ── DB-backed routes ──────────────────────────────────────────────────────────
 
-app.use('/api/db/restaurants',      require('./routes/restaurants'));
+app.use('/api/db/businesses',       require('./routes/businesses'));
+// Legacy alias — redirect old /api/db/restaurants paths to /api/db/businesses
+app.use('/api/db/restaurants',      require('./routes/businesses'));
 app.use('/api/db/scheduled-posts',  require('./routes/scheduledPosts'));
 app.use('/api/db/script-templates', require('./routes/scriptTemplates'));
 app.use('/api/db/food-photos',      require('./routes/foodPhotos'));

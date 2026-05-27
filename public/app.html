@@ -753,7 +753,7 @@ document.getElementById('platformRow').addEventListener('change', e => {
 
 // ── Logo upload ────────────────────────────────────────────────────────────
 setupDropZone('logoZone', 'logoInput', 'logo', async (file) => {
-  await uploadFile('/api/upload/logo', 'file', file, { restaurantId: getRestaurantId() });
+  await uploadFile('/api/upload/logo', 'file', file, { businessId: getBusinessId() });
   logoUploaded = file.name;
   showPreview('logoPreview', 'logoIcon', 'logoLabel', URL.createObjectURL(file));
   toast('Logo uploaded', 'success');
@@ -764,7 +764,7 @@ setupDropZone('logoZone', 'logoInput', 'logo', async (file) => {
 setupDropZone('ownerVideoZone', 'ownerVideoInput', 'owner-video', async (file) => {
   const zone = document.getElementById('ownerVideoZone');
   zone.querySelector('.drop-label').textContent = 'Uploading…';
-  const data = await uploadFile('/api/upload/owner-video', 'file', file, { restaurantId: getRestaurantId() });
+  const data = await uploadFile('/api/upload/owner-video', 'file', file, { businessId: getBusinessId() });
   showOwnerVideoPreview(data.url || URL.createObjectURL(file));
   toast('Video uploaded', 'success');
 });
@@ -817,7 +817,7 @@ function setupSlotDrag(slot, idx) {
 
 async function handlePhotoUpload(idx, file) {
   try {
-    const data = await uploadFile('/api/upload/photos', 'files', file, { restaurantId: getRestaurantId() });
+    const data = await uploadFile('/api/upload/photos', 'files', file, { businessId: getBusinessId() });
     if (data.files?.[0]) {
       photoSlots[idx] = data.files[0];
       buildPhotoGrid();
@@ -832,7 +832,7 @@ async function removePhoto(idx, slot) {
   if (!photoSlots[idx]) return;
   try {
     const filename = photoSlots[idx].filename;
-    await fetch(`/api/assets/photos/${encodeURIComponent(filename)}?restaurantId=${getRestaurantId()}`, { method: 'DELETE', headers: authHeaders() });
+    await fetch(`/api/assets/photos/${encodeURIComponent(filename)}?businessId=${getBusinessId()}`, { method: 'DELETE', headers: authHeaders() });
     photoSlots[idx] = null;
     buildPhotoGrid();
     toast('Photo removed');
@@ -852,7 +852,7 @@ async function uploadTwinBackground(input) {
   try {
     const fd = new FormData();
     fd.append('file', file);
-    fd.append('restaurantId', getRestaurantId());
+    fd.append('businessId', getBusinessId());
     const res  = await fetch('/api/upload/twin-background', { method: 'POST', headers: authHeaders(), body: fd });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error);
@@ -921,8 +921,8 @@ async function saveAndGenerate() {
     .map(cb => cb.value);
 
   const config = {
-    restaurantId:   getRestaurantId(),
-    restaurantName: name,
+    businessId:   getBusinessId(),
+    businessName: name,
     businessType:   getEffectiveBizType(),
     cuisineType:    document.getElementById('cuisineType').value,
     ownerName:      document.getElementById('ownerName').value.trim(),
@@ -963,15 +963,15 @@ async function saveAndGenerate() {
 
 // ── Load saved state ───────────────────────────────────────────────────────
 async function loadSavedState() {
-  const rid = getRestaurantId();
+  const rid = getBusinessId();
   try {
     const [assets, config] = await Promise.all([
-      fetch(`/api/assets?restaurantId=${rid}`).then(r => r.json()),
-      fetch(`/api/config?restaurantId=${rid}`, { headers: authHeaders() }).then(r => r.json()),
+      fetch(`/api/assets?businessId=${rid}`).then(r => r.json()),
+      fetch(`/api/config?businessId=${rid}`, { headers: authHeaders() }).then(r => r.json()),
     ]);
 
     // Restore config fields
-    if (config.restaurantName) document.getElementById('restaurantName').value = config.restaurantName;
+    if (config.businessName || config.restaurantName) document.getElementById('restaurantName').value = config.businessName || config.restaurantName;
     if (config.cuisineType)    document.getElementById('cuisineType').value    = config.cuisineType;
     if (config.ownerName) document.getElementById('ownerName').value = config.ownerName;
     if (config.chefName)  document.getElementById('chefName').value  = config.chefName;
@@ -1032,7 +1032,7 @@ async function loadSavedState() {
 
     // Load Instagram credentials + login email
     try {
-      const rest = await fetch(`/api/db/restaurants/${rid}`, { headers: authHeaders() }).then(r => r.json());
+      const rest = await fetch(`/api/db/businesses/${rid}`, { headers: authHeaders() }).then(r => r.json());
       if (rest.instagramUrl)    document.getElementById('igUrl').value = rest.instagramUrl;
       if (rest.instagramUserId) document.getElementById('igAccountId').value = rest.instagramUserId;
       if (rest.instagramAccessToken) {
@@ -1106,7 +1106,7 @@ async function saveAvatarId() {
   const avatarId = (document.getElementById('heygenAvatarId')?.value || '').trim();
   const msg = document.getElementById('avatarIdMsg');
   try {
-    const res = await fetch(`/api/db/restaurants/${getRestaurantId()}`, {
+    const res = await fetch(`/api/db/businesses/${getBusinessId()}`, {
       method:  'PATCH',
       headers: authHeaders({ 'Content-Type': 'application/json' }),
       body:    JSON.stringify({ heygenAvatarId: avatarId || null }),
@@ -1134,7 +1134,7 @@ async function saveLoginCredentials() {
     const res = await fetch('/api/auth/set-credentials', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ restaurantId: getRestaurantId(), email, password }),
+      body: JSON.stringify({ businessId: getBusinessId(), email, password }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Save failed');
@@ -1146,13 +1146,13 @@ async function saveLoginCredentials() {
 
 // ── Instagram credentials ──────────────────────────────────────────────────
 async function saveIgCreds() {
-  const rid   = getRestaurantId();
+  const rid   = getBusinessId();
   const url   = document.getElementById('igUrl').value.trim();
   const id    = document.getElementById('igAccountId').value.trim();
   const token = document.getElementById('igAccessToken').value.trim();
   const body  = { instagramUrl: url || undefined, instagramUserId: id, instagramAccessToken: token };
   try {
-    const res = await fetch(`/api/db/restaurants/${rid}`, {
+    const res = await fetch(`/api/db/businesses/${rid}`, {
       method:  'PATCH',
       headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(body),
@@ -1179,7 +1179,7 @@ async function lookupIgId() {
     const res  = await fetch('/api/instagram/lookup-id', {
       method:  'POST',
       headers: authHeaders({ 'Content-Type': 'application/json' }),
-      body: JSON.stringify({ instagramUrl: url, restaurantId: getRestaurantId() }),
+      body: JSON.stringify({ instagramUrl: url, businessId: getBusinessId() }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error);
@@ -1197,8 +1197,8 @@ async function lookupIgId() {
 
 async function loadIgStatus() {
   try {
-    const rid  = getRestaurantId();
-    const data = await fetch(`/api/instagram/status?restaurantId=${rid}`, { headers: authHeaders() }).then(r => r.json());
+    const rid  = getBusinessId();
+    const data = await fetch(`/api/instagram/status?businessId=${rid}`, { headers: authHeaders() }).then(r => r.json());
 
     // OAuth connect button
     const oauthRow = document.getElementById('igOauthRow');
@@ -1242,16 +1242,16 @@ async function loadIgStatus() {
 
 function connectInstagram(e) {
   e.preventDefault();
-  window.location.href = `/auth/instagram?restaurantId=${getRestaurantId()}`;
+  window.location.href = `/auth/instagram?businessId=${getBusinessId()}`;
 }
 
 async function refreshIgToken() {
   try {
-    const rid = getRestaurantId();
+    const rid = getBusinessId();
     const res = await fetch(`/api/instagram/refresh`, {
       method:  'POST',
       headers: authHeaders({ 'Content-Type': 'application/json' }),
-      body: JSON.stringify({ restaurantId: rid }),
+      body: JSON.stringify({ businessId: rid }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error);

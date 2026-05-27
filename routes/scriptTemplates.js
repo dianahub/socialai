@@ -6,15 +6,16 @@ const router = Router();
 // POST /api/db/script-templates/generate-with-ai
 // Must be before /:id routes so Express doesn't treat "generate-with-ai" as an id
 router.post('/generate-with-ai', async (req, res) => {
-  const { topic, details, restaurantId } = req.body;
+  const { topic, details, businessId, restaurantId } = req.body;
+  const bizId = businessId || restaurantId; // backward-compat
 
   let restaurantName = 'our restaurant';
   let ownerName      = 'the chef';
   let cuisineType    = 'fine dining';
 
-  if (restaurantId) {
+  if (bizId) {
     try {
-      const r = await db.restaurant.findUnique({ where: { id: Number(restaurantId) } });
+      const r = await db.business.findUnique({ where: { id: Number(bizId) } });
       if (r) {
         restaurantName = r.name      || restaurantName;
         cuisineType    = r.cuisineType || cuisineType;
@@ -55,11 +56,11 @@ Requirements: first person, warm and personal, specific to the topic, end with a
   }
 });
 
-// GET /api/db/script-templates?restaurantId=&isActive=
+// GET /api/db/script-templates?businessId=&isActive=
 router.get('/', async (req, res) => {
-  const { restaurantId, isActive } = req.query;
+  const { businessId, isActive } = req.query;
   const where = {};
-  if (restaurantId) where.restaurantId = Number(restaurantId);
+  if (businessId) where.businessId = Number(businessId);
   if (isActive !== undefined) where.isActive = isActive === 'true';
   try {
     const rows = await db.scriptTemplate.findMany({
@@ -75,7 +76,7 @@ router.get('/:id', async (req, res) => {
   try {
     const row = await db.scriptTemplate.findUnique({ where: { id: Number(req.params.id) } });
     if (!row) return res.status(404).json({ error: 'Not found' });
-    if (req.restaurantId !== undefined && row.restaurantId !== req.restaurantId)
+    if (req.businessId !== undefined && row.businessId !== req.businessId)
       return res.status(404).json({ error: 'Not found' });
     res.json(row);
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -83,14 +84,14 @@ router.get('/:id', async (req, res) => {
 
 // POST /api/db/script-templates
 router.post('/', async (req, res) => {
-  const { restaurantId, templateName, topic, scriptText, isActive = true } = req.body;
-  if (!restaurantId) return res.status(400).json({ error: 'restaurantId is required' });
+  const { businessId, templateName, topic, scriptText, isActive = true } = req.body;
+  if (!businessId)   return res.status(400).json({ error: 'businessId is required' });
   if (!templateName) return res.status(400).json({ error: 'templateName is required' });
   if (!scriptText)   return res.status(400).json({ error: 'scriptText is required' });
   try {
     const row = await db.scriptTemplate.create({
       data: {
-        restaurantId: Number(restaurantId),
+        businessId: Number(businessId),
         templateName,
         topic:    topic    || null,
         scriptText,
@@ -111,9 +112,9 @@ router.patch('/:id', async (req, res) => {
   if (isActive     !== undefined) data.isActive     = Boolean(isActive);
   if (lastUsedAt   !== undefined) data.lastUsedAt   = lastUsedAt ? new Date(lastUsedAt) : null;
   try {
-    if (req.restaurantId !== undefined) {
+    if (req.businessId !== undefined) {
       const existing = await db.scriptTemplate.findUnique({ where: { id: Number(req.params.id) } });
-      if (!existing || existing.restaurantId !== req.restaurantId)
+      if (!existing || existing.businessId !== req.businessId)
         return res.status(404).json({ error: 'Not found' });
     }
     const row = await db.scriptTemplate.update({ where: { id: Number(req.params.id) }, data });
@@ -127,9 +128,9 @@ router.patch('/:id', async (req, res) => {
 // DELETE /api/db/script-templates/:id
 router.delete('/:id', async (req, res) => {
   try {
-    if (req.restaurantId !== undefined) {
+    if (req.businessId !== undefined) {
       const existing = await db.scriptTemplate.findUnique({ where: { id: Number(req.params.id) } });
-      if (!existing || existing.restaurantId !== req.restaurantId)
+      if (!existing || existing.businessId !== req.businessId)
         return res.status(404).json({ error: 'Not found' });
     }
     await db.scriptTemplate.delete({ where: { id: Number(req.params.id) } });

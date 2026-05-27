@@ -104,7 +104,7 @@
   try {
     const [leads, users] = await Promise.all([
       fetch('/api/leads').then(r => r.json()),
-      fetch('/api/db/restaurants').then(r => r.json()),
+      fetch('/api/db/businesses').then(r => r.json()),
     ]);
     document.getElementById('statLeads').textContent     = leads.length;
     document.getElementById('statActive').textContent    = leads.filter(l => l.status === 'lead').length;

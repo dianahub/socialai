@@ -234,7 +234,7 @@ let users = [], viewingId = null;
 
 async function loadUsers() {
   try {
-    const res = await fetch('/api/db/restaurants');
+    const res = await fetch('/api/db/businesses');
     if (res.status === 401) { location.href = '/admin/login'; return; }
     users = await res.json();
     renderTable();
@@ -321,7 +321,7 @@ async function deleteUser() {
 
 async function doDelete(id) {
   try {
-    const res = await fetch(`/api/db/restaurants/${id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/db/businesses/${id}`, { method: 'DELETE' });
     if (!res.ok) throw new Error((await res.json()).error || 'Delete failed');
     await loadUsers();
     showToast('Account deleted');
@@ -337,7 +337,7 @@ async function loginAs(id) {
     if (!res.ok) throw new Error(data.error || 'Failed');
     const url = new URL('/index.html', location.origin);
     url.searchParams.set('impersonate_token', data.token);
-    url.searchParams.set('restaurantId', data.restaurantId);
+    url.searchParams.set('businessId', data.businessId);
     window.open(url.toString(), '_blank');
   } catch (e) { showToast(e.message, true); }
 }
@@ -383,7 +383,7 @@ async function submitEdit() {
 
   btn.disabled = true; btn.textContent = 'Saving…';
   try {
-    const res  = await fetch(`/api/db/restaurants/${editingId}`, {
+    const res  = await fetch(`/api/db/businesses/${editingId}`, {
       method:  'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify(body),

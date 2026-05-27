@@ -7,8 +7,8 @@ const adapter = new PrismaLibSql({ url });
 const db      = new PrismaClient({ adapter });
 
 async function main() {
-  // ── Restaurant ──────────────────────────────────────────────────────────────
-  const restaurant = await db.restaurant.upsert({
+  // ── Business ──────────────────────────────────────────────────────────────
+  const restaurant = await db.business.upsert({
     where: { id: 1 },
     update: {},
     create: {
@@ -36,7 +36,7 @@ async function main() {
   ];
 
   for (const photo of photoData) {
-    await db.foodPhoto.create({ data: { restaurantId: restaurant.id, ...photo } });
+    await db.foodPhoto.create({ data: { businessId: restaurant.id, ...photo } });
   }
   console.log(`Seeded ${photoData.length} food photos`);
 
@@ -71,7 +71,7 @@ async function main() {
 
   const createdTemplates = [];
   for (const t of templates) {
-    const tmpl = await db.scriptTemplate.create({ data: { restaurantId: restaurant.id, ...t } });
+    const tmpl = await db.scriptTemplate.create({ data: { businessId: restaurant.id, ...t } });
     createdTemplates.push(tmpl);
   }
   console.log(`Seeded ${createdTemplates.length} script templates`);
@@ -181,7 +181,7 @@ async function main() {
   ];
 
   for (const p of posts) {
-    await db.scheduledPost.create({ data: { restaurantId: restaurant.id, ...p } });
+    await db.scheduledPost.create({ data: { businessId: restaurant.id, ...p } });
   }
   console.log(`Seeded ${posts.length} scheduled posts`);
 
@@ -196,7 +196,7 @@ async function main() {
   for (const j of jobs) {
     await db.generationJob.create({
       data: {
-        restaurantId:  restaurant.id,
+        businessId:    restaurant.id,
         completedAt:   j.status === 'completed' ? new Date() : null,
         ...j,
       },

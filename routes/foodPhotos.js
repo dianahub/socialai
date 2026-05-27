@@ -3,10 +3,10 @@ const db = require('../lib/db');
 
 const router = Router();
 
-// GET /api/db/food-photos?restaurantId=
+// GET /api/db/food-photos?businessId=
 router.get('/', async (req, res) => {
-  const { restaurantId } = req.query;
-  const where = restaurantId ? { restaurantId: Number(restaurantId) } : {};
+  const { businessId } = req.query;
+  const where = businessId ? { businessId: Number(businessId) } : {};
   try {
     const rows = await db.foodPhoto.findMany({ where, orderBy: { createdAt: 'desc' } });
     res.json(rows);
@@ -15,12 +15,12 @@ router.get('/', async (req, res) => {
 
 // POST /api/db/food-photos
 router.post('/', async (req, res) => {
-  const { restaurantId, photoUrl, caption } = req.body;
-  if (!restaurantId) return res.status(400).json({ error: 'restaurantId is required' });
-  if (!photoUrl)     return res.status(400).json({ error: 'photoUrl is required' });
+  const { businessId, photoUrl, caption } = req.body;
+  if (!businessId) return res.status(400).json({ error: 'businessId is required' });
+  if (!photoUrl)   return res.status(400).json({ error: 'photoUrl is required' });
   try {
     const row = await db.foodPhoto.create({
-      data: { restaurantId: Number(restaurantId), photoUrl, caption: caption || null },
+      data: { businessId: Number(businessId), photoUrl, caption: caption || null },
     });
     res.status(201).json(row);
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -29,9 +29,9 @@ router.post('/', async (req, res) => {
 // DELETE /api/db/food-photos/:id
 router.delete('/:id', async (req, res) => {
   try {
-    if (req.restaurantId !== undefined) {
+    if (req.businessId !== undefined) {
       const existing = await db.foodPhoto.findUnique({ where: { id: Number(req.params.id) } });
-      if (!existing || existing.restaurantId !== req.restaurantId)
+      if (!existing || existing.businessId !== req.businessId)
         return res.status(404).json({ error: 'Not found' });
     }
     await db.foodPhoto.delete({ where: { id: Number(req.params.id) } });

@@ -5,12 +5,12 @@ const router = Router();
 
 const VALID_STATUSES = ['pending', 'processing', 'completed', 'failed'];
 
-// GET /api/db/generation-jobs?restaurantId=&status=
+// GET /api/db/generation-jobs?businessId=&status=
 router.get('/', async (req, res) => {
-  const { restaurantId, status } = req.query;
+  const { businessId, status } = req.query;
   const where = {};
-  if (restaurantId) where.restaurantId = Number(restaurantId);
-  if (status)       where.status       = status;
+  if (businessId) where.businessId = Number(businessId);
+  if (status)     where.status     = status;
   try {
     const rows = await db.generationJob.findMany({ where, orderBy: { createdAt: 'desc' } });
     res.json(rows);
@@ -22,7 +22,7 @@ router.get('/:id', async (req, res) => {
   try {
     const row = await db.generationJob.findUnique({ where: { id: Number(req.params.id) } });
     if (!row) return res.status(404).json({ error: 'Not found' });
-    if (req.restaurantId !== undefined && row.restaurantId !== req.restaurantId)
+    if (req.businessId !== undefined && row.businessId !== req.businessId)
       return res.status(404).json({ error: 'Not found' });
     res.json(row);
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -30,17 +30,17 @@ router.get('/:id', async (req, res) => {
 
 // POST /api/db/generation-jobs  — create a new job record
 router.post('/', async (req, res) => {
-  const { restaurantId, jobType, externalJobId, scheduledPostId, status = 'pending' } = req.body;
-  if (!restaurantId) return res.status(400).json({ error: 'restaurantId is required' });
+  const { businessId, jobType, externalJobId, scheduledPostId, status = 'pending' } = req.body;
+  if (!businessId) return res.status(400).json({ error: 'businessId is required' });
   if (!jobType)      return res.status(400).json({ error: 'jobType is required' });
   if (!VALID_STATUSES.includes(status))
     return res.status(400).json({ error: `status must be one of: ${VALID_STATUSES.join(', ')}` });
   try {
     const row = await db.generationJob.create({
       data: {
-        restaurantId: Number(restaurantId),
+        businessId:      Number(businessId),
         jobType,
-        externalJobId: externalJobId || null,
+        externalJobId:   externalJobId || null,
         scheduledPostId: scheduledPostId ? Number(scheduledPostId) : null,
         status,
       },
@@ -63,9 +63,9 @@ router.patch('/:id', async (req, res) => {
   if (externalJobId !== undefined) data.externalJobId = externalJobId;
   if (errorMessage  !== undefined) data.errorMessage  = errorMessage;
   try {
-    if (req.restaurantId !== undefined) {
+    if (req.businessId !== undefined) {
       const existing = await db.generationJob.findUnique({ where: { id: Number(req.params.id) } });
-      if (!existing || existing.restaurantId !== req.restaurantId)
+      if (!existing || existing.businessId !== req.businessId)
         return res.status(404).json({ error: 'Not found' });
     }
     const row = await db.generationJob.update({ where: { id: Number(req.params.id) }, data });

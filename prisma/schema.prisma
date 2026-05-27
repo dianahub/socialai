@@ -7,7 +7,7 @@ datasource db {
   provider = "sqlite"
 }
 
-model Restaurant {
+model Business {
   id                   Int      @id @default(autoincrement())
   name                 String
   cuisineType          String?
@@ -52,6 +52,8 @@ model Restaurant {
   scheduledPosts  ScheduledPost[]
   generationJobs  GenerationJob[]
   weeklyBriefs    WeeklyBrief[]
+
+  @@map("Restaurant")
 }
 
 model Lead {
@@ -65,25 +67,25 @@ model Lead {
   notes           String?
   referredBy      String?
   status          String    @default("lead") // lead | converted
-  restaurantId    Int?
+  businessId      Int?      @map("restaurantId")
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 }
 
 model FoodPhoto {
-  id           Int        @id @default(autoincrement())
-  restaurantId Int
-  photoUrl     String
-  caption      String?
-  createdAt    DateTime   @default(now())
+  id         Int      @id @default(autoincrement())
+  businessId Int      @map("restaurantId")
+  photoUrl   String
+  caption    String?
+  createdAt  DateTime @default(now())
 
-  restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
 }
 
 // topic: welcome | weekend_special | happy_hour | new_menu_item | holiday | general_update | behind_the_scenes | seasonal_menu
 model ScriptTemplate {
   id           Int       @id @default(autoincrement())
-  restaurantId Int
+  businessId   Int       @map("restaurantId")
   templateName String
   topic        String?
   scriptText   String
@@ -92,7 +94,7 @@ model ScriptTemplate {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
-  restaurant     Restaurant    @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  business       Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
   scheduledPosts ScheduledPost[]
 }
 
@@ -100,7 +102,7 @@ model ScriptTemplate {
 // status:   draft | scheduled | published | failed
 model ScheduledPost {
   id               Int       @id @default(autoincrement())
-  restaurantId     Int
+  businessId       Int       @map("restaurantId")
   postType         String
   contentUrl       String?
   caption          String?
@@ -114,31 +116,31 @@ model ScheduledPost {
   createdAt        DateTime  @default(now())
   publishedAt      DateTime?
 
-  restaurant     Restaurant      @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  business       Business        @relation(fields: [businessId], references: [id], onDelete: Cascade)
   scriptTemplate ScriptTemplate? @relation(fields: [scriptTemplateId], references: [id])
   generationJobs GenerationJob[]
 }
 
 model WeeklyBrief {
-  id           Int        @id @default(autoincrement())
-  restaurantId Int
-  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
-  weekOf       String     // YYYY-MM-DD (Monday of the week)
+  id         Int      @id @default(autoincrement())
+  businessId Int      @map("restaurantId")
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  weekOf     String   // YYYY-MM-DD (Monday of the week)
   featuredDish String?
   event        String?
   promotion    String?
   notes        String?
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
-  @@unique([restaurantId, weekOf])
+  @@unique([businessId, weekOf], map: "WeeklyBrief_restaurantId_weekOf_key")
 }
 
 // jobType:  owner_twin_video | cinematic_video | branded_image_feed | branded_image_story
 // status:   pending | processing | completed | failed
 model GenerationJob {
   id              Int       @id @default(autoincrement())
-  restaurantId    Int
+  businessId      Int       @map("restaurantId")
   jobType         String
   externalJobId   String?
   status          String    @default("pending")
@@ -148,6 +150,6 @@ model GenerationJob {
   createdAt       DateTime  @default(now())
   completedAt     DateTime?
 
-  restaurant    Restaurant     @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  business      Business       @relation(fields: [businessId], references: [id], onDelete: Cascade)
   scheduledPost ScheduledPost? @relation(fields: [scheduledPostId], references: [id])
 }

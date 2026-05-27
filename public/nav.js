@@ -1,4 +1,4 @@
-// nav.js — restaurant switcher (admin mode) OR restaurant name + logout (auth mode)
+// nav.js — business switcher (admin mode) OR business name + logout (auth mode)
 // Intercepts all /api/ fetch calls to add Bearer token automatically.
 (function () {
   // ── Impersonation: admin passes token via query param ────────────────────
@@ -7,6 +7,7 @@
   if (_impToken) {
     localStorage.setItem('authToken', _impToken);
     _params.delete('impersonate_token');
+    _params.delete('businessId');
     _params.delete('restaurantId');
     const clean = location.pathname + (_params.toString() ? '?' + _params.toString() : '');
     history.replaceState(null, '', clean);
@@ -18,23 +19,26 @@
     return localStorage.getItem('authToken') || '';
   };
 
-  window.getRestaurantId = function () {
-    // In auth mode the token carries the restaurantId; fall back to localStorage
+  window.getBusinessId = function () {
+    // In auth mode the token carries the businessId; fall back to localStorage
     const token = getAuthToken();
     if (token) {
       try {
         const payload = JSON.parse(atob(token.split('.')[1]));
-        return payload.restaurantId || 1;
+        return payload.businessId || payload.restaurantId || 1;
       } catch { /* fall through */ }
     }
     // Admin/dev mode: honour ?id= in the URL
     const urlId = new URLSearchParams(location.search).get('id');
     if (urlId) {
-      localStorage.setItem('selectedRestaurantId', urlId);
+      localStorage.setItem('selectedBusinessId', urlId);
       return Number(urlId);
     }
-    return Number(localStorage.getItem('selectedRestaurantId')) || 1;
+    return Number(localStorage.getItem('selectedBusinessId')) || Number(localStorage.getItem('selectedRestaurantId')) || 1;
   };
+
+  // Backward-compat alias
+  window.getRestaurantId = window.getBusinessId;
 
   // ── Fetch interceptor — adds Bearer token to all /api/ requests ──────────
   const _fetch = window.fetch.bind(window);
@@ -292,7 +296,7 @@
 
     document.getElementById('navRestSelect').addEventListener('change', function () {
       const id = Number(this.value);
-      if (id) { localStorage.setItem('selectedRestaurantId', id); location.reload(); }
+      if (id) { localStorage.setItem('selectedBusinessId', id); location.reload(); }
     });
     document.getElementById('navNewRestBtn').addEventListener('click', function () {
       document.getElementById('navRestModal').classList.add('open');
@@ -303,8 +307,8 @@
     const select = document.getElementById('navRestSelect');
     if (!select) return;
     try {
-      const rows = await _fetch('/api/db/restaurants').then(r => r.json());
-      const currentId = window.getRestaurantId();
+      const rows = await _fetch('/api/db/businesses').then(r => r.json());
+      const currentId = window.getBusinessId();
       select.innerHTML = '';
       rows.forEach(function (r) {
         const opt = document.createElement('option');
@@ -314,7 +318,7 @@
         select.appendChild(opt);
       });
       if (rows.length && !rows.find(function (r) { return r.id === currentId; })) {
-        localStorage.setItem('selectedRestaurantId', rows[0].id);
+        localStorage.setItem('selectedBusinessId', rows[0].id);
         select.value = rows[0].id;
       }
     } catch {
@@ -357,14 +361,14 @@
       const btn = document.getElementById('navRestCreate');
       btn.textContent = 'Creating…'; btn.disabled = true;
       try {
-        const res = await _fetch('/api/db/restaurants', {
+        const res = await _fetch('/api/db/businesses', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name, cuisineType }),
         });
         const row = await res.json();
         if (!res.ok) throw new Error(row.error);
-        localStorage.setItem('selectedRestaurantId', row.id);
+        localStorage.setItem('selectedBusinessId', row.id);
         modal.classList.remove('open');
         location.reload();
       } catch (e) {

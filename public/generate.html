@@ -660,16 +660,16 @@ function platformBadge(p) {
   return `<span class="badge badge-${cls[p] || 'ig'}">${map[p] || p.toUpperCase()}</span>`;
 }
 
-// ── Load restaurant header ─────────────────────────────────────────────────
+// ── Load business header ─────────────────────────────────────────────────
 async function loadHeader() {
-  const rid = getRestaurantId();
+  const rid = getBusinessId();
   try {
     const [assets, config] = await Promise.all([
-      fetch(`/api/assets?restaurantId=${rid}`).then(r => r.json()),
-      fetch(`/api/config?restaurantId=${rid}`).then(r => r.json()),
+      fetch(`/api/assets?businessId=${rid}`).then(r => r.json()),
+      fetch(`/api/config?businessId=${rid}`).then(r => r.json()),
     ]);
-    if (config.restaurantName) {
-      document.getElementById('headerName').textContent = config.restaurantName;
+    if (config.businessName || config.restaurantName) {
+      document.getElementById('headerName').textContent = config.businessName || config.restaurantName;
       document.getElementById('headerMeta').textContent =
         [config.cuisineType, config.ownerName ? `Owner: ${config.ownerName}` : null, config.chefName ? config.chefName : null].filter(Boolean).join(' · ');
     }
@@ -702,8 +702,8 @@ function getMondayLabel() {
 async function loadBrief() {
   document.getElementById('briefWeekLabel').textContent = `Week of ${getMondayLabel()}`;
   try {
-    const rid  = getRestaurantId();
-    const data = await fetch(`/api/weekly-brief?restaurantId=${rid}`).then(r => r.json());
+    const rid  = getBusinessId();
+    const data = await fetch(`/api/weekly-brief?businessId=${rid}`).then(r => r.json());
     if (data.featuredDish) document.getElementById('briefDish').value  = data.featuredDish;
     if (data.event)        document.getElementById('briefEvent').value = data.event;
     if (data.promotion)    document.getElementById('briefPromo').value = data.promotion;
@@ -713,13 +713,13 @@ async function loadBrief() {
 
 let briefSavedTimer;
 async function saveBrief() {
-  const rid = getRestaurantId();
+  const rid = getBusinessId();
   try {
     await fetch('/api/weekly-brief', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        restaurantId: rid,
+        businessId: rid,
         featuredDish: document.getElementById('briefDish').value.trim()  || null,
         event:        document.getElementById('briefEvent').value.trim() || null,
         promotion:    document.getElementById('briefPromo').value.trim() || null,
@@ -738,17 +738,17 @@ async function saveBrief() {
 // ── Auto-generate setting ────────────────────────────────────────────────────
 async function loadAutoGenSetting() {
   try {
-    const rid  = getRestaurantId();
-    const r    = await fetch(`/api/db/restaurants/${rid}`).then(r => r.json());
+    const rid  = getBusinessId();
+    const r    = await fetch(`/api/db/businesses/${rid}`).then(r => r.json());
     document.getElementById('autoGenToggle').checked = !!r.autoGenerateEnabled;
   } catch {}
 }
 
 async function saveAutoGenSetting() {
-  const rid     = getRestaurantId();
+  const rid     = getBusinessId();
   const enabled = document.getElementById('autoGenToggle').checked;
   try {
-    await fetch(`/api/db/restaurants/${rid}`, {
+    await fetch(`/api/db/businesses/${rid}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ autoGenerateEnabled: enabled }),
@@ -764,11 +764,11 @@ async function generateAll() {
   btn.disabled = true;
   btn.textContent = 'Queuing…';
   try {
-    const rid = getRestaurantId();
+    const rid = getBusinessId();
     const res = await fetch('/api/generate-all', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ restaurantId: rid }),
+      body: JSON.stringify({ businessId: rid }),
     });
     if (!res.ok) throw new Error(await res.text());
     toast('Generation started — video, owner twin, and image posts are being created', 'success');
@@ -791,10 +791,10 @@ async function writeScript() {
   btn.textContent = 'Writing…';
 
   try {
-    const rid = getRestaurantId();
+    const rid = getBusinessId();
     const [config, brief] = await Promise.all([
-      fetch(`/api/config?restaurantId=${rid}`).then(r => r.json()).catch(() => ({})),
-      fetch(`/api/weekly-brief?restaurantId=${rid}`).then(r => r.json()).catch(() => ({})),
+      fetch(`/api/config?businessId=${rid}`).then(r => r.json()).catch(() => ({})),
+      fetch(`/api/weekly-brief?businessId=${rid}`).then(r => r.json()).catch(() => ({})),
     ]);
 
     const details = [brief.featuredDish, brief.event, brief.promotion, brief.notes]
@@ -804,11 +804,11 @@ async function writeScript() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        topic:          'welcome',
+        topic:        'welcome',
         details,
-        ownerName:      config.ownerName,
-        restaurantName: config.restaurantName,
-        cuisineType:    config.cuisineType,
+        ownerName:    config.ownerName,
+        businessName: config.businessName || config.restaurantName,
+        cuisineType:  config.cuisineType,
       }),
     });
     const data = await res.json();
@@ -880,7 +880,7 @@ async function submitIgPost() {
     if (!res.ok) throw new Error(data.error || 'Post failed');
     closeIgModal();
     toast('Posting to Instagram — check back in a minute!', 'success');
-    setTimeout(() => { fetch(`/api/output?restaurantId=${getRestaurantId()}`).then(r => r.json()).then(renderGallery); }, 90000);
+    setTimeout(() => { fetch(`/api/output?businessId=${getBusinessId()}`).then(r => r.json()).then(renderGallery); }, 90000);
   } catch (e) {
     document.getElementById('igError').textContent = e.message;
     document.getElementById('igError').style.display = 'block';
@@ -914,11 +914,11 @@ function clearScript() {
 let savedTimer;
 async function saveScriptToConfig(script) {
   try {
-    const rid = getRestaurantId();
+    const rid = getBusinessId();
     await fetch('/api/config', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ restaurantId: rid, ownerScript: script }),
+      body: JSON.stringify({ businessId: rid, ownerScript: script }),
     });
     const el = document.getElementById('scriptSaved');
     if (el) {
@@ -937,11 +937,11 @@ async function openPreview() {
   document.getElementById('prevError').style.display = 'none';
 
   try {
-    const rid  = getRestaurantId();
+    const rid  = getBusinessId();
     const res  = await fetch('/api/generate/previews', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('authToken')}` },
-      body:    JSON.stringify({ restaurantId: rid }),
+      body:    JSON.stringify({ businessId: rid }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || res.status);
@@ -993,7 +993,7 @@ async function generate(type) {
   startPolling();
 
   try {
-    const body = { type, restaurantId: getRestaurantId() };
+    const body = { type, businessId: getBusinessId() };
     if (type === 'twin' && customScript) body.customScript = customScript;
     const res  = await fetch('/api/generate', {
       method: 'POST',
@@ -1059,7 +1059,7 @@ let lastOutputHash = '';
 
 async function pollOutput() {
   try {
-    const items = await fetch(`/api/output?restaurantId=${getRestaurantId()}`).then(r => r.json());
+    const items = await fetch(`/api/output?businessId=${getBusinessId()}`).then(r => r.json());
     const hash  = items.map(i => i.id + ':' + i.status).join('|');
     if (hash === lastOutputHash) return;
     lastOutputHash = hash;
@@ -1271,8 +1271,8 @@ async function submitScheduleModal() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        restaurantId: getRestaurantId(),
-        postType:     _schedType,
+        businessId: getBusinessId(),
+        postType:   _schedType,
         contentUrl:   _schedContentUrl,
         scheduledTime,
         status:       'scheduled',
@@ -1292,7 +1292,7 @@ async function submitScheduleModal() {
 // ── Init ───────────────────────────────────────────────────────────────────
 async function loadScriptTemplates() {
   try {
-    const rows = await fetch(`/api/db/script-templates?restaurantId=${getRestaurantId()}&isActive=true`)
+    const rows = await fetch(`/api/db/script-templates?businessId=${getBusinessId()}&isActive=true`)
       .then(r => r.json()).catch(() => []);
     const picker = document.getElementById('tmplPicker');
     rows.forEach(t => {
@@ -1317,8 +1317,8 @@ function pickTemplate() {
 
 async function checkScheduledTwinJobs() {
   try {
-    const rid  = getRestaurantId();
-    const jobs = await fetch(`/api/db/generation-jobs?restaurantId=${rid}&status=pending`)
+    const rid  = getBusinessId();
+    const jobs = await fetch(`/api/db/generation-jobs?businessId=${rid}&status=pending`)
       .then(r => r.json()).catch(() => []);
     const twinJobs = jobs.filter(j => j.jobType === 'owner_twin_video');
     const notice   = document.getElementById('scheduledTwinNotice');
@@ -1338,11 +1338,11 @@ async function init() {
 
   // Restore saved script — prefer server config, fall back to localStorage
   try {
-    const cfg = await fetch(`/api/config?restaurantId=${getRestaurantId()}`).then(r => r.json()).catch(() => ({}));
+    const cfg = await fetch(`/api/config?businessId=${getBusinessId()}`).then(r => r.json()).catch(() => ({}));
     const saved = cfg.ownerScript || localStorage.getItem('ownerScript');
     if (saved) setScript(saved);
   } catch {}
-  const items = await fetch(`/api/output?restaurantId=${getRestaurantId()}`).then(r => r.json()).catch(() => []);
+  const items = await fetch(`/api/output?businessId=${getBusinessId()}`).then(r => r.json()).catch(() => []);
   if (items.length) {
     // Treat any 'generating' job older than 5 min as stale — don't lock the card
     const staleMs = 5 * 60 * 1000;

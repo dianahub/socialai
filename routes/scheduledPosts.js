@@ -6,12 +6,12 @@ const router = Router();
 const VALID_TYPES    = ['owner_twin_video', 'cinematic_video', 'branded_image_feed', 'branded_image_story'];
 const VALID_STATUSES = ['draft', 'scheduled', 'published', 'failed'];
 
-// GET /api/db/scheduled-posts?restaurantId=&status=&from=&to=
+// GET /api/db/scheduled-posts?businessId=&status=&from=&to=
 router.get('/', async (req, res) => {
-  const { restaurantId, status, from, to } = req.query;
+  const { businessId, status, from, to } = req.query;
   const where = {};
-  if (restaurantId) where.restaurantId = Number(restaurantId);
-  if (status)       where.status       = status;
+  if (businessId) where.businessId = Number(businessId);
+  if (status)     where.status     = status;
   if (from || to) {
     where.scheduledTime = {};
     if (from) where.scheduledTime.gte = new Date(from);
@@ -35,7 +35,7 @@ router.get('/:id', async (req, res) => {
       include: { scriptTemplate: true },
     });
     if (!row) return res.status(404).json({ error: 'Not found' });
-    if (req.restaurantId !== undefined && row.restaurantId !== req.restaurantId)
+    if (req.businessId !== undefined && row.businessId !== req.businessId)
       return res.status(404).json({ error: 'Not found' });
     res.json(row);
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -43,10 +43,10 @@ router.get('/:id', async (req, res) => {
 
 // POST /api/db/scheduled-posts
 router.post('/', async (req, res) => {
-  const { restaurantId, postType, contentUrl, caption, scheduledTime,
+  const { businessId, postType, contentUrl, caption, scheduledTime,
           status = 'draft', scriptTemplateId } = req.body;
 
-  if (!restaurantId)   return res.status(400).json({ error: 'restaurantId is required' });
+  if (!businessId)     return res.status(400).json({ error: 'businessId is required' });
   if (!postType)       return res.status(400).json({ error: 'postType is required' });
   if (!scheduledTime)  return res.status(400).json({ error: 'scheduledTime is required' });
   if (!VALID_TYPES.includes(postType))
@@ -57,11 +57,11 @@ router.post('/', async (req, res) => {
   try {
     const row = await db.scheduledPost.create({
       data: {
-        restaurantId:    Number(restaurantId),
+        businessId:       Number(businessId),
         postType,
-        contentUrl:      contentUrl || null,
-        caption:         caption    || null,
-        scheduledTime:   new Date(scheduledTime),
+        contentUrl:       contentUrl || null,
+        caption:          caption    || null,
+        scheduledTime:    new Date(scheduledTime),
         status,
         scriptTemplateId: scriptTemplateId ? Number(scriptTemplateId) : null,
       },
@@ -88,9 +88,9 @@ router.patch('/:id', async (req, res) => {
   if (scriptTemplateId !== undefined) data.scriptTemplateId = scriptTemplateId ? Number(scriptTemplateId) : null;
 
   try {
-    if (req.restaurantId !== undefined) {
+    if (req.businessId !== undefined) {
       const existing = await db.scheduledPost.findUnique({ where: { id: Number(req.params.id) } });
-      if (!existing || existing.restaurantId !== req.restaurantId)
+      if (!existing || existing.businessId !== req.businessId)
         return res.status(404).json({ error: 'Not found' });
     }
     const row = await db.scheduledPost.update({ where: { id: Number(req.params.id) }, data });
@@ -104,9 +104,9 @@ router.patch('/:id', async (req, res) => {
 // DELETE /api/db/scheduled-posts/:id
 router.delete('/:id', async (req, res) => {
   try {
-    if (req.restaurantId !== undefined) {
+    if (req.businessId !== undefined) {
       const existing = await db.scheduledPost.findUnique({ where: { id: Number(req.params.id) } });
-      if (!existing || existing.restaurantId !== req.restaurantId)
+      if (!existing || existing.businessId !== req.businessId)
         return res.status(404).json({ error: 'Not found' });
     }
     await db.scheduledPost.delete({ where: { id: Number(req.params.id) } });
@@ -123,7 +123,7 @@ router.post('/:id/post-now', async (req, res) => {
   try {
     const post = await db.scheduledPost.findUnique({ where: { id: postId } });
     if (!post) return res.status(404).json({ error: 'Not found' });
-    if (req.restaurantId !== undefined && post.restaurantId !== req.restaurantId)
+    if (req.businessId !== undefined && post.businessId !== req.businessId)
       return res.status(404).json({ error: 'Not found' });
     if (!post.contentUrl) return res.status(400).json({ error: 'No content URL on this post — attach media first' });
 

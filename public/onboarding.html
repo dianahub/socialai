@@ -624,7 +624,7 @@ const TOKEN = localStorage.getItem('authToken');
 if (!TOKEN) window.location.href = '/login.html';
 
 const state = {
-  restaurantName: '', cuisineType: '', location: '', ownerName: '',
+  businessName: '', restaurantName: '', cuisineType: '', location: '', ownerName: '',
   voiceTone: 'elegant', tagline: '',
   primaryColor: '#c8a84b', accentColor: '#e5c97a', bgColor: '#090910',
   logoUploaded: false, ownerUploaded: false, photosCount: 0,
@@ -689,7 +689,7 @@ function applyBusinessType() {
 
   // Check IG
   try {
-    const rr = await fetch('/api/db/restaurants', { headers: { Authorization: `Bearer ${TOKEN}` } });
+    const rr = await fetch('/api/db/businesses', { headers: { Authorization: `Bearer ${TOKEN}` } });
     const rs  = await rr.json();
     if (rs[0]?.instagramUserId) state.igConnected = true;
   } catch {}
@@ -727,7 +727,8 @@ async function saveStep1() {
   err.classList.remove('show');
   if (!name) { err.textContent = `${getBizLabel()} name is required.`; err.classList.add('show'); return; }
 
-  state.restaurantName = name;
+  state.businessName = name;
+  state.restaurantName = name; // backward-compat alias
   state.location       = document.getElementById('location').value.trim();
   state.ownerName      = document.getElementById('ownerName').value.trim();
   state.voiceTone      = document.getElementById('voiceTone').value;
@@ -738,6 +739,7 @@ async function saveStep1() {
       method: 'POST',
       headers: authHeaders(),
       body: JSON.stringify({
+        businessName:   state.businessName,
         restaurantName: state.restaurantName,
         ownerName:      state.ownerName,
         tagline:        state.tagline,
@@ -748,10 +750,10 @@ async function saveStep1() {
     if (!res.ok) throw new Error((await res.json()).error || 'Save failed');
     // Also save location to restaurant record
     if (state.location) {
-      const rr = await fetch('/api/db/restaurants', { headers: { Authorization: `Bearer ${TOKEN}` } });
+      const rr = await fetch('/api/db/businesses', { headers: { Authorization: `Bearer ${TOKEN}` } });
       const rs = await rr.json();
       if (rs[0]) {
-        await fetch(`/api/db/restaurants/${rs[0].id}`, {
+        await fetch(`/api/db/businesses/${rs[0].id}`, {
           method: 'PATCH',
           headers: authHeaders(),
           body: JSON.stringify({ location: state.location }),
@@ -783,7 +785,7 @@ function updatePreview() {
   preview.style.background = bg;
   document.getElementById('previewName').style.color = accent;
   document.getElementById('previewTag').style.color  = primary;
-  document.getElementById('previewName').textContent = state.restaurantName || document.getElementById('restaurantName')?.value || 'Your Business';
+  document.getElementById('previewName').textContent = state.businessName || state.restaurantName || document.getElementById('restaurantName')?.value || 'Your Business';
   const loc = document.getElementById('location')?.value || state.location || '';
   document.getElementById('previewTag').textContent = loc;
 }
@@ -820,7 +822,7 @@ async function saveStep3() {
   err.classList.remove('show');
   if (avatarId) {
     try {
-      const res = await fetch(`/api/db/restaurants/${state.restaurantId}`, {
+      const res = await fetch(`/api/db/businesses/${state.businessId}`, {
         method:  'PATCH',
         headers: { ...authHeaders(), 'Content-Type': 'application/json' },
         body:    JSON.stringify({ heygenAvatarId: avatarId }),
@@ -963,7 +965,7 @@ function buildSummary() {
   const meta = BIZ_META[state.businessType] || BIZ_META.other;
   document.getElementById('sumBizIcon').textContent  = meta.icon;
   document.getElementById('sumBizLabel').textContent = getBizLabel();
-  document.getElementById('sumName').textContent    = state.restaurantName || '—';
+  document.getElementById('sumName').textContent    = state.businessName || state.restaurantName || '—';
   document.getElementById('sumLogo').innerHTML      = state.logoUploaded  ? '<span class="check">✓ Uploaded</span>' : '<span class="skip">Skipped</span>';
   document.getElementById('sumOwner').innerHTML     = state.heygenAvatarId ? '<span class="check">✓ HeyGen avatar</span>' : state.ownerVideoUrl ? '<span class="check">✓ Video uploaded</span>' : '<span class="skip">Skipped</span>';
   document.getElementById('sumPhotos').innerHTML    = state.photosCount   ? `<span class="check">✓ ${state.photosCount} photo${state.photosCount > 1 ? 's' : ''}</span>` : '<span class="skip">Skipped</span>';
@@ -979,7 +981,7 @@ async function generateAndFinish() {
   status.classList.add('show');
 
   try {
-    const rr  = await fetch('/api/db/restaurants', { headers: { Authorization: `Bearer ${TOKEN}` } });
+    const rr  = await fetch('/api/db/businesses', { headers: { Authorization: `Bearer ${TOKEN}` } });
     const rs  = await rr.json();
     const rid = rs[0]?.id || 1;
 
@@ -990,7 +992,7 @@ async function generateAndFinish() {
     await fetch('/api/generate-week', {
       method: 'POST',
       headers: authHeaders(),
-      body: JSON.stringify({ restaurantId: rid, startDate, days: 7, postFrequency: '3x_week' }),
+      body: JSON.stringify({ businessId: rid, startDate, days: 7, postFrequency: '3x_week' }),
     });
 
     localStorage.setItem('onboardingComplete', '1');
