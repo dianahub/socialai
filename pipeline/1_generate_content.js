@@ -460,7 +460,7 @@ async function generateVideo(config, jobId) {
     type:          'video',
     platform:      config.platforms || ['instagram', 'tiktok'],
     model:         'Photo Slideshow',
-    prompt:        `${framePaths.length} photos · ${slideSec}s/slide · Ken Burns`,
+    prompt:        `${framePaths.length} photos · ${slideSec}s/slide`,
   };
 }
 
