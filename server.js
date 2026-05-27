@@ -1595,7 +1595,12 @@ app.use('/api/instagram',       igAuthRouter);
 
 // ── Start ─────────────────────────────────────────────────────────────────────
 
-app.listen(PORT, () => {
+// Ensure any schema columns that may have been missed by a failed migration exist
+async function startServer() {
+  try {
+    await db.$executeRaw`ALTER TABLE "Restaurant" ADD COLUMN "facebookPageId" TEXT`;
+  } catch {} // ignore "duplicate column" — means it already exists
+  app.listen(PORT, () => {
   console.log(`\n  ModernSocial.app`);
   console.log(`  ─────────────────────────────`);
   console.log(`  http://localhost:${PORT}`);
@@ -1614,4 +1619,7 @@ app.listen(PORT, () => {
   // Token refresh cron: daily at midnight — refresh IG tokens expiring within 7 days
   cron.schedule('0 0 * * *', refreshExpiringTokens);
   console.log('[ig-token] Daily refresh cron started');
-});
+  });
+}
+
+startServer();
