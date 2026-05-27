@@ -184,6 +184,15 @@ app.get('/auth/google/callback', async (req, res) => {
   const { code, state, error } = req.query;
   const failUrl = '/login.html?error=oauth_failed';
 
+  const parts = (state || '').split('.');
+  const [ts, rand, sig] = parts;
+  const data     = `${ts}.${rand}`;
+  const expected = parts.length === 3
+    ? crypto.createHmac('sha256', process.env.JWT_SECRET || 'oauth-secret').update(data).digest('hex').slice(0, 16)
+    : '?';
+  const age = ts ? Date.now() - parseInt(ts, 36) : -1;
+  console.log('[google-oauth] callback parts:', parts.length, 'sig match:', sig === expected, 'age:', age, 'ms');
+
   if (error || !code || !verifyOAuthState(state)) {
     console.error('[google-oauth] failed — error:', error, 'state valid:', verifyOAuthState(state));
     return res.redirect(failUrl);
