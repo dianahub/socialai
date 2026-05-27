@@ -266,9 +266,18 @@
     <div class="card">
       <div class="card-title">Manual Credentials</div>
       <div class="form-grid">
+        <div class="field" style="grid-column:1/-1">
+          <label>Instagram Profile URL <span style="font-weight:400;text-transform:none;letter-spacing:0;opacity:0.6">(to look up your Account ID)</span></label>
+          <div style="display:flex;gap:0.5rem">
+            <input type="text" id="igProfileUrlSettings" placeholder="https://instagram.com/yourhandle" style="flex:1" oninput="onIgProfileUrlInput(this.value)">
+            <button class="btn btn-ghost btn-sm" onclick="lookupIgAccountId()" style="white-space:nowrap">Find Account ID</button>
+          </div>
+          <div id="igLookupHelper" style="display:none;margin-top:0.5rem;font-size:0.78rem;color:var(--text-muted)"></div>
+        </div>
         <div class="field">
           <label>Instagram Account ID</label>
-          <input type="text" id="igAccountIdSettings" placeholder="e.g. 17841400000000000">
+          <input type="text" id="igAccountIdSettings" placeholder="e.g. 17841400000000000" oninput="onIgAccountIdInput(this.value)">
+          <div id="igAccountIdHelper" style="display:none;margin-top:0.4rem;font-size:0.78rem;color:var(--gold-light)"></div>
         </div>
         <div class="field">
           <label>Access Token</label>
@@ -591,6 +600,50 @@ async function toggleAutoPublishSettings(enabled) {
     toast('Failed: ' + e.message, 'err');
     document.getElementById('autoPublishSettings').checked = !enabled;
   }
+}
+
+function extractIgUsername(value) {
+  value = value.trim().replace(/\/$/, '');
+  if (value.includes('instagram.com/')) {
+    const m = value.match(/instagram\.com\/([A-Za-z0-9_.]+)/);
+    return m ? m[1] : null;
+  }
+  if (/^@?[A-Za-z0-9_.]+$/.test(value)) return value.replace(/^@/, '');
+  return null;
+}
+
+function onIgProfileUrlInput(value) {
+  const helper = document.getElementById('igLookupHelper');
+  const username = extractIgUsername(value);
+  if (username) {
+    helper.style.display = 'block';
+    helper.innerHTML = `Username: <strong>@${username}</strong> — numeric Account ID needed below.
+      <a href="https://commentpicker.com/instagram-user-id.php" target="_blank" rel="noopener"
+         style="color:var(--gold-light);text-decoration:underline;margin-left:0.3rem">Look up ID ↗</a>`;
+  } else {
+    helper.style.display = value ? 'block' : 'none';
+    helper.textContent = value ? 'Enter a full Instagram profile URL (e.g. https://instagram.com/yourhandle)' : '';
+  }
+}
+
+function onIgAccountIdInput(value) {
+  const helper = document.getElementById('igAccountIdHelper');
+  const username = extractIgUsername(value);
+  if (username) {
+    // They pasted a URL/username into the Account ID field — show helper and clear field
+    document.getElementById('igProfileUrlSettings').value = value;
+    document.getElementById('igAccountIdSettings').value = '';
+    helper.style.display = 'none';
+    onIgProfileUrlInput(value);
+  } else {
+    helper.style.display = 'none';
+  }
+}
+
+function lookupIgAccountId() {
+  const profileUrl = document.getElementById('igProfileUrlSettings').value.trim();
+  const username = extractIgUsername(profileUrl) || 'your-username';
+  window.open(`https://commentpicker.com/instagram-user-id.php`, '_blank', 'noopener');
 }
 
 async function saveIgCredsSettings() {
