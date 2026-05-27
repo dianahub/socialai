@@ -11,9 +11,6 @@ const bcrypt  = require('bcryptjs');
 const cron    = require('node-cron');
 const { Resend } = require('resend');
 
-// Ensure any columns added by recent migrations exist, even if migrate deploy failed
-db.$executeRaw`ALTER TABLE "Restaurant" ADD COLUMN "facebookPageId" TEXT`
-  .catch(() => {}); // silently ignore "duplicate column" errors
 
 const app  = express();
 app.set('trust proxy', 1);
