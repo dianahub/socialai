@@ -626,6 +626,7 @@
 let pollInterval  = null;
 let activejobs    = new Set();
 const cardStates  = {};   // type → 'idle' | 'generating' | 'done'
+const activeJobId = {};   // type → specific jobId being tracked
 let customScript  = null;
 let scriptListenerAttached = false;
 let hasHashtags   = false;  // cached from settings check on init
@@ -1039,6 +1040,7 @@ async function generate(type) {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || res.status);
     activejobs.add(data.jobId);
+    activeJobId[type] = data.jobId;
     toast(`${type} generation started`, 'success');
   } catch (e) {
     toast('Generation failed: ' + e.message, 'error');
@@ -1102,31 +1104,26 @@ async function pollOutput() {
 
     renderGallery(items);
 
-    // Only the most recent job per type drives card state — old error/ready jobs
-    // from previous attempts must not reset the card while a new job is in flight.
-    // items is already sorted newest-first, so first occurrence wins.
-    const latestByType = {};
-    for (const item of items) {
-      if (!latestByType[item.type]) latestByType[item.type] = item;
-    }
-
+    // Track completion by specific jobId — not by type or hash, which are
+    // vulnerable to old jobs of the same type interfering with card state.
     let anyGenerating = false;
-    for (const [type, item] of Object.entries(latestByType)) {
-      if (item.status === 'generating') {
-        anyGenerating = true;
-      } else if (item.status === 'ready') {
-        activejobs.delete(item.id);
-        if (cardStates[type] === 'generating') setCardState(type, 'done');
+    for (const [type, jobId] of Object.entries(activeJobId)) {
+      const item = items.find(i => i.id === jobId);
+      if (!item) continue;
+      if (item.status === 'ready') {
+        delete activeJobId[type];
+        activejobs.delete(jobId);
+        setCardState(type, 'done');
       } else if (item.status === 'error') {
-        if (activejobs.has(item.id)) {
-          activejobs.delete(item.id);
-          toast('Generation failed — try again', 'error');
-        }
-        if (cardStates[type] === 'generating') setCardState(type, 'idle');
+        delete activeJobId[type];
+        activejobs.delete(jobId);
+        toast('Generation failed — try again', 'error');
+        setCardState(type, 'idle');
+      } else if (item.status === 'generating') {
+        anyGenerating = true;
       }
     }
 
-    // Check if any card is still in generating state
     const stillGenerating = Object.values(cardStates).some(s => s === 'generating');
     if (!stillGenerating && !anyGenerating) stopPolling();
 
@@ -1247,21 +1244,18 @@ async function clearStuckJobs() {
 
 function openVideoModal(src, isTwin) {
   const player = document.getElementById('videoPlayer');
-  const inner  = document.getElementById('videoModalInner');
   player.src = src;
   if (isTwin) {
-    inner.style.width  = '';
-    inner.style.height = '100%';
-    player.style.width  = 'auto';
-    player.style.height = '100%';
-    player.style.maxWidth = '100%';
-    player.style.objectFit = 'contain';
+    player.style.height    = '90vh';
+    player.style.width     = 'auto';
+    player.style.maxWidth  = '90vw';
+    player.style.maxHeight = '90vh';
+    player.style.objectFit = '';
   } else {
-    inner.style.width  = '100%';
-    inner.style.height = '100%';
-    player.style.width  = '100%';
-    player.style.height = '100%';
-    player.style.maxWidth = '';
+    player.style.height    = '100vh';
+    player.style.width     = '100vw';
+    player.style.maxWidth  = '';
+    player.style.maxHeight = '';
     player.style.objectFit = 'cover';
   }
   document.getElementById('videoModal').style.display = 'flex';
