@@ -1598,6 +1598,10 @@ app.use('/api/instagram',       igAuthRouter);
 // Ensure any schema columns that may have been missed by a failed migration exist
 async function startServer() {
   try {
+    // Clear any lingering failed migration record so future deploys don't block
+    await db.$executeRaw`DELETE FROM "_prisma_migrations" WHERE "migration_name" = '20260527100000_add_facebook_page_id' AND "finished_at" IS NULL`;
+  } catch {}
+  try {
     await db.$executeRaw`ALTER TABLE "Restaurant" ADD COLUMN "facebookPageId" TEXT`;
   } catch {} // ignore "duplicate column" — means it already exists
   app.listen(PORT, () => {
