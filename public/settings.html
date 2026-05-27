@@ -63,6 +63,10 @@
   .hashtag-add { display:flex;gap:0.4rem;margin-top:0.5rem; }
   .hashtag-input { flex:1;background:var(--bg-surface);border:1px solid var(--border);border-radius:6px;padding:0.35rem 0.65rem;color:var(--text);font-family:'Inter',sans-serif;font-size:0.78rem;outline:none; }
   .hashtag-input:focus { border-color:rgba(200,168,75,0.3); }
+  /* AI suggestion chips */
+  .suggest-chip { display:inline-flex;align-items:center;gap:0.25rem;padding:0.22rem 0.55rem;background:rgba(200,168,75,0.08);border:1px solid rgba(200,168,75,0.22);border-radius:20px;font-size:0.72rem;color:var(--gold-light);cursor:pointer;transition:background 0.15s; }
+  .suggest-chip:hover { background:rgba(200,168,75,0.18); }
+  .suggest-chip .plus { font-size:0.8rem;opacity:0.7; }
 
   /* Status chips */
   .status-chip { display:inline-flex;align-items:center;gap:0.4rem;padding:0.25rem 0.65rem;border-radius:20px;font-size:0.75rem;font-weight:500; }
@@ -168,6 +172,19 @@
       <div class="hashtag-add">
         <input type="text" class="hashtag-input" id="hashtagInput" placeholder="#YourRestaurant" onkeydown="if(event.key==='Enter'){event.preventDefault();addDefaultHashtag()}">
         <button class="btn btn-ghost btn-sm" onclick="addDefaultHashtag()">+ Add</button>
+        <button class="btn btn-ghost btn-sm" id="aiSuggestBtn" onclick="suggestHashtagsWithAI()" style="white-space:nowrap">✨ AI Suggest</button>
+      </div>
+
+      <!-- AI suggestions area -->
+      <div id="aiSuggestionsWrap" style="display:none;margin-top:1rem;padding-top:0.85rem;border-top:1px solid var(--border)">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem;">
+          <span style="font-size:0.7rem;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:var(--text-muted)">AI Suggestions — click to add</span>
+          <div style="display:flex;gap:0.4rem;">
+            <button class="btn btn-ghost btn-sm" onclick="addAllSuggested()" style="font-size:0.7rem;padding:0.2rem 0.6rem">Add All</button>
+            <button class="btn btn-ghost btn-sm" onclick="dismissSuggestions()" style="font-size:0.7rem;padding:0.2rem 0.5rem">✕</button>
+          </div>
+        </div>
+        <div id="aiSuggestionChips" style="display:flex;flex-wrap:wrap;gap:0.3rem;"></div>
       </div>
     </div>
 
@@ -368,6 +385,61 @@ function addDefaultHashtag() {
   if (!tag.startsWith('#')) tag = '#' + tag;
   if (!defaultHashtags.includes(tag)) { defaultHashtags.push(tag); renderDefaultHashtags(); }
   input.value = '';
+}
+
+let aiSuggestions = [];
+
+async function suggestHashtagsWithAI() {
+  const btn  = document.getElementById('aiSuggestBtn');
+  const wrap = document.getElementById('aiSuggestionsWrap');
+  btn.disabled  = true;
+  btn.textContent = '…';
+  try {
+    const res  = await api('POST', '/api/suggest-hashtags', { restaurantId });
+    aiSuggestions = (res.hashtags || []).filter(t => !defaultHashtags.includes(t));
+    renderSuggestions();
+    wrap.style.display = aiSuggestions.length ? 'block' : 'none';
+    if (!aiSuggestions.length) toast('No new suggestions — all already added', '');
+  } catch (e) {
+    toast('AI suggestion failed: ' + e.message, 'err');
+  } finally {
+    btn.disabled    = false;
+    btn.textContent = '✨ AI Suggest';
+  }
+}
+
+function renderSuggestions() {
+  const container = document.getElementById('aiSuggestionChips');
+  container.innerHTML = aiSuggestions.map((tag, i) =>
+    `<button class="suggest-chip" onclick="addSuggested(${i})"><span class="plus">+</span>${escHtml(tag)}</button>`
+  ).join('');
+}
+
+function addSuggested(i) {
+  const tag = aiSuggestions[i];
+  if (tag && !defaultHashtags.includes(tag)) {
+    defaultHashtags.push(tag);
+    renderDefaultHashtags();
+  }
+  aiSuggestions.splice(i, 1);
+  renderSuggestions();
+  if (!aiSuggestions.length) document.getElementById('aiSuggestionsWrap').style.display = 'none';
+}
+
+function addAllSuggested() {
+  aiSuggestions.forEach(tag => {
+    if (!defaultHashtags.includes(tag)) defaultHashtags.push(tag);
+  });
+  aiSuggestions = [];
+  renderDefaultHashtags();
+  renderSuggestions();
+  document.getElementById('aiSuggestionsWrap').style.display = 'none';
+  toast('All suggestions added', 'ok');
+}
+
+function dismissSuggestions() {
+  aiSuggestions = [];
+  document.getElementById('aiSuggestionsWrap').style.display = 'none';
 }
 
 function escHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }

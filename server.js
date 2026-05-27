@@ -1406,6 +1406,46 @@ app.post('/api/generate-hashtags', async (req, res) => {
   }
 });
 
+app.post('/api/suggest-hashtags', async (req, res) => {
+  const rid = req.restaurantId || Number(req.body.restaurantId) || 1;
+  try {
+    const r = await db.restaurant.findUnique({ where: { id: rid } });
+    const name        = r?.name        || '';
+    const bizType     = r?.businessType || 'restaurant';
+    const specialty   = r?.cuisineType  || '';
+    const location    = r?.location     || '';
+
+    if (!process.env.ANTHROPIC_API_KEY) {
+      return res.status(503).json({ error: 'ANTHROPIC_API_KEY not configured' });
+    }
+
+    const Anthropic = require('@anthropic-ai/sdk');
+    const client    = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+    const prompt = `Generate 20 highly relevant Instagram/social media hashtags for a business with these details:
+- Business name: ${name}
+- Business type: ${bizType}
+- Specialty/style: ${specialty || 'not specified'}
+- Location: ${location || 'not specified'}
+
+Return ONLY a JSON array of hashtag strings (each starting with #), no explanation. Mix broad appeal tags, niche tags, and location tags. Example format: ["#FineD ining","#PastaLovers","#MiamiEats"]`;
+
+    const msg = await client.messages.create({
+      model:      'claude-haiku-4-5-20251001',
+      max_tokens: 400,
+      messages:   [{ role: 'user', content: prompt }],
+    });
+
+    const raw  = msg.content[0]?.text || '[]';
+    const match = raw.match(/\[[\s\S]*\]/);
+    const tags  = match ? JSON.parse(match[0]) : [];
+    res.json({ hashtags: tags.filter(t => typeof t === 'string' && t.startsWith('#')) });
+  } catch (e) {
+    console.error('[suggest-hashtags] error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ── Schedule ──────────────────────────────────────────────────────────────────
 
 app.get('/api/schedule', (req, res) => {
