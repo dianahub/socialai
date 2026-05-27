@@ -1102,22 +1102,27 @@ async function pollOutput() {
 
     renderGallery(items);
 
-    // Update card states based on job completion
-    let anyGenerating = false;
+    // Only the most recent job per type drives card state — old error/ready jobs
+    // from previous attempts must not reset the card while a new job is in flight.
+    // items is already sorted newest-first, so first occurrence wins.
+    const latestByType = {};
     for (const item of items) {
-      if (item.status === 'ready') {
-        if (activejobs.has(item.id)) activejobs.delete(item.id);
-        // Always resolve the card if it's stuck in generating — activejobs may have lost
-        // track of this job (race between init() fetch and generation completing)
-        if (cardStates[item.type] === 'generating') setCardState(item.type, 'done');
+      if (!latestByType[item.type]) latestByType[item.type] = item;
+    }
+
+    let anyGenerating = false;
+    for (const [type, item] of Object.entries(latestByType)) {
+      if (item.status === 'generating') {
+        anyGenerating = true;
+      } else if (item.status === 'ready') {
+        activejobs.delete(item.id);
+        if (cardStates[type] === 'generating') setCardState(type, 'done');
       } else if (item.status === 'error') {
         if (activejobs.has(item.id)) {
           activejobs.delete(item.id);
           toast('Generation failed — try again', 'error');
         }
-        if (cardStates[item.type] === 'generating') setCardState(item.type, 'idle');
-      } else if (item.status === 'generating') {
-        anyGenerating = true;
+        if (cardStates[type] === 'generating') setCardState(type, 'idle');
       }
     }
 
