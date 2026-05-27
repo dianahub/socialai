@@ -1152,7 +1152,7 @@ app.get('/api/output', (req, res) => {
       catch { return null; }
     })
     .filter(Boolean)
-    .filter(item => !bid || !item.businessId || item.businessId === bid)
+    .filter(item => !bid || item.businessId === bid || (!item.businessId && bid === 1))
     .sort((a, b) => new Date(b.created) - new Date(a.created));
   res.json(items);
 });
@@ -1186,6 +1186,8 @@ app.delete('/api/output/:jobId', (req, res) => {
   if (!fs.existsSync(metaPath)) return res.status(404).json({ error: 'Job not found' });
   try {
     const meta = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
+    const bid = req.businessId || null;
+    if (bid && meta.businessId && meta.businessId !== bid) return res.status(403).json({ error: 'Forbidden' });
     // Delete associated media files
     const filesToDelete = [];
     if (meta.filename)      filesToDelete.push(path.join(OUTPUT_DIR, meta.filename));
@@ -1206,6 +1208,8 @@ app.patch('/api/output/:jobId/approve', (req, res) => {
   if (!fs.existsSync(metaPath)) return res.status(404).json({ error: 'Job not found' });
   try {
     const meta = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
+    const bid = req.businessId || null;
+    if (bid && meta.businessId && meta.businessId !== bid) return res.status(403).json({ error: 'Forbidden' });
     const { caption } = req.body;
     meta.approval_status = 'approved';
     meta.approved_at     = new Date().toISOString();
@@ -1222,6 +1226,8 @@ app.patch('/api/output/:jobId/reject', (req, res) => {
   if (!fs.existsSync(metaPath)) return res.status(404).json({ error: 'Job not found' });
   try {
     const meta = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
+    const bid = req.businessId || null;
+    if (bid && meta.businessId && meta.businessId !== bid) return res.status(403).json({ error: 'Forbidden' });
     meta.approval_status = 'rejected';
     meta.rejected_at     = new Date().toISOString();
     fs.writeFileSync(metaPath, JSON.stringify(meta, null, 2));
@@ -1238,6 +1244,8 @@ app.post('/api/output/:jobId/caption', async (req, res) => {
   if (!fs.existsSync(metaPath)) return res.status(404).json({ error: 'Job not found' });
   try {
     const meta   = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
+    const bid = req.businessId || null;
+    if (bid && meta.businessId && meta.businessId !== bid) return res.status(403).json({ error: 'Forbidden' });
     let   config = {};
     try { config = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8')); } catch {}
 
