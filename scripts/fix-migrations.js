@@ -1,30 +1,44 @@
 /**
- * Preflight script: clears any failed migration records from _prisma_migrations
- * so `prisma migrate deploy` can re-apply them cleanly.
- * Runs before the server starts; exits 0 even on error so startup isn't blocked.
+ * Preflight: uses the Prisma client (not the CLI) to mark the known-failed
+ * facebookPageId migration as rolled-back, then add the column directly.
+ * The Prisma runtime does NOT check migration state, so this works even
+ * when migrate deploy would be blocked.
  */
-const { createClient } = require('@libsql/client');
+require('dotenv').config();
+const { PrismaLibSql } = require('@prisma/adapter-libsql');
+const { PrismaClient }  = require('./lib/generated/prisma');
 
-const dbUrl = process.env.DATABASE_URL || 'file:./data/restaurant.db';
+const MIGRATION = '20260527100000_add_facebook_page_id';
 
 async function main() {
-  const client = createClient({ url: dbUrl });
+  const url     = process.env.DATABASE_URL || 'file:./data/restaurant.db';
+  const adapter = new PrismaLibSql({ url });
+  const db      = new PrismaClient({ adapter });
+
   try {
-    // Delete failed (started but never finished or rolled back) migration records
-    // so prisma migrate deploy will re-apply them with the current SQL file
-    const result = await client.execute(
-      `DELETE FROM "_prisma_migrations"
-       WHERE "finished_at" IS NULL
-         AND "rolled_back_at" IS NULL`
-    );
-    if (result.rowsAffected > 0) {
-      console.log(`[fix-migrations] Cleared ${result.rowsAffected} failed migration record(s) — will be re-applied`);
+    // Mark the failed migration as rolled-back so migrate deploy won't block
+    const r = await db.$executeRaw`
+      UPDATE "_prisma_migrations"
+      SET    "rolled_back_at" = datetime('now')
+      WHERE  "migration_name" = ${MIGRATION}
+        AND  "finished_at"    IS NULL
+        AND  "rolled_back_at" IS NULL
+    `;
+    if (r > 0) console.log(`[fix-migrations] Marked ${MIGRATION} as rolled-back`);
+
+    // Add the column directly so the re-applied migration won't fail
+    // (ignored by SQLite if the column already exists)
+    try {
+      await db.$executeRaw`ALTER TABLE "Restaurant" ADD COLUMN "facebookPageId" TEXT`;
+      console.log('[fix-migrations] Added facebookPageId column');
+    } catch (e) {
+      if (!e.message.includes('duplicate column')) console.warn('[fix-migrations] ALTER TABLE:', e.message);
     }
   } catch (e) {
-    console.warn('[fix-migrations] Could not clear failed migrations:', e.message);
+    console.warn('[fix-migrations] Could not fix migration state:', e.message);
   } finally {
-    client.close();
+    await db.$disconnect();
   }
 }
 
-main().catch(() => {}).then(() => process.exit(0));
+main().catch(console.error).then(() => process.exit(0));
