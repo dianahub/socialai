@@ -459,7 +459,7 @@ async function generateVideo(config, jobId) {
     thumbnailPath: `/output/${thumbFile}`,
     type:          'video',
     platform:      config.platforms || ['instagram', 'tiktok'],
-    model:         'Food Photo Slideshow',
+    model:         'Photo Slideshow',
     prompt:        `${framePaths.length} photos · ${slideSec}s/slide · Ken Burns`,
   };
 }
