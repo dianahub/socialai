@@ -1,2 +1,2 @@
 -- AlterTable
-ALTER TABLE "Business" ADD COLUMN "facebookPageId" TEXT;
+ALTER TABLE "Restaurant" ADD COLUMN "facebookPageId" TEXT;

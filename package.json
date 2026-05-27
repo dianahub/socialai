@@ -4,7 +4,7 @@
   "description": "AI-powered social media content generation for fine dining restaurants",
   "main": "server.js",
   "scripts": {
-    "start": "prisma migrate deploy && node server.js",
+    "start": "prisma migrate resolve --rolled-back 20260527100000_add_facebook_page_id 2>/dev/null; prisma migrate deploy && node server.js",
     "dev": "nodemon server.js",
     "db:migrate": "prisma migrate deploy",
     "db:seed": "node prisma/seed.js",
