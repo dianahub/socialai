@@ -410,7 +410,11 @@ app.use((req, res, next) => {
   // ADMIN_SECRET header bypasses JWT auth (for scripted admin operations)
   const adminSecret = req.headers['x-admin-secret'];
   if (adminSecret && adminSecret === process.env.ADMIN_SECRET) return next();
-  // Admin cookie session (used by /admin/* pages) also bypasses JWT
+  // If a Bearer token is present, always authenticate via JWT — even if an admin
+  // cookie exists. This prevents the admin cookie from scoping API calls to
+  // restaurant 1 when a regular user is signed in with their own token.
+  if (req.headers.authorization?.startsWith('Bearer ')) return requireAuth(req, res, next);
+  // Admin cookie session (used by /admin/* pages) bypasses JWT only when no Bearer token
   if (isAdminAuthed(req)) return next();
   requireAuth(req, res, next);
 });
