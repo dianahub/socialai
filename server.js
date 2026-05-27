@@ -1595,15 +1595,21 @@ app.use('/api/instagram',       igAuthRouter);
 
 // ── Start ─────────────────────────────────────────────────────────────────────
 
-// Ensure any schema columns that may have been missed by a failed migration exist
 async function startServer() {
+  // Clear any failed migration record blocking prisma migrate deploy
   try {
-    // Clear any lingering failed migration record so future deploys don't block
     await db.$executeRaw`DELETE FROM "_prisma_migrations" WHERE "migration_name" = '20260527100000_add_facebook_page_id' AND "finished_at" IS NULL`;
   } catch {}
+  // Ensure facebookPageId column exists (safe to run even if already present)
   try {
     await db.$executeRaw`ALTER TABLE "Restaurant" ADD COLUMN "facebookPageId" TEXT`;
-  } catch {} // ignore "duplicate column" — means it already exists
+  } catch {}
+  // Now run pending migrations cleanly
+  try {
+    require('child_process').execSync('npx prisma migrate deploy', { stdio: 'inherit' });
+  } catch (e) {
+    console.warn('[startup] migrate deploy warning:', e.message);
+  }
   app.listen(PORT, () => {
   console.log(`\n  ModernSocial.app`);
   console.log(`  ─────────────────────────────`);
