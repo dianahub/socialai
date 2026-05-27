@@ -141,11 +141,32 @@ function getCookie(req, name) {
   return null;
 }
 
+// Signed state — no cookie needed; state = "<ts>.<rand>.<hmac>" verified on callback
+function makeOAuthState() {
+  const ts   = Date.now().toString(36);
+  const rand = crypto.randomBytes(8).toString('hex');
+  const data = `${ts}.${rand}`;
+  const sig  = crypto.createHmac('sha256', process.env.JWT_SECRET || 'oauth-secret')
+                     .update(data).digest('hex').slice(0, 16);
+  return `${data}.${sig}`;
+}
+
+function verifyOAuthState(state) {
+  if (!state || typeof state !== 'string') return false;
+  const parts = state.split('.');
+  if (parts.length !== 3) return false;
+  const [ts, rand, sig] = parts;
+  const data     = `${ts}.${rand}`;
+  const expected = crypto.createHmac('sha256', process.env.JWT_SECRET || 'oauth-secret')
+                         .update(data).digest('hex').slice(0, 16);
+  const age = Date.now() - parseInt(ts, 36);
+  return sig === expected && age < 600_000 && age >= 0;
+}
+
 // Start Google OAuth flow
 app.get('/auth/google', (req, res) => {
   if (!googleEnabled()) return res.status(503).send('Google OAuth not configured.');
-  const crypto = require('crypto');
-  const state  = crypto.randomBytes(16).toString('hex');
+  const state  = makeOAuthState();
   const params = new URLSearchParams({
     client_id:     process.env.GOOGLE_CLIENT_ID,
     redirect_uri:  `${process.env.APP_URL}/auth/google/callback`,
@@ -155,18 +176,16 @@ app.get('/auth/google', (req, res) => {
     access_type:   'online',
     prompt:        'select_account',
   });
-  res.setHeader('Set-Cookie', `g_oauth_state=${state}; HttpOnly; Secure; SameSite=Lax; Max-Age=600; Path=/`);
   res.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params}`);
 });
 
 // Google OAuth callback
 app.get('/auth/google/callback', async (req, res) => {
   const { code, state, error } = req.query;
-  const storedState = getCookie(req, 'g_oauth_state');
-  const failUrl     = '/login.html?error=oauth_failed';
+  const failUrl = '/login.html?error=oauth_failed';
 
-  if (error || !code || !storedState || state !== storedState) {
-    console.error('[google-oauth] failed — error:', error, 'state match:', state === storedState);
+  if (error || !code || !verifyOAuthState(state)) {
+    console.error('[google-oauth] failed — error:', error, 'state valid:', verifyOAuthState(state));
     return res.redirect(failUrl);
   }
 
@@ -206,8 +225,6 @@ app.get('/auth/google/callback', async (req, res) => {
     }
 
     const token = createToken(restaurant.id);
-    res.setHeader('Set-Cookie', 'g_oauth_state=; HttpOnly; Secure; Max-Age=0; Path=/');
-    // Pass token via URL hash (never hits the server) so the callback page can store in localStorage
     res.redirect(`/auth-callback.html#token=${encodeURIComponent(token)}`);
   } catch (e) {
     console.error('[google-oauth] error:', e.message);
