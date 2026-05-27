@@ -603,7 +603,7 @@ async function generateImagePost(config, jobId) {
           } else {
             await sharp(imgBuffer).resize(w, h, { fit: 'cover', position: 'centre' }).jpeg({ quality: 90 }).toFile(outputPath);
           }
-          files.push({ filename, path: `/output/${filename}`, width: w, height: h, variant, prompt, model: 'Food Photo' });
+          files.push({ filename, path: `/output/${filename}`, width: w, height: h, variant, prompt, model: 'Branded' });
           continue;
         }
       } catch (e) {
@@ -620,7 +620,7 @@ async function generateImagePost(config, jobId) {
     type:     'image',
     platform: config.platforms || ['instagram'],
     files,
-    note: photoUrls.length ? null : 'Upload food photos on the Assets page for real images.',
+    note: photoUrls.length ? null : 'Upload photos on the Assets page for real images.',
   };
 }
 

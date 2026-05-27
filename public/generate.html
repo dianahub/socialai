@@ -1242,7 +1242,23 @@ async function clearStuckJobs() {
 
 function openVideoModal(src, isTwin) {
   const player = document.getElementById('videoPlayer');
+  const inner  = document.getElementById('videoModalInner');
   player.src = src;
+  if (isTwin) {
+    inner.style.width  = '';
+    inner.style.height = '100%';
+    player.style.width  = 'auto';
+    player.style.height = '100%';
+    player.style.maxWidth = '100%';
+    player.style.objectFit = 'contain';
+  } else {
+    inner.style.width  = '100%';
+    inner.style.height = '100%';
+    player.style.width  = '100%';
+    player.style.height = '100%';
+    player.style.maxWidth = '';
+    player.style.objectFit = 'cover';
+  }
   document.getElementById('videoModal').style.display = 'flex';
 }
 

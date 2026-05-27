@@ -1602,6 +1602,22 @@ async function startServer() {
   try {
     await db.$executeRaw`ALTER TABLE "Restaurant" ADD COLUMN "facebookPageId" TEXT`;
   } catch {}
+  // Clear any meta.json files stuck in 'generating' from a previous server run
+  try {
+    if (fs.existsSync(OUTPUT_DIR)) {
+      fs.readdirSync(OUTPUT_DIR).filter(f => f.endsWith('_meta.json')).forEach(f => {
+        try {
+          const p    = path.join(OUTPUT_DIR, f);
+          const meta = JSON.parse(fs.readFileSync(p, 'utf8'));
+          if (meta.status === 'generating') {
+            meta.status = 'error';
+            meta.error  = 'Server restarted during generation — please generate again.';
+            fs.writeFileSync(p, JSON.stringify(meta, null, 2));
+          }
+        } catch {}
+      });
+    }
+  } catch {}
   app.listen(PORT, () => {
   console.log(`\n  ModernSocial.app`);
   console.log(`  ─────────────────────────────`);
