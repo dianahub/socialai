@@ -1243,11 +1243,23 @@ app.post('/api/output/:jobId/caption', async (req, res) => {
   const metaPath = path.join(OUTPUT_DIR, `${req.params.jobId}_meta.json`);
   if (!fs.existsSync(metaPath)) return res.status(404).json({ error: 'Job not found' });
   try {
-    const meta   = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
-    const bid = req.businessId || null;
-    if (bid && meta.businessId && meta.businessId !== bid) return res.status(403).json({ error: 'Forbidden' });
-    let   config = {};
-    try { config = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8')); } catch {}
+    const meta = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
+    const bid  = req.businessId || meta.businessId || null;
+    if (req.businessId && meta.businessId && meta.businessId !== req.businessId)
+      return res.status(403).json({ error: 'Forbidden' });
+
+    // Load business from DB for name, cuisine, and saved hashtags
+    let businessName = 'our restaurant', cuisineType = '', savedHashtags = [];
+    if (bid) {
+      try {
+        const r = await db.business.findUnique({ where: { id: Number(bid) } });
+        if (r) {
+          businessName = r.name || businessName;
+          cuisineType  = r.cuisineType || '';
+          try { if (r.defaultHashtags) savedHashtags = JSON.parse(r.defaultHashtags); } catch {}
+        }
+      } catch {}
+    }
 
     const Anthropic = require('@anthropic-ai/sdk');
     const client    = new Anthropic.default({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -1256,20 +1268,25 @@ app.post('/api/output/:jobId/caption', async (req, res) => {
       max_tokens: 200,
       messages: [{
         role:    'user',
-        content: `Write an Instagram caption for a restaurant video post.
+        content: `Write an Instagram caption for a restaurant post.
 
-Restaurant: ${config.restaurantName || 'our restaurant'}
-Cuisine: ${config.cuisineType || ''}
+Restaurant: ${businessName}
+Cuisine: ${cuisineType}
 Video script: ${meta.prompt || ''}
 
 Rules:
 - 2-3 sentences, warm and inviting tone
 - Include a call to action (book a table, visit us, link in bio)
-- Add 8-10 relevant hashtags at the end
+- NO hashtags — they will be appended separately
 - Return only the caption text`,
       }],
     });
-    const caption = msg.content[0].type === 'text' ? msg.content[0].text.trim() : '';
+    const captionText = msg.content[0].type === 'text' ? msg.content[0].text.trim() : '';
+
+    // Append saved hashtags from business settings
+    const caption = savedHashtags.length
+      ? `${captionText}\n\n${savedHashtags.join(' ')}`
+      : captionText;
 
     // Save caption to job meta
     meta.caption = caption;
@@ -1325,6 +1342,59 @@ app.post('/api/output/:jobId/post-instagram', async (req, res) => {
     } catch (err) {
       console.error(`[instagram] Job ${req.params.jobId} failed:`, err.message);
       meta.instagram_error = err.message;
+      fs.writeFileSync(metaPath, JSON.stringify(meta, null, 2));
+    }
+  })();
+});
+
+// ── Post to Facebook ──────────────────────────────────────────────────────────
+
+app.post('/api/output/:jobId/post-facebook', async (req, res) => {
+  const metaPath = path.join(OUTPUT_DIR, `${req.params.jobId}_meta.json`);
+  if (!fs.existsSync(metaPath)) return res.status(404).json({ error: 'Job not found' });
+
+  const meta    = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
+  const appUrl  = process.env.APP_URL || '';
+  const caption = req.body.caption || meta.caption || '';
+
+  if (!appUrl)    return res.status(500).json({ error: 'APP_URL env var not set' });
+  if (!caption)   return res.status(400).json({ error: 'Caption is required' });
+
+  const mediaFile = meta.filename || (meta.files && meta.files[0]?.filename);
+  if (!mediaFile) return res.status(400).json({ error: 'No media file on this job' });
+
+  const publicUrl = `${appUrl}/output/${mediaFile}`;
+  const isVideo   = mediaFile.endsWith('.mp4');
+
+  let fbCreds = {};
+  try {
+    const businessId = req.businessId || Number(req.body.businessId) || 1;
+    const r = await db.business.findUnique({ where: { id: businessId } });
+    if (r?.facebookPageId && r?.instagramAccessToken) {
+      fbCreds = { pageId: r.facebookPageId, accessToken: r.instagramAccessToken };
+    }
+  } catch {}
+
+  if (!fbCreds.pageId)
+    return res.status(400).json({ error: 'Facebook Page ID not configured — add it in Settings' });
+
+  res.json({ success: true, status: 'posting', message: 'Posting to Facebook in background...' });
+
+  (async () => {
+    try {
+      const { postFacebookImage, postFacebookVideo } = require('./pipeline/4_instagram');
+      const result = isVideo
+        ? await postFacebookVideo(publicUrl, caption, fbCreds)
+        : await postFacebookImage(publicUrl, caption, fbCreds);
+      meta.facebook_post_id  = result.mediaId;
+      meta.facebook_url      = result.permalink;
+      meta.facebook_posted_at = new Date().toISOString();
+      meta.caption            = caption;
+      fs.writeFileSync(metaPath, JSON.stringify(meta, null, 2));
+      console.log(`[facebook] Job ${req.params.jobId} posted:`, result.permalink);
+    } catch (err) {
+      console.error(`[facebook] Job ${req.params.jobId} failed:`, err.message);
+      meta.facebook_error = err.message;
       fs.writeFileSync(metaPath, JSON.stringify(meta, null, 2));
     }
   })();

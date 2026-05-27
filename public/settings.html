@@ -280,8 +280,13 @@
           <div id="igAccountIdHelper" style="display:none;margin-top:0.4rem;font-size:0.78rem;color:var(--gold-light)"></div>
         </div>
         <div class="field">
+          <label>Facebook Page ID</label>
+          <input type="text" id="fbPageIdSettings" placeholder="e.g. 123456789012345">
+          <div style="margin-top:0.3rem;font-size:0.75rem;color:var(--text-muted)">Find it at facebook.com/your-page → About → Page ID</div>
+        </div>
+        <div class="field">
           <label>Access Token</label>
-          <input type="password" id="igAccessTokenSettings" placeholder="Long-lived Meta Graph API token">
+          <input type="password" id="igAccessTokenSettings" placeholder="Long-lived Meta Graph API token (used for both Instagram & Facebook)">
         </div>
       </div>
       <div class="save-bar" style="margin-top:1rem">
@@ -540,7 +545,8 @@ async function loadAll() {
     if (r.chefName)  document.getElementById('restChefName').value  = r.chefName;
     if (r.tagline)   document.getElementById('restTagline').value   = r.tagline;
     if (r.loginEmail) document.getElementById('loginEmail').value   = r.loginEmail;
-    if (r.instagramUserId) document.getElementById('igAccountIdSettings').value = r.instagramUserId;
+    if (r.instagramUserId)   document.getElementById('igAccountIdSettings').value = r.instagramUserId;
+    if (r.facebookPageId)    document.getElementById('fbPageIdSettings').value    = r.facebookPageId;
     if (r.instagramAccessToken) document.getElementById('igAccessTokenSettings').placeholder = '••••••• (saved)';
     document.getElementById('autoPublishSettings').checked = !!r.autoPublishEnabled;
   } catch {}
@@ -647,11 +653,16 @@ function lookupIgAccountId() {
 }
 
 async function saveIgCredsSettings() {
-  const id    = document.getElementById('igAccountIdSettings').value.trim();
-  const token = document.getElementById('igAccessTokenSettings').value.trim();
+  const id     = document.getElementById('igAccountIdSettings').value.trim();
+  const fbPage = document.getElementById('fbPageIdSettings').value.trim();
+  const token  = document.getElementById('igAccessTokenSettings').value.trim();
   try {
-    await api('PATCH', `/api/db/businesses/${businessId}`, { instagramUserId: id, instagramAccessToken: token || undefined });
-    toast('Instagram credentials saved', 'ok');
+    await api('PATCH', `/api/db/businesses/${businessId}`, {
+      instagramUserId:      id,
+      facebookPageId:       fbPage || undefined,
+      instagramAccessToken: token  || undefined,
+    });
+    toast('Social media credentials saved', 'ok');
     await loadIgStatus();
   } catch (e) { toast('Save failed: ' + e.message, 'err'); }
 }

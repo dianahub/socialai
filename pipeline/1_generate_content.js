@@ -422,7 +422,7 @@ async function generateVideo(config, jobId) {
     // Scale every input to exactly 1920x1080 then build xfade chain
     const filterParts = [];
     for (let i = 0; i < n; i++) {
-      filterParts.push(`[${i}:v]scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2,setsar=1[v${i}]`);
+      filterParts.push(`[${i}:v]scale=1920:1080:force_original_aspect_ratio=increase,crop=1920:1080,setsar=1[v${i}]`);
     }
 
     let prev = '[v0]';

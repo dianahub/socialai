@@ -106,4 +106,60 @@ async function postImage(imageUrl, caption, creds = {}) {
   return { mediaId: publishData.id, permalink };
 }
 
-module.exports = { postReel, postImage };
+/** Post an image to a Facebook Page. */
+async function postFacebookImage(imageUrl, caption, creds = {}) {
+  const token  = creds.accessToken || process.env.INSTAGRAM_ACCESS_TOKEN || '';
+  const pageId = creds.pageId      || process.env.FACEBOOK_PAGE_ID       || '';
+  if (!token || !pageId)
+    throw new Error('Facebook Page ID and access token must be set');
+
+  // Get a page-level access token from the user token
+  const accsRes  = await fetch(`${GRAPH}/me/accounts?access_token=${token}`);
+  const accsData = await accsRes.json();
+  const page     = (accsData.data || []).find(p => p.id === pageId);
+  const pageToken = page?.access_token || token; // fall back to user token
+
+  console.log('[facebook] Posting image to page', pageId);
+  const res  = await fetch(`${GRAPH}/${pageId}/photos`, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ url: imageUrl, caption, access_token: pageToken }),
+  });
+  const data = await res.json();
+  if (!res.ok || !data.id)
+    throw new Error(`Facebook image post failed: ${JSON.stringify(data)}`);
+
+  const postId    = data.post_id || data.id;
+  const permalink = `https://www.facebook.com/${postId}`;
+  console.log('[facebook] Posted! Post ID:', postId);
+  return { mediaId: postId, permalink };
+}
+
+/** Post a video to a Facebook Page. */
+async function postFacebookVideo(videoUrl, caption, creds = {}) {
+  const token  = creds.accessToken || process.env.INSTAGRAM_ACCESS_TOKEN || '';
+  const pageId = creds.pageId      || process.env.FACEBOOK_PAGE_ID       || '';
+  if (!token || !pageId)
+    throw new Error('Facebook Page ID and access token must be set');
+
+  const accsRes   = await fetch(`${GRAPH}/me/accounts?access_token=${token}`);
+  const accsData  = await accsRes.json();
+  const page      = (accsData.data || []).find(p => p.id === pageId);
+  const pageToken = page?.access_token || token;
+
+  console.log('[facebook] Posting video to page', pageId);
+  const res  = await fetch(`${GRAPH}/${pageId}/videos`, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ file_url: videoUrl, description: caption, access_token: pageToken }),
+  });
+  const data = await res.json();
+  if (!res.ok || !data.id)
+    throw new Error(`Facebook video post failed: ${JSON.stringify(data)}`);
+
+  const permalink = `https://www.facebook.com/${data.id}`;
+  console.log('[facebook] Posted! Video ID:', data.id);
+  return { mediaId: data.id, permalink };
+}
+
+module.exports = { postReel, postImage, postFacebookImage, postFacebookVideo };

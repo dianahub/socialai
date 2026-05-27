@@ -30,6 +30,7 @@ model Business {
   instagramAccessToken String?
   instagramUserId      String?
   instagramUrl         String?
+  facebookPageId       String?
   tokenExpiresAt       DateTime?
   autoPublishEnabled   Boolean  @default(false)
   autoGenerateEnabled  Boolean  @default(false)
