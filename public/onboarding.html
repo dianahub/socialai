@@ -485,21 +485,52 @@
 
     <!-- HeyGen Avatar ID -->
     <div style="margin-top:1.2rem; padding:1.2rem; border-radius:12px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1);">
-      <div style="font-size:0.82rem; font-weight:700; letter-spacing:0.06em; color:var(--gold); margin-bottom:0.6rem;">🎬 HeyGen Video Avatar</div>
+      <div style="font-size:0.82rem; font-weight:700; letter-spacing:0.06em; color:var(--gold); margin-bottom:0.6rem;">🎬 Owner Twin Video</div>
       <div style="font-size:0.78rem; color:var(--text-muted); margin-bottom:1rem; line-height:1.6;">
-        To generate the owner twin video you need a <strong style="color:var(--text)">pre-trained HeyGen video avatar</strong>.<br>
-        <ol style="margin:0.6rem 0 0 1.1rem; padding:0; display:flex; flex-direction:column; gap:0.3rem;">
-          <li>Go to <a href="https://app.heygen.com/avatars" target="_blank" style="color:var(--gold)">app.heygen.com/avatars</a></li>
-          <li>Click <strong>Create Avatar</strong> and upload 2–5 min of yourself speaking</li>
-          <li>Once training is complete, open the avatar and copy its <strong>Avatar ID</strong></li>
-          <li>Paste it below</li>
-        </ol>
+        Choose one option for the owner twin video:
       </div>
-      <input type="text" id="heygenAvatarId"
-        placeholder="e.g. 3d801ac11ed04ccc8efba1cdf0f75297"
-        style="width:100%; box-sizing:border-box; padding:0.6rem 0.8rem; border-radius:8px; border:1px solid rgba(255,255,255,0.15); background:rgba(0,0,0,0.3); color:var(--text); font-size:0.82rem; font-family:monospace; outline:none;"
-      />
-      <div id="avatarIdStatus" style="font-size:0.72rem; color:var(--green); margin-top:0.4rem; display:none;">✓ Avatar ID saved</div>
+
+      <!-- Option A: HeyGen Avatar ID -->
+      <div style="margin-bottom:0.75rem;">
+        <div style="font-size:0.72rem; font-weight:600; letter-spacing:0.07em; text-transform:uppercase; color:var(--text-muted); margin-bottom:0.5rem;">Option A — HeyGen Avatar ID</div>
+        <div style="font-size:0.75rem; color:var(--text-muted); margin-bottom:0.6rem; line-height:1.55;">
+          <ol style="margin:0 0 0 1.1rem; padding:0; display:flex; flex-direction:column; gap:0.25rem;">
+            <li>Go to <a href="https://app.heygen.com/avatars" target="_blank" style="color:var(--gold)">app.heygen.com/avatars</a></li>
+            <li>Create an avatar — upload 2–5 min of yourself speaking</li>
+            <li>Once training is complete, copy the <strong>Avatar ID</strong> and paste below</li>
+          </ol>
+        </div>
+        <input type="text" id="heygenAvatarId"
+          placeholder="e.g. 3d801ac11ed04ccc8efba1cdf0f75297"
+          style="width:100%; box-sizing:border-box; padding:0.6rem 0.8rem; border-radius:8px; border:1px solid rgba(255,255,255,0.15); background:rgba(0,0,0,0.3); color:var(--text); font-size:0.82rem; font-family:monospace; outline:none;"
+        />
+        <div id="avatarIdStatus" style="font-size:0.72rem; color:var(--green); margin-top:0.35rem; display:none;">✓ Avatar ID saved</div>
+      </div>
+
+      <!-- OR divider -->
+      <div style="display:flex; align-items:center; gap:0.65rem; margin:1rem 0;">
+        <div style="flex:1; height:1px; background:rgba(255,255,255,0.09)"></div>
+        <span style="font-size:0.68rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.08em;">or</span>
+        <div style="flex:1; height:1px; background:rgba(255,255,255,0.09)"></div>
+      </div>
+
+      <!-- Option B: Upload own video -->
+      <div>
+        <div style="font-size:0.72rem; font-weight:600; letter-spacing:0.07em; text-transform:uppercase; color:var(--text-muted); margin-bottom:0.4rem;">Option B — Upload Your Own Video</div>
+        <p style="font-size:0.75rem; color:var(--text-muted); margin-bottom:0.65rem; line-height:1.5;">
+          Record yourself speaking to camera and upload it here. No HeyGen account needed.
+        </p>
+        <div class="upload-zone-wide" id="zoneownervideo" style="padding:1rem;">
+          <input type="file" id="ownerVideoInputOnboarding" accept="video/mp4,video/quicktime,video/webm,video/*" onchange="uploadOwnerVideoOnboarding(this)" />
+          <div class="upload-icon">🎥</div>
+          <div class="upload-label" id="ownerVideoOnboardingLabel">Drop video or click to browse</div>
+          <div class="upload-sublabel">MP4, MOV, or WebM · Max 200 MB</div>
+          <div class="upload-status" id="ownerVideoOnboardingStatus"></div>
+        </div>
+        <div id="ownerVideoOnboardingPreview" style="display:none; margin-top:0.65rem;">
+          <video id="ownerVideoOnboardingPlayer" controls style="width:100%; border-radius:8px; max-height:160px; border:1px solid rgba(255,255,255,0.12);"></video>
+        </div>
+      </div>
     </div>
 
     <div class="upload-zone-wide" id="zonephotos">
@@ -599,6 +630,7 @@ const state = {
   logoUploaded: false, ownerUploaded: false, photosCount: 0,
   igConnected: false,
   businessType: 'restaurant',
+  heygenAvatarId: '', ownerVideoUrl: '',
 };
 
 let currentStep = 1;
@@ -795,7 +827,7 @@ async function saveStep3() {
       });
       if (!res.ok) throw new Error((await res.json()).error || 'Save failed');
       if (status) { status.style.display = 'block'; }
-      state.heygenAvatarId = avatarId;
+      state.heygenAvatarId  = avatarId;
     } catch (e) {
       err.textContent = e.message;
       err.classList.add('show');
@@ -831,6 +863,46 @@ async function uploadAsset(type, input) {
     err.textContent = e.message;
     err.classList.add('show');
     saving.classList.remove('show');
+  }
+}
+
+async function uploadOwnerVideoOnboarding(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const saving = document.getElementById('saving3');
+  const err    = document.getElementById('err3');
+  const label  = document.getElementById('ownerVideoOnboardingLabel');
+  const status = document.getElementById('ownerVideoOnboardingStatus');
+  saving.textContent = 'Uploading video…';
+  saving.classList.add('show');
+  err.classList.remove('show');
+  label.textContent = 'Uploading…';
+
+  const fd = new FormData();
+  fd.append('file', file);
+  try {
+    const res = await fetch('/api/upload/owner-video', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${TOKEN}` },
+      body: fd,
+    });
+    if (!res.ok) throw new Error((await res.json()).error || 'Upload failed');
+    const data = await res.json();
+    state.ownerVideoUrl = data.url || '';
+    document.getElementById('zoneownervideo').classList.add('uploaded');
+    status.textContent    = '✓ Video uploaded';
+    status.style.display  = 'block';
+    label.textContent     = 'Video uploaded';
+    const preview  = document.getElementById('ownerVideoOnboardingPreview');
+    const player   = document.getElementById('ownerVideoOnboardingPlayer');
+    player.src     = data.url || URL.createObjectURL(file);
+    preview.style.display = 'block';
+    saving.classList.remove('show');
+  } catch (e) {
+    err.textContent = e.message;
+    err.classList.add('show');
+    saving.classList.remove('show');
+    label.textContent = 'Drop video or click to browse';
   }
 }
 
@@ -893,7 +965,7 @@ function buildSummary() {
   document.getElementById('sumBizLabel').textContent = getBizLabel();
   document.getElementById('sumName').textContent    = state.restaurantName || '—';
   document.getElementById('sumLogo').innerHTML      = state.logoUploaded  ? '<span class="check">✓ Uploaded</span>' : '<span class="skip">Skipped</span>';
-  document.getElementById('sumOwner').innerHTML     = state.heygenAvatarId ? '<span class="check">✓ Connected</span>' : '<span class="skip">Skipped</span>';
+  document.getElementById('sumOwner').innerHTML     = state.heygenAvatarId ? '<span class="check">✓ HeyGen avatar</span>' : state.ownerVideoUrl ? '<span class="check">✓ Video uploaded</span>' : '<span class="skip">Skipped</span>';
   document.getElementById('sumPhotos').innerHTML    = state.photosCount   ? `<span class="check">✓ ${state.photosCount} photo${state.photosCount > 1 ? 's' : ''}</span>` : '<span class="skip">Skipped</span>';
   document.getElementById('sumIg').innerHTML        = state.igUrl ? `<span class="check">${state.igUrl.replace('https://www.instagram.com/','@').replace('https://instagram.com/','@')}</span>` : state.igConnected ? '<span class="check">✓ Connected</span>' : '<span class="skip">Skipped</span>';
 }

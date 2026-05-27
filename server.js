@@ -570,6 +570,37 @@ app.post('/api/upload/twin-background', uploadTwinBg.single('file'), async (req,
   res.json({ success: true, url: localUrl });
 });
 
+const uploadOwnerVideo = multer({ storage: multer.memoryStorage(), limits: { fileSize: 200 * 1024 * 1024 } });
+
+app.post('/api/upload/owner-video', uploadOwnerVideo.single('file'), async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No file received' });
+  const restaurantId = req.restaurantId || Number(req.body.restaurantId) || 1;
+  const ext          = path.extname(req.file.originalname).toLowerCase();
+
+  if (cld.isConfigured()) {
+    try {
+      const result = await cld.uploadBuffer(req.file.buffer, {
+        public_id:     `restaurant-social-ai/${restaurantId}/owner-video`,
+        overwrite:     true,
+        resource_type: 'video',
+        quality:       'auto',
+      });
+      await db.restaurant.update({ where: { id: restaurantId }, data: { ownerVideoUrl: result.url } }).catch(() => {});
+      return res.json({ success: true, url: result.url });
+    } catch (e) {
+      console.error('[owner-video] Cloudinary upload failed:', e.message);
+      return res.status(500).json({ error: 'Upload failed: ' + e.message });
+    }
+  }
+
+  // Local fallback
+  const filename = `owner-video${ext || '.mp4'}`;
+  saveLocalAsset('owner-video', filename, req.file.buffer);
+  const localUrl = `/assets/owner-video/${filename}`;
+  await db.restaurant.update({ where: { id: restaurantId }, data: { ownerVideoUrl: localUrl } }).catch(() => {});
+  res.json({ success: true, url: localUrl });
+});
+
 // ── Asset management ──────────────────────────────────────────────────────────
 
 app.get('/api/assets', async (req, res) => {
@@ -673,6 +704,7 @@ function restaurantToConfig(r) {
     heygenAvatarId:    r.heygenAvatarId    || null,
     heygenAvatarStyle: r.heygenAvatarStyle || 'normal',
     twinBackgroundUrl: r.twinBackgroundUrl || '',
+    ownerVideoUrl:     r.ownerVideoUrl     || '',
     ownerVoiceId:      r.ownerVoiceId      || null,
     voiceTone:         r.voiceTone         || '',
   };

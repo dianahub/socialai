@@ -589,6 +589,26 @@
         </select>
       </div>
     </div>
+
+    <!-- OR: upload own video -->
+    <div style="display:flex;align-items:center;gap:0.75rem;margin:1.5rem 0 1.1rem;">
+      <div style="flex:1;height:1px;background:rgba(255,255,255,0.08)"></div>
+      <span style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.09em;white-space:nowrap;">Don't have HeyGen? Upload your own video</span>
+      <div style="flex:1;height:1px;background:rgba(255,255,255,0.08)"></div>
+    </div>
+    <p style="font-size:0.76rem;color:var(--text-muted);margin-bottom:0.85rem;line-height:1.55;">
+      Upload a pre-recorded video of the owner speaking. It will be used as the owner twin video directly — no HeyGen account required.
+    </p>
+    <div class="drop-zone" id="ownerVideoZone">
+      <input type="file" id="ownerVideoInput" accept="video/mp4,video/quicktime,video/webm,video/*">
+      <div class="drop-icon" id="ownerVideoIcon">🎥</div>
+      <div class="drop-label" id="ownerVideoLabel">Drop video here or <u>click to browse</u></div>
+      <div class="drop-hint">MP4, MOV, or WebM · Max 200 MB</div>
+    </div>
+    <div id="ownerVideoPreviewWrap" style="display:none;margin-top:0.75rem;">
+      <video id="ownerVideoPreview" controls style="width:100%;max-height:200px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);"></video>
+      <p style="font-size:0.72rem;color:var(--green,#4ade80);margin-top:0.35rem;">✓ Video uploaded</p>
+    </div>
   </div>
 
   <!-- ── Login Credentials ── -->
@@ -739,6 +759,24 @@ setupDropZone('logoZone', 'logoInput', 'logo', async (file) => {
   toast('Logo uploaded', 'success');
 });
 
+
+// ── Owner video upload ─────────────────────────────────────────────────────
+setupDropZone('ownerVideoZone', 'ownerVideoInput', 'owner-video', async (file) => {
+  const zone = document.getElementById('ownerVideoZone');
+  zone.querySelector('.drop-label').textContent = 'Uploading…';
+  const data = await uploadFile('/api/upload/owner-video', 'file', file, { restaurantId: getRestaurantId() });
+  showOwnerVideoPreview(data.url || URL.createObjectURL(file));
+  toast('Video uploaded', 'success');
+});
+
+function showOwnerVideoPreview(url) {
+  const wrap  = document.getElementById('ownerVideoPreviewWrap');
+  const video = document.getElementById('ownerVideoPreview');
+  video.src       = url;
+  wrap.style.display = 'block';
+  document.getElementById('ownerVideoIcon').style.display  = 'none';
+  document.getElementById('ownerVideoLabel').style.display = 'none';
+}
 
 // ── Photo grid ─────────────────────────────────────────────────────────────
 function buildPhotoGrid() {
@@ -969,6 +1007,7 @@ async function loadSavedState() {
       document.getElementById('twinBackgroundUrl').value = config.twinBackgroundUrl;
       showTwinBgPreview(config.twinBackgroundUrl, /\.(mp4|mov|webm)/i.test(config.twinBackgroundUrl));
     }
+    if (config.ownerVideoUrl) showOwnerVideoPreview(config.ownerVideoUrl);
 
     setBizTypeDropdown(config.businessType || 'restaurant');
 
