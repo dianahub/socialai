@@ -502,10 +502,11 @@ async function generateTwinClip(config, jobId, customScript) {
         throw new Error('No HeyGen avatar ID set. Add your HeyGen Avatar ID in the Assets page to generate twin videos.');
       }
 
-      const uiStyle    = config.heygenAvatarStyle || 'normal';
+      const uiStyle    = config.heygenAvatarStyle || 'closeUp';
       // HeyGen API only accepts: normal, circle, closeUp, full, voiceOnly
       // 'expressive' is our UI label for Avatar V — maps to 'normal' on the API
-      const apiStyle   = ['circle','closeUp','full','normal','voiceOnly'].includes(uiStyle) ? uiStyle : 'normal';
+      // Default closeUp so face fills the 9:16 portrait frame without top/bottom bars
+      const apiStyle   = ['circle','closeUp','full','normal','voiceOnly'].includes(uiStyle) ? uiStyle : 'closeUp';
       character  = { type: 'avatar', avatar_id: config.heygenAvatarId, avatar_style: apiStyle };
       modelLabel = uiStyle === 'expressive' ? 'HeyGen Digital Twin Avatar V' : 'HeyGen Video Avatar';
       console.log(`[generateTwinClip] Using avatar ${config.heygenAvatarId} style=${apiStyle} (ui=${uiStyle})`);
