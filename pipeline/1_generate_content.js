@@ -830,6 +830,7 @@ async function burnTwinCaptions(videoUrl, captionUrl, script, outPath) {
     console.log('[twin captions] ffmpeg not found — skipping');
     return false;
   }
+  const { spawnSync } = require('child_process');
   fs.mkdirSync(TWIN_TEMP_DIR, { recursive: true });
   const id      = require('crypto').randomUUID();
   const rawPath = path.join(TWIN_TEMP_DIR, `${id}_raw.mp4`);
@@ -851,12 +852,34 @@ async function burnTwinCaptions(videoUrl, captionUrl, script, outPath) {
     const drawtextFilters = _buildDrawtextFilters(srt, capDir, fontFile);
     if (!drawtextFilters) { console.log('[twin captions] No cues — skipping'); return false; }
 
-    // Dark panel over bottom 28% of 1280px frame + captions (matches ai-trading-research)
-    const vf       = drawtextFilters;
+    // Detect and remove baked-in black bars from HeyGen output
+    let cropFilter = '';
+    try {
+      const detectResult = spawnSync(ffmpegBin,
+        ['-i', rawPath, '-vf', 'cropdetect=24:2:0', '-frames:v', '90', '-f', 'null', '/dev/null'],
+        { timeout: 30000, maxBuffer: 5 * 1024 * 1024 }
+      );
+      const detectOut = (detectResult.stderr || Buffer.alloc(0)).toString();
+      const cropMatches = [...detectOut.matchAll(/crop=(\d+:\d+:\d+:\d+)/g)];
+      if (cropMatches.length) {
+        const [cw, ch, cx, cy] = cropMatches[cropMatches.length - 1][1].split(':').map(Number);
+        // Only crop if significant bars detected (more than 4% trimmed from height)
+        const rawH = 1280;
+        if (ch < rawH * 0.96) {
+          cropFilter = `crop=${cw}:${ch}:${cx}:${cy},`;
+          console.log(`[twin captions] Cropping bars: ${cw}x${ch} at ${cx},${cy}`);
+        } else {
+          console.log('[twin captions] No significant bars detected');
+        }
+      }
+    } catch (e) {
+      console.warn('[twin captions] cropdetect failed, skipping crop:', e.message);
+    }
+
+    const vf = cropFilter + drawtextFilters;
     const cueCount = (drawtextFilters.match(/drawtext=/g) || []).length;
     console.log(`[twin captions] Burning ${cueCount} cues...`);
 
-    const { spawnSync } = require('child_process');
     const result = spawnSync(ffmpegBin,
       ['-y', '-i', rawPath, '-vf', vf, '-c:v', 'libx264', '-crf', '23', '-c:a', 'copy', '-preset', 'fast', outPath],
       { timeout: 180000, maxBuffer: 50 * 1024 * 1024 }

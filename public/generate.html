@@ -1124,15 +1124,8 @@ let lastOutputHash = '';
 async function pollOutput() {
   try {
     const items = await fetch(`/api/output?businessId=${getBusinessId()}`).then(r => r.json());
-    const hash  = items.map(i => i.id + ':' + i.status).join('|');
-    if (hash === lastOutputHash) return;
-    lastOutputHash = hash;
 
-    renderGallery(items);
-
-    // Track completion by specific jobId — not by type or hash, which are
-    // vulnerable to old jobs of the same type interfering with card state.
-    let anyGenerating = false;
+    // Always check tracked jobs first — don't gate on hash so completions are never missed
     for (const [type, jobId] of Object.entries(activeJobId)) {
       const item = items.find(i => i.id === jobId);
       if (!item) continue;
@@ -1140,18 +1133,25 @@ async function pollOutput() {
         delete activeJobId[type];
         activejobs.delete(jobId);
         setCardState(type, 'done');
+        lastOutputHash = '';   // force gallery re-render on next tick
       } else if (item.status === 'error') {
         delete activeJobId[type];
         activejobs.delete(jobId);
         toast('Generation failed — try again', 'error');
         setCardState(type, 'idle');
-      } else if (item.status === 'generating') {
-        anyGenerating = true;
+        lastOutputHash = '';
       }
     }
 
+    // Re-render gallery only when something changed
+    const hash = items.map(i => i.id + ':' + i.status).join('|');
+    if (hash !== lastOutputHash) {
+      lastOutputHash = hash;
+      renderGallery(items);
+    }
+
     const stillGenerating = Object.values(cardStates).some(s => s === 'generating');
-    if (!stillGenerating && !anyGenerating) stopPolling();
+    if (!stillGenerating) stopPolling();
 
   } catch (e) {
     console.warn('Poll failed:', e.message);
@@ -1272,8 +1272,6 @@ function openVideoModal(src, isTwin) {
   const player = document.getElementById('videoPlayer');
   player.src = src;
   if (isTwin) {
-    // Portrait 9:16 — width is derived from height so the element is always the
-    // right aspect ratio. object-fit:cover fills any leftover gap on narrow screens.
     player.style.height    = '100vh';
     player.style.width     = 'calc(100vh * 9 / 16)';
     player.style.maxWidth  = '100vw';
