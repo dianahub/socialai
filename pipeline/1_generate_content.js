@@ -408,8 +408,13 @@ async function generateVideo(config, jobId) {
   const thumbFile  = `${jobId}_video_thumb.jpg`;
   const thumbPath  = path.join(OUTPUT_DIR, thumbFile);
 
-  const slideSec = 4;
-  const n        = framePaths.length;
+  const slideSec   = 4;
+  const n          = framePaths.length;
+  const videoDurSec = n * slideSec - 0.5 * (n - 1); // total with crossfades
+
+  // Generate background music in parallel with frame prep
+  const { generateMusic } = require('../lib/musicGen');
+  const musicPath = await generateMusic(config, videoDurSec);
 
   // Build xfade filter chain: each input scaled + padded, then chained fades
   await new Promise((resolve, reject) => {
@@ -434,16 +439,36 @@ async function generateVideo(config, jobId) {
     }
     if (n === 1) filterParts.push('[v0]copy[vout]');
 
+    const fadeStart = Math.max(0, videoDurSec - 2);
+
+    if (musicPath) {
+      // Mix music: loop if shorter than video, fade out last 2s, trim to video length
+      cmd.input(musicPath);
+      const audioIdx = n; // music is input after all frames
+      filterParts.push(
+        `[${audioIdx}:a]aloop=loop=-1:size=2e+09,afade=t=out:st=${fadeStart}:d=2,atrim=duration=${videoDurSec}[aout]`
+      );
+      cmd
+        .complexFilter(filterParts.join(';'))
+        .outputOptions(['-map [vout]', '-map [aout]', '-c:v libx264', '-c:a aac', '-b:a 192k',
+                        '-pix_fmt yuv420p', '-crf 23', '-preset fast', '-movflags +faststart', '-r 25']);
+    } else {
+      cmd
+        .complexFilter(filterParts.join(';'))
+        .outputOptions(['-map [vout]', '-c:v libx264', '-pix_fmt yuv420p',
+                        '-crf 23', '-preset fast', '-movflags +faststart', '-r 25']);
+    }
+
     cmd
-      .complexFilter(filterParts.join(';'))
-      .outputOptions(['-map [vout]', '-c:v libx264', '-pix_fmt yuv420p',
-                      '-crf 23', '-preset fast', '-movflags +faststart', '-r 25'])
       .output(outputPath)
       .on('start', cmd => console.log('[generateVideo] ffmpeg start:', cmd.slice(0, 120)))
       .on('end',   ()  => { clearTimeout(ffmpegTimeout); resolve(); })
       .on('error', err => { clearTimeout(ffmpegTimeout); reject(err); })
       .run();
   });
+
+  // Cleanup music temp file
+  if (musicPath) try { fs.unlinkSync(musicPath); } catch {}
 
   // Thumbnail = first frame
   fs.copyFileSync(framePaths[0], thumbPath);
