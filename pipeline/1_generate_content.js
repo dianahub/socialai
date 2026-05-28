@@ -534,7 +534,7 @@ async function generateTwinClip(config, jobId, customScript) {
           voice: voiceInput,
           background,
         }],
-        dimension:    { width: 720, height: 1280 },
+        dimension:    { width: 1080, height: 1920 },
         aspect_ratio: '9:16',
         caption: true,
         test: false,
@@ -864,7 +864,7 @@ async function burnTwinCaptions(videoUrl, captionUrl, script, outPath) {
       if (cropMatches.length) {
         const [cw, ch, cx, cy] = cropMatches[cropMatches.length - 1][1].split(':').map(Number);
         // Only crop if significant bars detected (more than 4% trimmed from height)
-        const rawH = 1280;
+        const rawH = 1920;
         if (ch < rawH * 0.96) {
           cropFilter = `crop=${cw}:${ch}:${cx}:${cy},`;
           console.log(`[twin captions] Cropping bars: ${cw}x${ch} at ${cx},${cy}`);
