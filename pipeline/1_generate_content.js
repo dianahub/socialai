@@ -868,8 +868,9 @@ async function burnTwinCaptions(videoUrl, captionUrl, script, outPath) {
         const [cw, ch, cx, cy] = lastCrop.split(':').map(Number);
         const rawW = 1080, rawH = 1920;
         if (cw < rawW * 0.99 || ch < rawH * 0.99) {
-          cropFilter = `crop=${cw}:${ch}:${cx}:${cy},`;
-          console.log(`[twin captions] Cropping bars: ${cw}x${ch} at ${cx},${cy} (original ${rawW}x${rawH})`);
+          // Crop to content then scale+center-crop back to full frame so output stays 1080x1920
+          cropFilter = `crop=${cw}:${ch}:${cx}:${cy},scale=${rawW}:${rawH}:force_original_aspect_ratio=increase,crop=${rawW}:${rawH},`;
+          console.log(`[twin captions] Cropping+scaling bars: ${cw}x${ch} at ${cx},${cy} → ${rawW}x${rawH}`);
         } else {
           console.log(`[twin captions] No bars detected (crop=${cw}x${ch})`);
         }
