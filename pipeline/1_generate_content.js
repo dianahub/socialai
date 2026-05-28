@@ -856,14 +856,16 @@ async function burnTwinCaptions(videoUrl, captionUrl, script, outPath) {
     let cropFilter = '';
     try {
       const detectResult = spawnSync(ffmpegBin,
-        ['-i', rawPath, '-vf', 'cropdetect=24:2:0', '-frames:v', '90', '-f', 'null', '/dev/null'],
+        ['-i', rawPath, '-vf', 'cropdetect=64:2:0', '-frames:v', '120', '-f', 'null', '/dev/null'],
         { timeout: 30000, maxBuffer: 5 * 1024 * 1024 }
       );
       const detectOut = (detectResult.stderr || Buffer.alloc(0)).toString();
       const cropMatches = [...detectOut.matchAll(/crop=(\d+:\d+:\d+:\d+)/g)];
+      console.log(`[twin captions] cropdetect found ${cropMatches.length} crop suggestions`);
       if (cropMatches.length) {
-        const [cw, ch, cx, cy] = cropMatches[cropMatches.length - 1][1].split(':').map(Number);
-        // Crop if any bars detected in width OR height (>= 1% trimmed)
+        const lastCrop = cropMatches[cropMatches.length - 1][1];
+        console.log(`[twin captions] cropdetect result: ${lastCrop}`);
+        const [cw, ch, cx, cy] = lastCrop.split(':').map(Number);
         const rawW = 1080, rawH = 1920;
         if (cw < rawW * 0.99 || ch < rawH * 0.99) {
           cropFilter = `crop=${cw}:${ch}:${cx}:${cy},`;
