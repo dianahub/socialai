@@ -735,7 +735,7 @@ function restaurantToConfig(r) {
     ownerScript:    r.ownerScript   || '',
     businessType:   r.businessType  || 'restaurant',
     heygenAvatarId:    r.heygenAvatarId    || null,
-    heygenAvatarStyle: r.heygenAvatarStyle || 'normal',
+    heygenAvatarStyle: r.heygenAvatarStyle || 'full',
     twinBackgroundUrl: r.twinBackgroundUrl || '',
     ownerVideoUrl:     r.ownerVideoUrl     || '',
     ownerVoiceId:      r.ownerVoiceId      || null,
@@ -766,7 +766,7 @@ app.post('/api/config', async (req, res) => {
   if (businessType    !== undefined) data.businessType        = businessType;
   if (heygenAvatarId !== undefined) data.heygenAvatarId = heygenAvatarId || null;
   console.log(`[config POST] saving heygenAvatarId="${heygenAvatarId}" → ${data.heygenAvatarId}`);
-  if (heygenAvatarStyle !== undefined) data.heygenAvatarStyle   = heygenAvatarStyle || 'normal';
+  if (heygenAvatarStyle !== undefined) data.heygenAvatarStyle   = heygenAvatarStyle || 'full';
   if (twinBackgroundUrl !== undefined) data.twinBackgroundUrl   = twinBackgroundUrl || null;
   if (ownerVoiceId      !== undefined) data.ownerVoiceId        = ownerVoiceId      || null;
   if (voiceTone         !== undefined) data.voiceTone           = voiceTone         || null;
