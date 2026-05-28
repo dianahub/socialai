@@ -880,8 +880,28 @@ async function submitIgPost() {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Post failed');
     closeIgModal();
-    toast('Posting to Instagram — check back in a minute!', 'success');
-    setTimeout(() => { fetch(`/api/output?businessId=${getBusinessId()}`).then(r => r.json()).then(renderGallery); }, 90000);
+    toast('Posting to Instagram…', 'info');
+    // Poll until the background post resolves (success or error)
+    const igPollDeadline = Date.now() + 120_000;
+    const igPollId = setInterval(async () => {
+      try {
+        const fresh = await fetch(`/api/output?businessId=${getBusinessId()}`).then(r => r.json());
+        const posted = fresh.find(i => i.id === igJobId);
+        if (!posted) { clearInterval(igPollId); return; }
+        if (posted.instagram_url) {
+          clearInterval(igPollId);
+          renderGallery(fresh);
+          toast('Posted to Instagram!', 'success');
+        } else if (posted.instagram_error) {
+          clearInterval(igPollId);
+          renderGallery(fresh);
+          toast('Instagram failed: ' + posted.instagram_error, 'error');
+        } else if (Date.now() > igPollDeadline) {
+          clearInterval(igPollId);
+          toast('Instagram post timed out — check your account', 'error');
+        }
+      } catch { /* keep polling */ }
+    }, 5000);
   } catch (e) {
     document.getElementById('igError').textContent = e.message;
     document.getElementById('igError').style.display = 'block';
@@ -1133,7 +1153,12 @@ async function pollOutput() {
         delete activeJobId[type];
         activejobs.delete(jobId);
         setCardState(type, 'done');
-        lastOutputHash = '';   // force gallery re-render on next tick
+        lastOutputHash = '';
+        // Fresh fetch so gallery shows new video immediately, then scroll it into view
+        fetch(`/api/output?businessId=${getBusinessId()}`).then(r => r.json()).then(fresh => {
+          renderGallery(fresh);
+          document.getElementById('gallery')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }).catch(() => {});
       } else if (item.status === 'error') {
         delete activeJobId[type];
         activejobs.delete(jobId);
