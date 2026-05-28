@@ -562,8 +562,10 @@
     <label style="font-size:0.75rem; font-weight:600; letter-spacing:0.05em; color:var(--text-muted); display:block; margin-bottom:0.4rem; margin-top:1rem;">AVATAR STYLE</label>
     <select id="heygenAvatarStyle"
       style="width:100%; box-sizing:border-box; padding:0.6rem 0.8rem; border-radius:8px; border:1px solid rgba(255,255,255,0.15); background:rgba(0,0,0,0.3); color:var(--text); font-size:0.82rem; outline:none;">
-      <option value="normal">Normal</option>
-      <option value="expressive">Expressive (Digital Twin Avatar V)</option>
+      <option value="full" selected>Full (portrait, fills 9:16 — recommended)</option>
+      <option value="closeUp">Close-Up</option>
+      <option value="circle">Circle</option>
+      <option value="normal">Normal (landscape — causes bars)</option>
     </select>
 
     <input type="hidden" id="twinBackgroundUrl">
@@ -935,7 +937,7 @@ async function saveAndGenerate() {
     twinStyle:      document.getElementById('twinStyle').value,
     twinUsecase:    document.getElementById('twinUsecase').value,
     heygenAvatarId:    (document.getElementById('heygenAvatarId')?.value    || '').trim(),
-    heygenAvatarStyle: (document.getElementById('heygenAvatarStyle')?.value || 'normal'),
+    heygenAvatarStyle: (document.getElementById('heygenAvatarStyle')?.value || 'full'),
     twinBackgroundUrl: (document.getElementById('twinBackgroundUrl')?.value  || '').trim() || undefined,
     savedAt:           new Date().toISOString(),
   };
@@ -1002,7 +1004,8 @@ async function loadSavedState() {
     }
     if (config.twinStyle)         document.getElementById('twinStyle').value         = config.twinStyle;
     if (config.twinUsecase)       document.getElementById('twinUsecase').value       = config.twinUsecase;
-    if (config.heygenAvatarStyle) document.getElementById('heygenAvatarStyle').value = config.heygenAvatarStyle;
+    const savedStyle = config.heygenAvatarStyle === 'normal' ? 'full' : (config.heygenAvatarStyle || 'full');
+    document.getElementById('heygenAvatarStyle').value = savedStyle;
     if (config.twinBackgroundUrl) {
       document.getElementById('twinBackgroundUrl').value = config.twinBackgroundUrl;
       showTwinBgPreview(config.twinBackgroundUrl, /\.(mp4|mov|webm)/i.test(config.twinBackgroundUrl));
