@@ -1602,6 +1602,9 @@ async function startServer() {
   try {
     await db.$executeRaw`ALTER TABLE "Restaurant" ADD COLUMN "facebookPageId" TEXT`;
   } catch {}
+  try {
+    await db.$executeRaw`UPDATE "Restaurant" SET "heygenAvatarStyle" = 'full' WHERE "heygenAvatarStyle" = 'normal' OR "heygenAvatarStyle" IS NULL`;
+  } catch {}
   // Clear any meta.json files stuck in 'generating' from a previous server run
   try {
     if (fs.existsSync(OUTPUT_DIR)) {
