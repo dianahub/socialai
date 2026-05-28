@@ -863,13 +863,13 @@ async function burnTwinCaptions(videoUrl, captionUrl, script, outPath) {
       const cropMatches = [...detectOut.matchAll(/crop=(\d+:\d+:\d+:\d+)/g)];
       if (cropMatches.length) {
         const [cw, ch, cx, cy] = cropMatches[cropMatches.length - 1][1].split(':').map(Number);
-        // Only crop if significant bars detected (more than 4% trimmed from height)
-        const rawH = 1920;
-        if (ch < rawH * 0.96) {
+        // Crop if any bars detected in width OR height (>= 1% trimmed)
+        const rawW = 1080, rawH = 1920;
+        if (cw < rawW * 0.99 || ch < rawH * 0.99) {
           cropFilter = `crop=${cw}:${ch}:${cx}:${cy},`;
-          console.log(`[twin captions] Cropping bars: ${cw}x${ch} at ${cx},${cy}`);
+          console.log(`[twin captions] Cropping bars: ${cw}x${ch} at ${cx},${cy} (original ${rawW}x${rawH})`);
         } else {
-          console.log('[twin captions] No significant bars detected');
+          console.log(`[twin captions] No bars detected (crop=${cw}x${ch})`);
         }
       }
     } catch (e) {
