@@ -817,7 +817,7 @@ function _buildDrawtextFilters(srt, capDir, fontFile) {
       `drawtext=textfile='${cuePath}'` +
       `:enable='between(t,${t0.toFixed(3)},${t1.toFixed(3)})'` +
       `:fontsize=28${fontPart}` +
-      `:fontcolor=white:x=(w-text_w)/2:y=1002` +
+      `:fontcolor=white:x=(w-text_w)/2:y=h-300` +
       `:shadowx=2:shadowy=2:shadowcolor=black@0.9`
     );
   }
