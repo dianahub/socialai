@@ -1042,10 +1042,38 @@ async function generate(type) {
     activejobs.add(data.jobId);
     activeJobId[type] = data.jobId;
     toast(`${type} generation started`, 'success');
+    watchJob(data.jobId, type);
   } catch (e) {
     toast('Generation failed: ' + e.message, 'error');
     setCardState(type, 'idle');
   }
+}
+
+// Direct watcher — polls specifically for jobId, bypasses hash check entirely
+async function watchJob(jobId, type) {
+  for (let i = 0; i < 120; i++) {
+    await new Promise(r => setTimeout(r, 3000));
+    try {
+      const items = await fetch(`/api/output?businessId=${getBusinessId()}`).then(r => r.json());
+      const item  = items.find(it => it.id === jobId);
+      if (!item) continue;
+      if (item.status === 'ready') {
+        setCardState(type, 'done');
+        lastOutputHash = '';   // force gallery refresh
+        pollOutput();
+        return;
+      }
+      if (item.status === 'error') {
+        toast('Generation failed — try again', 'error');
+        setCardState(type, 'idle');
+        lastOutputHash = '';
+        pollOutput();
+        return;
+      }
+    } catch {}
+  }
+  // 6-minute timeout
+  if (cardStates[type] === 'generating') setCardState(type, 'idle');
 }
 
 function setCardState(type, state) {
