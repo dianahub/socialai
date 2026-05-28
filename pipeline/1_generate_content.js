@@ -816,9 +816,10 @@ function _buildDrawtextFilters(srt, capDir, fontFile) {
     filters.push(
       `drawtext=textfile='${cuePath}'` +
       `:enable='between(t,${t0.toFixed(3)},${t1.toFixed(3)})'` +
-      `:fontsize=28${fontPart}` +
+      `:fontsize=48${fontPart}` +
       `:fontcolor=white:x=(w-text_w)/2:y=h-300` +
-      `:shadowx=2:shadowy=2:shadowcolor=black@0.9`
+      `:borderw=3:bordercolor=black` +
+      `:shadowx=3:shadowy=3:shadowcolor=black@1.0`
     );
   }
   return filters.join(',');
