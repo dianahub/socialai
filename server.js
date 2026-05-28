@@ -733,7 +733,7 @@ function restaurantToConfig(r) {
     twinStyle:      r.twinStyle     || '',
     twinUsecase:    r.twinUsecase   || '',
     ownerScript:    r.ownerScript   || '',
-    businessType:   r.businessType  || 'restaurant',
+    businessType:   r.businessType  || '',
     heygenAvatarId:    r.heygenAvatarId    || null,
     heygenAvatarStyle: r.heygenAvatarStyle || 'full',
     twinBackgroundUrl: r.twinBackgroundUrl || '',

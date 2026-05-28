@@ -417,6 +417,7 @@
       <div>
         <label for="businessType">Business Type</label>
         <select id="businessType" onchange="onBizTypeChange()">
+          <option value="">— Select type —</option>
           <option value="restaurant">Restaurant</option>
           <option value="spa">Spa</option>
           <option value="salon">Salon</option>
@@ -1012,7 +1013,7 @@ async function loadSavedState() {
     }
     if (config.ownerVideoUrl) showOwnerVideoPreview(config.ownerVideoUrl);
 
-    setBizTypeDropdown(config.businessType || 'restaurant');
+    setBizTypeDropdown(config.businessType || '');
 
     // Restore uploads
     if (assets.logo) {
@@ -1065,11 +1066,11 @@ function onBizTypeChange() {
 
 function getEffectiveBizType() {
   const sel = document.getElementById('businessType');
-  if (!sel) return 'restaurant';
+  if (!sel) return '';
   if (sel.value === 'other') {
     return document.getElementById('businessTypeOther').value.trim() || 'other';
   }
-  return sel.value || 'restaurant';
+  return sel.value || '';
 }
 
 function setBizTypeDropdown(businessType) {
@@ -1078,7 +1079,7 @@ function setBizTypeDropdown(businessType) {
   if (!sel) return;
   const isPreset = !businessType || _PRESET_BIZ.includes(businessType);
   if (isPreset) {
-    sel.value = businessType || 'restaurant';
+    sel.value = businessType || '';
     otherEl.classList.remove('visible');
     otherEl.value = '';
   } else {
@@ -1086,7 +1087,7 @@ function setBizTypeDropdown(businessType) {
     otherEl.classList.add('visible');
     otherEl.value = businessType;
   }
-  applyBusinessTypeLabels(businessType || 'restaurant');
+  applyBusinessTypeLabels(businessType || '');
 }
 
 function applyBusinessTypeLabels(businessType) {
