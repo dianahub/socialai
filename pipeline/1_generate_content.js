@@ -502,18 +502,13 @@ async function generateTwinClip(config, jobId, customScript) {
         throw new Error('No HeyGen avatar ID set. Add your HeyGen Avatar ID in the Assets page to generate twin videos.');
       }
 
-      // talking_photo fills the full 9:16 frame with the owner's photo (no bars).
-      // avatar composites a pre-filmed avatar into the frame which can leave gaps.
-      const heygenType = config.heygenAvatarType || 'talking_photo';
-      if (heygenType === 'talking_photo') {
-        character  = { type: 'talking_photo', talking_photo_id: config.heygenAvatarId };
-        modelLabel = 'HeyGen Talking Photo';
-      } else {
-        const uiStyle  = config.heygenAvatarStyle || 'normal';
-        const apiStyle = ['circle','closeUp','full','normal','voiceOnly'].includes(uiStyle) ? uiStyle : 'normal';
-        character  = { type: 'avatar', avatar_id: config.heygenAvatarId, avatar_style: apiStyle };
-        modelLabel = 'HeyGen Video Avatar';
-      }
+      const uiStyle  = config.heygenAvatarStyle || 'full';
+      // HeyGen API accepts: normal, circle, closeUp, full, voiceOnly
+      // 'full' records the avatar vertically and fills the 9:16 portrait frame without bars.
+      // 'normal' is landscape-shot and gets letterboxed inside the portrait canvas.
+      const apiStyle = ['circle','closeUp','full','normal','voiceOnly'].includes(uiStyle) ? uiStyle : 'full';
+      character  = { type: 'avatar', avatar_id: config.heygenAvatarId, avatar_style: apiStyle };
+      modelLabel = 'HeyGen Video Avatar';
       console.log(`[generateTwinClip] Using avatar ${config.heygenAvatarId} style=${apiStyle} (ui=${uiStyle})`);
 
       // Use avatar's own cloned voice; for Avatar Looks, match by owner name; then fallback
