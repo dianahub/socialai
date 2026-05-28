@@ -1246,10 +1246,10 @@ function openVideoModal(src, isTwin) {
   const player = document.getElementById('videoPlayer');
   player.src = src;
   if (isTwin) {
-    player.style.height    = '90vh';
+    player.style.height    = '100vh';
     player.style.width     = 'auto';
-    player.style.maxWidth  = '90vw';
-    player.style.maxHeight = '90vh';
+    player.style.maxWidth  = '100vw';
+    player.style.maxHeight = '100vh';
     player.style.objectFit = '';
   } else {
     player.style.height    = '100vh';
@@ -1424,6 +1424,7 @@ async function init() {
       items.filter(i => i.status === 'generating').forEach(i => {
         setCardState(i.type, 'generating');
         activejobs.add(i.id);
+        activeJobId[i.type] = i.id;
       });
       startPolling();
     }
