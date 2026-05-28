@@ -836,30 +836,37 @@ app.post('/api/weekly-brief', async (req, res) => {
 // ── AI Script generation ──────────────────────────────────────────────────────
 
 app.post('/api/generate/script', async (req, res) => {
-  const { topic, details, ownerName, restaurantName, businessName, cuisineType } = req.body;
+  const { topic, details } = req.body;
   const businessId = req.businessId || Number(req.body.businessId) || 1;
 
-  // Fetch this week's brief for extra context
+  // Load business info + this week's brief
+  let biz = {};
   let brief = {};
+  try {
+    biz = await db.business.findUnique({ where: { id: businessId } }) || {};
+  } catch {}
   try {
     brief = await db.weeklyBrief.findUnique({
       where: { businessId_weekOf: { businessId, weekOf: getMondayOfWeek() } }
     }) || {};
   } catch {}
 
+  const bizName    = biz.name          || 'our business';
+  const ownerName  = biz.ownerName     || 'the owner';
+  const bizType    = biz.businessType  || biz.cuisineType || 'business';
+  const serviceType = biz.cuisineType  || bizType;
+
   const briefContext = [
-    brief.featuredDish && `Featured dish this week: ${brief.featuredDish}`,
+    brief.featuredDish && `Featured this week: ${brief.featuredDish}`,
     brief.event        && `Event: ${brief.event}`,
     brief.promotion    && `Promotion: ${brief.promotion}`,
     brief.notes        && `Extra notes: ${brief.notes}`,
   ].filter(Boolean).join('\n');
 
   if (!process.env.ANTHROPIC_API_KEY) {
-    const owner = ownerName || 'the chef';
-    const name  = businessName || restaurantName || 'our restaurant';
     const extra = briefContext || (details ? `I'm excited to share: ${details}.` : '');
     return res.json({
-      script: `Hello, I'm ${owner} from ${name}. ${extra} We pour our heart into every experience here, and I'd love to welcome you to our table soon.`,
+      script: `Hello, I'm ${ownerName} from ${bizName}. ${extra} We pour our heart into every experience here, and I'd love to welcome you soon.`,
       note: 'Template script — add ANTHROPIC_API_KEY to enable AI-written scripts.'
     });
   }
@@ -871,19 +878,19 @@ app.post('/api/generate/script', async (req, res) => {
     const msg = await client.messages.create({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 300,
-      system: 'You write short spoken scripts for restaurant owner digital twin social videos. Output only the spoken words — no stage directions, no labels, no quotes.',
+      system: 'You write short spoken scripts for business owner digital twin social videos. Output only the spoken words — no stage directions, no labels, no quotes.',
       messages: [{
         role: 'user',
-        content: `Write a 15–20 second spoken script (40–55 words) for a restaurant owner video post on Instagram.
+        content: `Write a 15–20 second spoken script (40–55 words) for a business owner video post on Instagram.
 
-Owner: ${ownerName || 'the owner'}
-Restaurant: ${restaurantName || 'the restaurant'}
-Cuisine: ${cuisineType || 'fine dining'}
+Owner: ${ownerName}
+Business: ${bizName}
+Type: ${serviceType}
 Topic: ${topic || 'welcome'}
 Details: ${details || 'none'}
 ${briefContext ? `\nThis week's context:\n${briefContext}` : ''}
 
-Requirements: first person, warm and personal, specific to the topic and any weekly context above, end with a natural invitation to visit or follow.`
+Requirements: first person, warm and personal, specific to the business type and topic, end with a natural invitation to visit or follow.`
       }]
     });
 

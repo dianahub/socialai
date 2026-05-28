@@ -9,23 +9,24 @@ router.post('/generate-with-ai', async (req, res) => {
   const { topic, details, businessId, restaurantId } = req.body;
   const bizId = businessId || restaurantId; // backward-compat
 
-  let restaurantName = 'our restaurant';
-  let ownerName      = 'the chef';
-  let cuisineType    = 'fine dining';
+  let bizName     = 'our business';
+  let ownerName   = 'the owner';
+  let serviceType = 'business';
 
   if (bizId) {
     try {
       const r = await db.business.findUnique({ where: { id: Number(bizId) } });
       if (r) {
-        restaurantName = r.name      || restaurantName;
-        cuisineType    = r.cuisineType || cuisineType;
+        bizName     = r.name         || bizName;
+        ownerName   = r.ownerName    || ownerName;
+        serviceType = r.cuisineType  || r.businessType || serviceType;
       }
     } catch {}
   }
 
   if (!process.env.ANTHROPIC_API_KEY) {
     return res.json({
-      script: `Hello, I'm ${ownerName} from ${restaurantName}. ${details ? `I'm excited to share: ${details}. ` : ''}We pour our heart into every experience here — I'd love to welcome you to our table soon.`,
+      script: `Hello, I'm ${ownerName} from ${bizName}. ${details ? `I'm excited to share: ${details}. ` : ''}We pour our heart into every experience here — I'd love to welcome you soon.`,
       note: 'Template script — add ANTHROPIC_API_KEY to enable AI-written scripts.',
     });
   }
@@ -36,18 +37,18 @@ router.post('/generate-with-ai', async (req, res) => {
     const msg = await client.messages.create({
       model:      'claude-haiku-4-5-20251001',
       max_tokens: 300,
-      system:     'You write short spoken scripts for restaurant owner digital twin social videos. Output only the spoken words — no stage directions, no labels, no quotes.',
+      system:     'You write short spoken scripts for business owner digital twin social videos. Output only the spoken words — no stage directions, no labels, no quotes.',
       messages: [{
         role:    'user',
-        content: `Write a 15–20 second spoken script (40–55 words) for a restaurant owner video post on Instagram.
+        content: `Write a 15–20 second spoken script (40–55 words) for a business owner video post on Instagram.
 
 Owner: ${ownerName}
-Restaurant: ${restaurantName}
-Cuisine: ${cuisineType}
+Business: ${bizName}
+Type: ${serviceType}
 Topic: ${topic || 'welcome'}
 Details: ${details || 'none'}
 
-Requirements: first person, warm and personal, specific to the topic, end with a natural invitation to visit or follow.`,
+Requirements: first person, warm and personal, specific to the business type and topic, end with a natural invitation to visit or follow.`,
       }],
     });
     res.json({ script: msg.content[0].text.trim() });
