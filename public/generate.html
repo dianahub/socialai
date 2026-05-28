@@ -1246,11 +1246,13 @@ function openVideoModal(src, isTwin) {
   const player = document.getElementById('videoPlayer');
   player.src = src;
   if (isTwin) {
+    // Portrait 9:16 — width is derived from height so the element is always the
+    // right aspect ratio. object-fit:cover fills any leftover gap on narrow screens.
     player.style.height    = '100vh';
-    player.style.width     = 'auto';
+    player.style.width     = 'calc(100vh * 9 / 16)';
     player.style.maxWidth  = '100vw';
-    player.style.maxHeight = '100vh';
-    player.style.objectFit = '';
+    player.style.maxHeight = '';
+    player.style.objectFit = 'cover';
   } else {
     player.style.height    = '100vh';
     player.style.width     = '100vw';
