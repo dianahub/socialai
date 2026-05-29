@@ -489,6 +489,142 @@ async function generateVideo(config, jobId) {
   };
 }
 
+// ── Higgsfield twin video ─────────────────────────────────────────────────────
+
+const HF_BASE = 'https://platform.higgsfield.ai';
+
+function higgsfieldHeaders() {
+  const key = process.env.HIGGSFIELD_API_KEY || '';
+  const colonIdx = key.indexOf(':');
+  const keyId     = colonIdx > -1 ? key.slice(0, colonIdx) : key;
+  const keySecret = colonIdx > -1 ? key.slice(colonIdx + 1) : '';
+  const h = { 'Content-Type': 'application/json', 'hf-api-key': keyId };
+  if (keySecret) h['hf-secret'] = keySecret;
+  return h;
+}
+
+// Cloudinary video → thumbnail URL at 1 second offset (no download needed)
+function cloudinaryVideoThumb(videoUrl) {
+  if (!videoUrl || !videoUrl.includes('res.cloudinary.com')) return null;
+  return videoUrl
+    .replace('/upload/', '/upload/so_1/')
+    .replace(/\.(mp4|mov|webm)(\?.*)?$/, '.jpg');
+}
+
+// Generate TTS audio with OpenAI and return mp3 Buffer, or null if unavailable
+async function openAiTts(script) {
+  if (!process.env.OPENAI_API_KEY) return null;
+  const res = await fetch('https://api.openai.com/v1/audio/speech', {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}` },
+    body:    JSON.stringify({ model: 'tts-1', input: script, voice: 'onyx', response_format: 'mp3' }),
+  });
+  if (!res.ok) {
+    console.warn('[higgsfield] OpenAI TTS failed:', res.status, await res.text().catch(() => ''));
+    return null;
+  }
+  return Buffer.from(await res.arrayBuffer());
+}
+
+// Upload a buffer to Higgsfield and return its public URL
+async function hfUploadBuffer(buffer, contentType) {
+  const headers = higgsfieldHeaders();
+  const urlRes  = await fetch(`${HF_BASE}/files/generate-upload-url`, {
+    method: 'POST', headers, body: JSON.stringify({ content_type: contentType }),
+  });
+  const urlData = await urlRes.json();
+  if (!urlData.upload_url) throw new Error(`Higgsfield upload-url failed: ${JSON.stringify(urlData)}`);
+  const putRes = await fetch(urlData.upload_url, {
+    method: 'PUT', headers: { 'Content-Type': contentType }, body: buffer,
+  });
+  if (!putRes.ok) throw new Error(`Higgsfield PUT upload failed: ${putRes.status}`);
+  return urlData.public_url;
+}
+
+async function generateTwinClipHighgsfield(config, jobId, script) {
+  console.log('[higgsfield] Starting twin generation…');
+  const headers = higgsfieldHeaders();
+  const medias  = [];
+
+  // Face identity: portrait photo, or a thumbnail extracted from the owner video
+  const portraitUrl = config._ownerUrl
+    || cloudinaryVideoThumb(config.ownerVideoUrl)
+    || null;
+  if (portraitUrl) {
+    medias.push({ role: 'start_image', value: portraitUrl });
+    console.log('[higgsfield] start_image:', portraitUrl.slice(-60));
+  }
+
+  // Motion reference: the owner's uploaded video drives body language / movement
+  if (config.ownerVideoUrl) {
+    medias.push({ role: 'video', value: config.ownerVideoUrl });
+    console.log('[higgsfield] motion video:', config.ownerVideoUrl.slice(-60));
+    // If we have no portrait, fall back to using the video URL as start_image too
+    if (!portraitUrl) medias.push({ role: 'start_image', value: config.ownerVideoUrl });
+  }
+
+  if (!medias.length) throw new Error('No owner portrait or video available for Higgsfield');
+
+  // Audio: TTS from script so the video lip-syncs to the promo
+  const audioBuffer = await openAiTts(script);
+  if (audioBuffer) {
+    try {
+      const audioUrl = await hfUploadBuffer(audioBuffer, 'audio/mpeg');
+      medias.push({ role: 'audio', value: audioUrl });
+      console.log('[higgsfield] audio uploaded:', audioUrl.slice(-60));
+    } catch (e) {
+      console.warn('[higgsfield] audio upload failed:', e.message, '— proceeding without audio sync');
+    }
+  } else {
+    console.log('[higgsfield] No OpenAI TTS — generating without audio sync');
+  }
+
+  const name   = config.ownerName    || 'the owner';
+  const biz    = config.businessName || config.restaurantName || 'their business';
+  const prompt = `${name} speaking warmly and professionally to camera about ${biz}. Portrait orientation, natural expression, direct eye contact, good lighting.`;
+
+  console.log('[higgsfield] POST /seedance_2_0 roles:', medias.map(m => m.role).join(', '));
+  const genRes  = await fetch(`${HF_BASE}/seedance_2_0`, {
+    method: 'POST', headers, body: JSON.stringify({ prompt, aspect_ratio: '9:16', duration: 8, resolution: '720p', medias }),
+  });
+  const genData = await genRes.json();
+  if (!genRes.ok || !genData.request_id)
+    throw new Error(`Higgsfield generation failed: ${JSON.stringify(genData)}`);
+
+  const requestId = genData.request_id;
+  console.log('[higgsfield] Queued, request_id:', requestId);
+
+  // Poll for up to 10 minutes
+  const deadline = Date.now() + 10 * 60 * 1000;
+  const authH = { 'hf-api-key': headers['hf-api-key'], ...(headers['hf-secret'] ? { 'hf-secret': headers['hf-secret'] } : {}) };
+  while (Date.now() < deadline) {
+    await new Promise(r => setTimeout(r, 10_000));
+    const st = await fetch(`${HF_BASE}/requests/${requestId}/status`, { headers: authH }).then(r => r.json());
+    console.log('[higgsfield] status:', st.status);
+    if (st.status === 'completed') {
+      const resultUrl = st.video?.url || st.jobs?.[0]?.results?.raw?.url;
+      if (!resultUrl) throw new Error('Higgsfield completed but no video URL in response');
+      const filename = `${jobId}_twin.mp4`;
+      await downloadFile(resultUrl, path.join(OUTPUT_DIR, filename));
+      console.log('[higgsfield] Twin saved:', filename);
+      return {
+        filename,
+        path:          `/output/${filename}`,
+        thumbnailPath: null,
+        type:          'twin',
+        platform:      config.platforms || ['instagram', 'facebook'],
+        model:         'Higgsfield Seedance 2.0',
+        prompt:        script,
+      };
+    }
+    if (st.status === 'failed' || st.status === 'nsfw')
+      throw new Error(`Higgsfield job ${st.status}: ${JSON.stringify(st)}`);
+  }
+  throw new Error('Higgsfield twin generation timed out after 10 minutes');
+}
+
+// ── Twin clip entry point ─────────────────────────────────────────────────────
+
 async function generateTwinClip(config, jobId, customScript) {
   const script = customScript || twinScript(config);
   console.log('[generateTwinClip] script:', script.slice(0, 80) + '…');
@@ -566,7 +702,16 @@ async function generateTwinClip(config, jobId, customScript) {
       console.error('[generateTwinClip] HeyGen error:', err.message, '— falling back to mock');
     }
   } else {
-    console.log('[generateTwinClip] No API key — mock mode');
+    console.log('[generateTwinClip] No HeyGen API key — checking Higgsfield…');
+  }
+
+  // ── Higgsfield fallback (no HeyGen or HeyGen failed) ────────────────────
+  if (process.env.HIGGSFIELD_API_KEY && (config._ownerUrl || config.ownerVideoUrl)) {
+    try {
+      return await generateTwinClipHighgsfield(config, jobId, script);
+    } catch (err) {
+      console.error('[generateTwinClip] Higgsfield error:', err.message, '— falling back to mock');
+    }
   }
 
   const file = await mockImage(config, jobId, 'twin', '👤', 'HeyGen Talking Photo');
@@ -577,7 +722,7 @@ async function generateTwinClip(config, jobId, customScript) {
     platform: config.platforms || ['instagram', 'facebook'],
     model:    'HeyGen Talking Photo (mock)',
     prompt:   script,
-    note:     'Placeholder. Set HEYGEN_API_KEY + upload owner photo for real talking avatar.',
+    note:     'Placeholder. Set HEYGEN_API_KEY or HIGGSFIELD_API_KEY + upload owner photo/video for real talking avatar.',
   };
 }
 
