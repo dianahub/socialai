@@ -1,7 +1,7 @@
 require('dotenv').config();
 // Run DB migrations at startup so Railway volume gets all pending schema changes
 try {
-  require('child_process').execSync('npx prisma migrate deploy', { stdio: 'inherit' });
+  require('child_process').execSync('./node_modules/.bin/prisma migrate deploy', { stdio: 'inherit' });
 } catch (e) {
   console.error('[startup] prisma migrate deploy failed:', e.message);
 }
