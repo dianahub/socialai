@@ -1,12 +1,19 @@
 require('dotenv').config();
-// Run DB migrations at startup so Railway volume gets all pending schema changes
-try {
-  // Resolve any stuck/failed migrations first, then deploy
-  require('child_process').execSync('node scripts/fix-migrations.js', { stdio: 'inherit' });
-  require('child_process').execSync('./node_modules/.bin/prisma migrate deploy', { stdio: 'inherit' });
-} catch (e) {
-  console.error('[startup] prisma migrate deploy failed:', e.message);
-}
+// Run DB migrations at startup. Retry once: if migrate deploy creates a new
+// failed row (duplicate column from a pre-existing column), fix-migrations
+// catches it on the second pass and the retry succeeds.
+(function runMigrations() {
+  const { execSync } = require('child_process');
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      execSync('node scripts/fix-migrations.js', { stdio: 'inherit' });
+      execSync('./node_modules/.bin/prisma migrate deploy', { stdio: 'inherit' });
+      return; // success
+    } catch (e) {
+      console.error(`[startup] migrate attempt ${attempt} failed:`, e.message);
+    }
+  }
+}());
 const express = require('express');
 const multer  = require('multer');
 const path    = require('path');
