@@ -3,6 +3,7 @@ const router  = express.Router();
 const db      = require('../lib/db');
 const bcrypt  = require('bcryptjs');
 const { createToken } = require('../lib/auth');
+const { sendEmail, contactNotificationEmail, OWNER } = require('../lib/email');
 
 // GET /api/leads — list all leads
 router.get('/', async (req, res) => {
@@ -30,6 +31,9 @@ router.post('/', async (req, res) => {
       },
     });
     res.json(lead);
+    // fire-and-forget — don't block the response
+    sendEmail(OWNER, `New contact: ${lead.name}`, contactNotificationEmail(lead))
+      .catch(err => console.error('[email] contact notification failed:', err.message));
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 

@@ -1,2 +1,2 @@
-[start]
-cmd = "node server.js"
+[phases.start]
+cmds = ["npx prisma migrate deploy && node server.js"]

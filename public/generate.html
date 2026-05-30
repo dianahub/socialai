@@ -681,9 +681,9 @@ async function loadHeader() {
       document.getElementById('headerLogoFallback').style.display = 'none';
     }
     const twinBtn = document.getElementById('twinGenBtn');
-    if (!config.heygenAvatarId) {
+    if (!config.heygenAvatarId && !config.ownerVideoUrl) {
       twinBtn.disabled = true;
-      twinBtn.title    = 'Add your HeyGen Avatar ID in the Assets page first';
+      twinBtn.title    = 'Add your HeyGen Avatar ID or upload an owner video in the Assets page first';
       twinBtn.textContent = 'Set HeyGen Avatar ID to unlock';
       twinBtn.style.opacity = '0.45';
       twinBtn.style.cursor  = 'not-allowed';
@@ -879,6 +879,7 @@ async function submitIgPost() {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Post failed');
+    const postedJobId = igJobId;
     closeIgModal();
     toast('Posting to Instagram…', 'info');
     // Poll until the background post resolves (success or error)
@@ -886,7 +887,7 @@ async function submitIgPost() {
     const igPollId = setInterval(async () => {
       try {
         const fresh = await fetch(`/api/output?businessId=${getBusinessId()}`).then(r => r.json());
-        const posted = fresh.find(i => i.id === igJobId);
+        const posted = fresh.find(i => i.id === postedJobId);
         if (!posted) { clearInterval(igPollId); return; }
         if (posted.instagram_url) {
           clearInterval(igPollId);
@@ -1485,5 +1486,16 @@ async function init() {
 
 init();
 </script>
+
+<style>
+.site-footer{display:flex;align-items:center;justify-content:center;gap:1rem;padding:1.25rem 2rem;border-top:1px solid var(--gold-border);flex-wrap:wrap;margin-top:3rem;}
+.site-footer-text{color:var(--text-muted);font-size:0.875rem;}
+.site-footer-btn{display:inline-block;padding:0.4rem 1.1rem;background:transparent;border:1px solid var(--gold);border-radius:20px;color:var(--gold);font-size:0.85rem;font-weight:500;text-decoration:none;transition:background 0.15s,color 0.15s;}
+.site-footer-btn:hover{background:var(--gold);color:#1a1200;}
+</style>
+<footer class="site-footer">
+  <span class="site-footer-text">Questions? We're here to help.</span>
+  <a class="site-footer-btn" href="/contact.html">Contact Us</a>
+</footer>
 </body>
 </html>

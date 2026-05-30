@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Contact Us — ModernSocial.app</title>
+<link rel="stylesheet" href="/theme.css">
+<script src="/nav.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg-deep);
+    color: var(--text);
+    font-family: 'Inter', system-ui, sans-serif;
+    font-weight: 400;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 2.5rem;
+    height: 64px;
+    background: var(--bg-nav);
+    border-bottom: 1px solid var(--gold-border);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .nav-brand {
+    font-family: var(--font-display);
+    font-size: 1.15rem;
+    color: var(--gold-light);
+    text-decoration: none;
+    letter-spacing: 0.01em;
+  }
+  .nav-back {
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 0.875rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    transition: color 0.15s;
+  }
+  .nav-back:hover { color: var(--text); }
+
+  .page-wrap {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 3rem 1.5rem 5rem;
+  }
+
+  .page-header {
+    text-align: center;
+    margin-bottom: 2.5rem;
+  }
+  .page-header h1 {
+    font-family: var(--font-display);
+    font-size: 2rem;
+    color: var(--gold-light);
+    margin-bottom: 0.5rem;
+  }
+  .page-header p {
+    color: var(--text-muted);
+    font-size: 0.95rem;
+  }
+
+  .contact-options {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-bottom: 2.5rem;
+  }
+
+  .contact-option {
+    background: var(--bg-card);
+    border: 1px solid var(--gold-border);
+    border-radius: var(--radius);
+    padding: 1.25rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+  .contact-option .label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+  }
+  .contact-option .value {
+    font-size: 1.05rem;
+    color: var(--gold-light);
+    font-weight: 500;
+    word-break: break-all;
+  }
+  .contact-option a {
+    color: var(--gold-light);
+    text-decoration: none;
+  }
+  .contact-option a:hover { text-decoration: underline; }
+
+  .form-card {
+    background: var(--bg-card);
+    border: 1px solid var(--gold-border);
+    border-radius: var(--radius);
+    padding: 2rem;
+  }
+  .form-card h2 {
+    font-family: var(--font-display);
+    font-size: 1.2rem;
+    color: var(--text);
+    margin-bottom: 1.5rem;
+  }
+
+  .field-group {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+  @media (max-width: 480px) { .field-group { grid-template-columns: 1fr; } }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    margin-bottom: 1rem;
+  }
+  .field.full { grid-column: 1 / -1; }
+
+  label {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+  }
+  label span { color: var(--gold); }
+
+  input, textarea, select {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 0.95rem;
+    padding: 0.65rem 0.9rem;
+    width: 100%;
+    transition: border-color 0.15s;
+    outline: none;
+  }
+  input:focus, textarea:focus, select:focus {
+    border-color: var(--gold);
+  }
+  textarea {
+    resize: vertical;
+    min-height: 110px;
+  }
+  select option { background: var(--bg-surface); }
+
+  .submit-btn {
+    width: 100%;
+    margin-top: 0.5rem;
+    padding: 0.85rem;
+    background: linear-gradient(135deg, var(--gold), var(--gold-light));
+    color: #1a1200;
+    border: none;
+    border-radius: var(--radius);
+    font-size: 0.95rem;
+    font-weight: 600;
+    font-family: 'Inter', system-ui, sans-serif;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .submit-btn:hover { opacity: 0.9; }
+  .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .success-banner {
+    display: none;
+    background: var(--green-dim);
+    border: 1px solid var(--green);
+    border-radius: var(--radius);
+    padding: 1rem 1.25rem;
+    color: var(--green);
+    font-size: 0.95rem;
+    margin-bottom: 1.5rem;
+  }
+  .error-banner {
+    display: none;
+    background: var(--red-dim);
+    border: 1px solid var(--red);
+    border-radius: var(--radius);
+    padding: 1rem 1.25rem;
+    color: #ff8080;
+    font-size: 0.95rem;
+    margin-bottom: 1.5rem;
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <a class="nav-brand" href="/">✦ ModernSocial.app</a>
+  <a class="nav-back" href="javascript:history.back()">← Back</a>
+</nav>
+
+<div class="page-wrap">
+
+  <div class="page-header">
+    <h1>Get in Touch</h1>
+    <p>We'd love to hear from you — fill out the form or reach us directly.</p>
+  </div>
+
+  <div class="contact-options">
+    <div class="contact-option">
+      <span class="label">Call or Text</span>
+      <span class="value"><a href="tel:+12026400054">(202) 640-0054</a></span>
+    </div>
+  </div>
+
+  <div class="form-card">
+    <h2>Send us a message</h2>
+
+    <div id="successBanner" class="success-banner">
+      Thanks! We'll be in touch shortly.
+    </div>
+    <div id="errorBanner" class="error-banner"></div>
+
+    <form id="contactForm">
+      <div class="field-group">
+        <div class="field">
+          <label for="name">Name <span>*</span></label>
+          <input type="text" id="name" name="name" placeholder="Your name" required>
+        </div>
+        <div class="field">
+          <label for="businessName">Business Name</label>
+          <input type="text" id="businessName" name="businessName" placeholder="Your business">
+        </div>
+      </div>
+
+      <div class="field-group">
+        <div class="field">
+          <label for="email">Email</label>
+          <input type="email" id="email" name="email" placeholder="you@example.com">
+        </div>
+        <div class="field">
+          <label for="phone">Phone</label>
+          <input type="tel" id="phone" name="phone" placeholder="(555) 000-0000">
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="businessType">Business Type</label>
+        <select id="businessType" name="businessType">
+          <option value="">Select one…</option>
+          <option value="restaurant">Restaurant / Food & Beverage</option>
+          <option value="salon">Salon / Spa / Beauty</option>
+          <option value="fitness">Fitness / Wellness</option>
+          <option value="retail">Retail</option>
+          <option value="real_estate">Real Estate</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="notes">Message</label>
+        <textarea id="notes" name="notes" placeholder="How can we help?"></textarea>
+      </div>
+
+      <button type="submit" class="submit-btn" id="submitBtn">Send Message</button>
+    </form>
+  </div>
+
+</div>
+
+<script>
+document.getElementById('contactForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const btn = document.getElementById('submitBtn');
+  const successEl = document.getElementById('successBanner');
+  const errorEl = document.getElementById('errorBanner');
+  successEl.style.display = 'none';
+  errorEl.style.display = 'none';
+  btn.disabled = true;
+  btn.textContent = 'Sending…';
+
+  const body = {
+    name:         document.getElementById('name').value.trim(),
+    email:        document.getElementById('email').value.trim() || null,
+    phone:        document.getElementById('phone').value.trim() || null,
+    businessName: document.getElementById('businessName').value.trim() || null,
+    businessType: document.getElementById('businessType').value || null,
+    notes:        document.getElementById('notes').value.trim() || null,
+  };
+
+  try {
+    const res = await fetch('/api/leads', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const data = await res.json();
+      throw new Error(data.error || 'Submission failed');
+    }
+    successEl.style.display = 'block';
+    document.getElementById('contactForm').reset();
+  } catch (err) {
+    errorEl.textContent = err.message;
+    errorEl.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Send Message';
+  }
+});
+</script>
+</body>
+</html>

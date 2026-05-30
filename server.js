@@ -617,7 +617,8 @@ app.post('/api/upload/owner-video', uploadOwnerVideo.single('file'), async (req,
         resource_type: 'video',
         quality:       'auto',
       });
-      await db.business.update({ where: { id: businessId }, data: { ownerVideoUrl: result.url } }).catch(() => {});
+      await db.business.update({ where: { id: businessId }, data: { ownerVideoUrl: result.url } })
+        .catch(e => console.error('[owner-video] DB update failed:', e.message));
       return res.json({ success: true, url: result.url });
     } catch (e) {
       console.error('[owner-video] Cloudinary upload failed:', e.message);
@@ -629,7 +630,8 @@ app.post('/api/upload/owner-video', uploadOwnerVideo.single('file'), async (req,
   const filename = `owner-video${ext || '.mp4'}`;
   saveLocalAsset('owner-video', filename, req.file.buffer);
   const localUrl = `/assets/owner-video/${filename}`;
-  await db.business.update({ where: { id: businessId }, data: { ownerVideoUrl: localUrl } }).catch(() => {});
+  await db.business.update({ where: { id: businessId }, data: { ownerVideoUrl: localUrl } })
+    .catch(e => console.error('[owner-video] DB update failed:', e.message));
   res.json({ success: true, url: localUrl });
 });
 
@@ -747,7 +749,7 @@ app.post('/api/config', async (req, res) => {
   const { businessId: bId, restaurantName, businessName, cuisineType, ownerName, tagline,
           primaryColor, accentColor, bgColor, platforms, twinStyle, twinUsecase, ownerScript,
           businessType, heygenAvatarId, heygenAvatarStyle, twinBackgroundUrl,
-          ownerVoiceId, voiceTone } = req.body;
+          ownerVoiceId, voiceTone, ownerVideoUrl } = req.body;
   const businessId = req.businessId || Number(bId) || 1;
   const nameVal = businessName || restaurantName;
   console.log(`[config POST] businessId=${businessId} heygenAvatarId=${heygenAvatarId ?? '(not sent)'}`);
@@ -770,6 +772,7 @@ app.post('/api/config', async (req, res) => {
   if (twinBackgroundUrl !== undefined) data.twinBackgroundUrl   = twinBackgroundUrl || null;
   if (ownerVoiceId      !== undefined) data.ownerVoiceId        = ownerVoiceId      || null;
   if (voiceTone         !== undefined) data.voiceTone           = voiceTone         || null;
+  if (ownerVideoUrl     !== undefined) data.ownerVideoUrl       = ownerVideoUrl     || null;
   try {
     await db.business.update({ where: { id: businessId }, data });
     console.log(`[config POST] DB update OK for business ${businessId}`);
