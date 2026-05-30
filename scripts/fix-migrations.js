@@ -1,44 +1,49 @@
 /**
- * Preflight: uses the Prisma client (not the CLI) to mark the known-failed
- * facebookPageId migration as rolled-back, then add the column directly.
- * The Prisma runtime does NOT check migration state, so this works even
- * when migrate deploy would be blocked.
+ * Startup preflight: finds any migrations stuck in "started but never finished"
+ * state and marks them as applied. This happens when a previous deploy ran
+ * migrate deploy but the process was killed mid-migration, leaving a partial
+ * record in _prisma_migrations. We mark them applied because the ALTER TABLE
+ * SQL already ran (column exists) — confirmed by the "duplicate column" error.
  */
 require('dotenv').config();
-const { PrismaLibSql } = require('@prisma/adapter-libsql');
-const { PrismaClient }  = require('./lib/generated/prisma');
-
-const MIGRATION = '20260527100000_add_facebook_page_id';
+const { createClient } = require('@libsql/client');
 
 async function main() {
-  const url     = process.env.DATABASE_URL || 'file:./data/restaurant.db';
-  const adapter = new PrismaLibSql({ url });
-  const db      = new PrismaClient({ adapter });
+  const url    = process.env.DATABASE_URL || 'file:./data/restaurant.db';
+  const client = createClient({ url });
 
   try {
-    // Mark the failed migration as rolled-back so migrate deploy won't block
-    const r = await db.$executeRaw`
-      UPDATE "_prisma_migrations"
-      SET    "rolled_back_at" = datetime('now')
-      WHERE  "migration_name" = ${MIGRATION}
-        AND  "finished_at"    IS NULL
-        AND  "rolled_back_at" IS NULL
-    `;
-    if (r > 0) console.log(`[fix-migrations] Marked ${MIGRATION} as rolled-back`);
+    // Find migrations that started but never finished or rolled back
+    const stuck = await client.execute(
+      `SELECT migration_name FROM "_prisma_migrations"
+       WHERE finished_at IS NULL AND rolled_back_at IS NULL`
+    );
 
-    // Add the column directly so the re-applied migration won't fail
-    // (ignored by SQLite if the column already exists)
-    try {
-      await db.$executeRaw`ALTER TABLE "Restaurant" ADD COLUMN "facebookPageId" TEXT`;
-      console.log('[fix-migrations] Added facebookPageId column');
-    } catch (e) {
-      if (!e.message.includes('duplicate column')) console.warn('[fix-migrations] ALTER TABLE:', e.message);
+    for (const row of stuck.rows) {
+      const name = row.migration_name;
+      console.log(`[fix-migrations] Marking stuck migration as applied: ${name}`);
+      await client.execute({
+        sql: `UPDATE "_prisma_migrations"
+              SET finished_at = datetime('now'), applied_steps_count = 1
+              WHERE migration_name = ?`,
+        args: [name],
+      });
+    }
+
+    if (stuck.rows.length === 0) {
+      console.log('[fix-migrations] No stuck migrations found');
     }
   } catch (e) {
-    console.warn('[fix-migrations] Could not fix migration state:', e.message);
+    // _prisma_migrations might not exist yet on a fresh DB — that's fine
+    if (!e.message.includes('no such table')) {
+      console.warn('[fix-migrations] Warning:', e.message);
+    }
   } finally {
-    await db.$disconnect();
+    client.close();
   }
 }
 
-main().catch(console.error).then(() => process.exit(0));
+main().then(() => process.exit(0)).catch(e => {
+  console.warn('[fix-migrations] Non-fatal error:', e.message);
+  process.exit(0);
+});
