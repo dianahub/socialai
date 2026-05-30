@@ -1,2 +1,5 @@
+[phases.setup]
+nixPkgs = ["nodejs_22"]
+
 [phases.start]
 cmds = ["npx prisma migrate deploy && node server.js"]
