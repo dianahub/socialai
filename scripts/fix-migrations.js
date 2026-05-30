@@ -13,10 +13,9 @@ async function main() {
   const client = createClient({ url });
 
   try {
-    // Find migrations that started but never finished or rolled back
+    // Find migrations that never successfully finished (failed OR rolled-back by a previous fix attempt)
     const stuck = await client.execute(
-      `SELECT migration_name FROM "_prisma_migrations"
-       WHERE finished_at IS NULL AND rolled_back_at IS NULL`
+      `SELECT migration_name FROM "_prisma_migrations" WHERE finished_at IS NULL`
     );
 
     for (const row of stuck.rows) {
@@ -24,7 +23,7 @@ async function main() {
       console.log(`[fix-migrations] Marking stuck migration as applied: ${name}`);
       await client.execute({
         sql: `UPDATE "_prisma_migrations"
-              SET finished_at = datetime('now'), applied_steps_count = 1
+              SET finished_at = datetime('now'), rolled_back_at = NULL, applied_steps_count = 1
               WHERE migration_name = ?`,
         args: [name],
       });
